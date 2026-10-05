@@ -1,122 +1,37 @@
-import { useState, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router'
-import { useCharacterDraft, type SaveState } from '../hooks/useCharacterDraft'
-import { downloadText } from '../lib/download'
-import type { Character } from '../model/character'
-import { characterFileName, serializeCharacter } from '../model/fileFormat'
+import { useState } from 'react'
+import { useOutletContext } from 'react-router'
+import { Field, NumberInput, Section } from '../../components/ui'
+import type { Character } from '../../model/character'
 import {
   ATTRIBUTE_LABELS,
   MENTAL_ATTRIBUTES,
   PHYSICAL_ATTRIBUTES,
   SPECIAL_ATTRIBUTES,
   type AttributeId,
-} from '../rules/sr6/attributes'
-import { METATYPE_IDS, METATYPES, attributeMaximum } from '../rules/sr6/metatypes'
-import { SKILLS, SKILLS_BY_ID } from '../rules/sr6/skills'
+} from '../../rules/sr6/attributes'
+import { METATYPE_IDS, METATYPES, attributeMaximum } from '../../rules/sr6/metatypes'
+import { SKILLS, SKILLS_BY_ID } from '../../rules/sr6/skills'
+import type { CharacterContext, Update } from './CharacterPage'
 
-type Update = (change: (draft: Character) => Character) => void
-
-export function CharacterEditor() {
-  const { id = '' } = useParams()
-  const { character, update, saveState } = useCharacterDraft(id)
-
-  if (character === undefined) return null
-  if (character === null) {
-    return (
-      <div className="p-8 text-center">
-        <p className="mb-4">Character not found.</p>
-        <Link to="/" className="btn">
-          Back to characters
-        </Link>
-      </div>
-    )
-  }
-
+export function EditTab() {
+  const { character, update } = useOutletContext<CharacterContext>()
   return (
-    <div>
-      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-bg/95 px-4 py-3 backdrop-blur sm:px-8">
-        <Link to="/" className="text-muted hover:text-fg" aria-label="Back to characters">
-          ←
-        </Link>
-        <h1 className="mr-auto truncate font-display text-lg">{character.name || 'Unnamed runner'}</h1>
-        <SaveIndicator state={saveState} />
-        <button
-          className="btn"
-          onClick={() => downloadText(characterFileName(character), serializeCharacter(character))}
-        >
-          Export
-        </button>
-      </header>
-
-      <main className="mx-auto grid max-w-5xl gap-4 px-4 py-6 sm:px-8 lg:grid-cols-2">
-        <BasicsSection character={character} update={update} />
-        <AttributesSection character={character} update={update} />
-        <SkillsSection character={character} update={update} />
-        <ResourcesSection character={character} update={update} />
-        <Section title="Notes" className="lg:col-span-2">
-          <textarea
-            className="input min-h-32 w-full"
-            value={character.notes}
-            onChange={(e) => {
-              const notes = e.target.value
-              update((c) => ({ ...c, notes }))
-            }}
-          />
-        </Section>
-      </main>
+    <div className="grid gap-4 lg:grid-cols-2">
+      <BasicsSection character={character} update={update} />
+      <AttributesSection character={character} update={update} />
+      <SkillsSection character={character} update={update} />
+      <ResourcesSection character={character} update={update} />
+      <Section title="Notes" className="lg:col-span-2">
+        <textarea
+          className="input min-h-32 w-full"
+          value={character.notes}
+          onChange={(e) => {
+            const notes = e.target.value
+            update((c) => ({ ...c, notes }))
+          }}
+        />
+      </Section>
     </div>
-  )
-}
-
-function SaveIndicator({ state }: { state: SaveState }) {
-  const label = { saved: 'Saved', pending: 'Saving…', error: 'Save failed' }[state]
-  return <span className={`text-xs ${state === 'error' ? 'text-danger' : 'text-muted'}`}>{label}</span>
-}
-
-function Section({ title, children, className = '' }: { title: string; children: ReactNode; className?: string }) {
-  return (
-    <section className={`card p-4 ${className}`}>
-      <h2 className="mb-3 font-display text-sm tracking-widest text-accent uppercase">{title}</h2>
-      {children}
-    </section>
-  )
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-xs text-muted">{label}</span>
-      {children}
-    </label>
-  )
-}
-
-function NumberInput({
-  value,
-  onChange,
-  min,
-  max,
-  className = '',
-}: {
-  value: number
-  onChange: (value: number) => void
-  min?: number
-  max?: number
-  className?: string
-}) {
-  return (
-    <input
-      type="number"
-      inputMode="numeric"
-      className={`input w-full text-center ${className}`}
-      value={Number.isNaN(value) ? '' : value}
-      min={min}
-      max={max}
-      onChange={(e) => {
-        const parsed = parseInt(e.target.value, 10)
-        onChange(Number.isNaN(parsed) ? 0 : parsed)
-      }}
-    />
   )
 }
 

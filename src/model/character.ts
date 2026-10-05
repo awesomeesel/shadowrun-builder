@@ -72,6 +72,9 @@ export const GearSchema = z.object({
   rating: z.number().int().optional(),
   quantity: int(1),
   cost: int(0),
+  /** Armor rating this item adds to Defense Rating while equipped. */
+  armor: z.number().int().optional(),
+  equipped: z.boolean().default(false),
   notes: text(),
   source: SourceRefSchema.optional(),
 })
@@ -109,6 +112,15 @@ export const CharacterSchema = z.object({
       available: int(0),
       /** Karma earned over the character's career (excluding creation). */
       career: int(0),
+    })
+    .prefault({}),
+
+  /** Damage boxes currently filled, for tracking during play. */
+  damage: z
+    .object({
+      physical: int(0),
+      stun: int(0),
+      overflow: int(0),
     })
     .prefault({}),
 

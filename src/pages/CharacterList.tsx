@@ -25,7 +25,7 @@ export function CharacterList() {
 
   async function handleNew() {
     const character = await addCharacter()
-    navigate(`/character/${character.id}`)
+    navigate(`/character/${character.id}/edit`)
   }
 
   async function handleFiles(files: FileList | File[]) {
