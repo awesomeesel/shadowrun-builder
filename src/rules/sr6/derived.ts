@@ -1,4 +1,4 @@
-import type { Character, CharacterSkill } from '../../model/character'
+import type { Character, CharacterSkill, Weapon } from '../../model/character'
 import { SKILLS, SKILLS_BY_ID, type SkillDef } from './skills'
 
 /** Damage boxes per wound modifier step (-1 for every 3 boxes filled). */
@@ -120,4 +120,27 @@ export function ownedSkillPools(character: Character): SkillPool[] {
 export function untrainedSkillPools(character: Character): SkillPool[] {
   const owned = new Set(character.skills.map((s) => s.skillId))
   return SKILLS.filter((s) => s.untrained && !owned.has(s.id)).map((s) => skillPool(character, s, undefined))
+}
+
+export interface WeaponPool {
+  /** Dice before wound modifiers; null when the skill can't be used untrained. */
+  pool: number | null
+  /** Bonus included in `pool` from a matching specialization (+2) or expertise (+3). */
+  bonus: number
+}
+
+/** Attack pool for a weapon: its skill + attribute, plus a matching specialization or expertise. */
+export function weaponPool(character: Character, weapon: Weapon): WeaponPool {
+  const skill = SKILLS_BY_ID.get(weapon.skillId)
+  if (!skill) return { pool: null, bonus: 0 }
+  const owned = character.skills.find((s) => s.skillId === skill.id)
+  const base = skillPool(character, skill, owned)
+  if (base.pool === null) return { pool: null, bonus: 0 }
+
+  const wanted = weapon.specialization.trim().toLowerCase()
+  const matches = (text: string | undefined) => wanted !== '' && text?.trim().toLowerCase() === wanted
+  let bonus = 0
+  if (base.expertisePool !== null && matches(owned?.expertise)) bonus = EXPERTISE_BONUS
+  else if (base.specializationPool !== null && matches(owned?.specialization)) bonus = SPECIALIZATION_BONUS
+  return { pool: base.pool + bonus, bonus }
 }

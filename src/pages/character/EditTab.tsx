@@ -12,14 +12,27 @@ import {
 import { METATYPE_IDS, METATYPES, attributeMaximum } from '../../rules/sr6/metatypes'
 import { SKILLS, SKILLS_BY_ID } from '../../rules/sr6/skills'
 import type { CharacterContext, Update } from './CharacterPage'
+import {
+  ContactsSection,
+  EssenceInput,
+  GearSection,
+  KnowledgeSection,
+  QualitiesSection,
+  WeaponsSection,
+} from './EditLists'
 
 export function EditTab() {
   const { character, update } = useOutletContext<CharacterContext>()
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <BasicsSection character={character} update={update} />
       <AttributesSection character={character} update={update} />
       <SkillsSection character={character} update={update} />
+      <QualitiesSection character={character} update={update} />
+      <WeaponsSection character={character} update={update} />
+      <GearSection character={character} update={update} />
+      <ContactsSection character={character} update={update} />
+      <KnowledgeSection character={character} update={update} />
       <ResourcesSection character={character} update={update} />
       <Section title="Notes" className="lg:col-span-2">
         <textarea
@@ -123,7 +136,7 @@ function AttributesSection({ character, update }: { character: Character; update
         {group(MENTAL_ATTRIBUTES)}
         {group(SPECIAL_ATTRIBUTES)}
         <Field label="Essence">
-          <div className="input w-full text-center text-muted">{((600 - character.essenceLoss) / 100).toFixed(2)}</div>
+          <EssenceInput character={character} update={update} />
         </Field>
       </div>
     </Section>

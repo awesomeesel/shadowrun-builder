@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createCharacter, type Character } from '../../model/character'
-import { computeDerived, ownedSkillPools, untrainedSkillPools } from './derived'
+import { GearSchema, WeaponSchema, createCharacter, type Character } from '../../model/character'
+import { computeDerived, ownedSkillPools, untrainedSkillPools, weaponPool } from './derived'
 
 function runner(overrides: Partial<Character> = {}): Character {
   return createCharacter({
@@ -45,8 +45,8 @@ describe('computeDerived', () => {
     const d = computeDerived(
       runner({
         gear: [
-          { id: '1', name: 'Armor jacket', category: 'Armor', armor: 4, equipped: true, quantity: 1, cost: 1000, notes: '' },
-          { id: '2', name: 'Spare vest', category: 'Armor', armor: 3, equipped: false, quantity: 1, cost: 500, notes: '' },
+          GearSchema.parse({ name: 'Armor jacket', armor: 4, equipped: true }),
+          GearSchema.parse({ name: 'Spare vest', armor: 3, equipped: false }),
         ],
       }),
     )
@@ -86,5 +86,26 @@ describe('skill pools', () => {
       runner({ skills: [{ id: 's', skillId: 'sorcery', rating: 0, specialization: '', expertise: '' }] }),
     )
     expect(sorcery.pool).toBeNull()
+  })
+})
+
+describe('weaponPool', () => {
+  const pistol = WeaponSchema.parse({ name: 'Ares Predator VI', skillId: 'firearms', specialization: 'Pistols' })
+
+  it('adds a matching specialization', () => {
+    const c = runner({ skills: [{ id: 's', skillId: 'firearms', rating: 4, specialization: 'pistols', expertise: '' }] })
+    expect(weaponPool(c, pistol)).toEqual({ pool: 12, bonus: 2 })
+  })
+
+  it('prefers a matching expertise', () => {
+    const c = runner({
+      skills: [{ id: 's', skillId: 'firearms', rating: 4, specialization: 'Rifles', expertise: 'Pistols' }],
+    })
+    expect(weaponPool(c, pistol)).toEqual({ pool: 13, bonus: 3 })
+  })
+
+  it('falls back to an untrained roll', () => {
+    expect(weaponPool(runner(), pistol)).toEqual({ pool: 5, bonus: 0 })
+    expect(weaponPool(runner(), WeaponSchema.parse({ skillId: 'exotic-weapons' })).pool).toBeNull()
   })
 })

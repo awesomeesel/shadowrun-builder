@@ -10,6 +10,7 @@ import {
   type ConditionMonitor,
   type Initiative,
   type SkillPool,
+  weaponPool,
 } from '../../rules/sr6/derived'
 import { METATYPES } from '../../rules/sr6/metatypes'
 import type { CharacterContext } from './CharacterPage'
@@ -30,7 +31,7 @@ export function SheetTab() {
   )
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <section className="card flex gap-4 p-4 lg:col-span-2">
         {character.portrait && (
           <img src={character.portrait} alt="" className="size-20 shrink-0 rounded object-cover sm:size-24" />
@@ -115,6 +116,83 @@ export function SheetTab() {
           <PoolRow label="Lift / Carry (BOD + WIL)" pool={derived.pools.liftCarry} wounds={wounds} />
         </dl>
       </Section>
+
+      {character.weapons.length > 0 && (
+        <Section title="Weapons" className="lg:col-span-2">
+          <WeaponTable character={character} wounds={wounds} />
+        </Section>
+      )}
+
+      {character.qualities.length > 0 && (
+        <Section title="Qualities">
+          <ul className="grid gap-1 text-sm">
+            {character.qualities.map((q) => (
+              <li key={q.id}>
+                <span className={q.kind === 'negative' ? 'text-danger' : ''}>{q.name || 'Unnamed quality'}</span>
+                {q.rating > 1 && <span className="text-muted"> {q.rating}</span>}
+                {q.notes && <div className="text-xs text-muted">{q.notes}</div>}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {character.gear.length > 0 && (
+        <Section title="Armor & gear">
+          <ul className="grid gap-1 text-sm">
+            {character.gear.map((g) => (
+              <li key={g.id} className="flex justify-between gap-3">
+                <span>
+                  {g.quantity > 1 && <span className="text-muted">{g.quantity}× </span>}
+                  {g.name || 'Unnamed item'}
+                  {g.rating > 0 && <span className="text-muted"> (R{g.rating})</span>}
+                  {g.notes && <div className="text-xs text-muted">{g.notes}</div>}
+                </span>
+                {g.armor > 0 && (
+                  <span className={`shrink-0 text-xs ${g.equipped ? 'text-accent' : 'text-muted'}`}>
+                    +{g.armor} DR{g.equipped ? '' : ' (not worn)'}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {character.contacts.length > 0 && (
+        <Section title="Contacts">
+          <ul className="grid gap-1 text-sm">
+            {character.contacts.map((c) => (
+              <li key={c.id} className="flex justify-between gap-3">
+                <span>
+                  {c.name || 'Unnamed contact'}
+                  {c.role && <span className="text-muted"> · {c.role}</span>}
+                  {c.notes && <div className="text-xs text-muted">{c.notes}</div>}
+                </span>
+                <span className="shrink-0 text-xs text-muted tabular-nums" title="Connection / Loyalty">
+                  C{c.connection} L{c.loyalty}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {(character.languages.length > 0 || character.knowledgeSkills.length > 0) && (
+        <Section title="Knowledge & languages">
+          <ul className="grid gap-1 text-sm">
+            {character.languages.map((l) => (
+              <li key={l.id} className="flex justify-between gap-3">
+                <span>{l.name || 'Unnamed language'}</span>
+                <span className="text-xs text-muted capitalize">{l.level}</span>
+              </li>
+            ))}
+            {character.knowledgeSkills.map((k) => (
+              <li key={k.id}>{k.name || 'Unnamed knowledge skill'}</li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <Section title="Resources">
         <dl className="grid gap-y-1 text-sm">
@@ -272,5 +350,54 @@ function SkillTable({ pools, wounds }: { pools: SkillPool[]; wounds: number }) {
         ))}
       </tbody>
     </table>
+  )
+}
+
+const RANGE_LABELS = ['Close', 'Near', 'Med', 'Far', 'Ext']
+
+function WeaponTable({ character, wounds }: { character: Character; wounds: number }) {
+  return (
+    <div className="-mx-4 overflow-x-auto px-4">
+      <table className="w-full min-w-[34rem] text-sm">
+        <thead>
+          <tr className="text-left text-xs text-muted">
+            <th className="pb-1 font-normal">Weapon</th>
+            <th className="pb-1 text-center font-normal">DV</th>
+            {RANGE_LABELS.map((r) => (
+              <th key={r} className="pb-1 text-center font-normal">
+                {r}
+              </th>
+            ))}
+            <th className="pb-1 text-center font-normal">Mode</th>
+            <th className="pb-1 text-center font-normal">Ammo</th>
+            <th className="pb-1 text-right font-normal">Pool</th>
+          </tr>
+        </thead>
+        <tbody>
+          {character.weapons.map((w) => {
+            const { pool, bonus } = weaponPool(character, w)
+            return (
+              <tr key={w.id} className="border-t border-line/60">
+                <td className="py-1.5">
+                  {w.name || 'Unnamed weapon'}
+                  {w.notes && <div className="text-xs text-muted">{w.notes}</div>}
+                </td>
+                <td className="py-1.5 text-center">{w.damage || '–'}</td>
+                {w.attackRatings.map((ar, i) => (
+                  <td key={i} className="py-1.5 text-center tabular-nums">
+                    {ar ?? <span className="text-muted">–</span>}
+                  </td>
+                ))}
+                <td className="py-1.5 text-center text-xs">{w.modes || '–'}</td>
+                <td className="py-1.5 text-center text-xs">{w.ammo || '–'}</td>
+                <td className="py-1.5 text-right font-semibold tabular-nums" title={bonus ? `includes +${bonus} specialization` : undefined}>
+                  {pool === null ? <span className="font-normal text-muted">n/a</span> : formatPool(pool, wounds)}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
   )
 }

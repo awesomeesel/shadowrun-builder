@@ -35,21 +35,20 @@ export const SkillSchema = z.object({
 
 export const KnowledgeSkillSchema = z.object({
   id: id(),
-  name: z.string(),
+  name: z.string().default(''),
 })
 
 export const LanguageSchema = z.object({
   id: id(),
-  name: z.string(),
-  native: z.boolean().default(false),
-  /** 0 = basic knowledge, 1 = specialist, 2 = expert (ignored if native). */
-  level: int(0),
+  name: z.string().default(''),
+  level: z.enum(['basic', 'specialist', 'expert', 'native']).default('basic'),
 })
 
 export const QualitySchema = z.object({
   id: id(),
-  name: z.string(),
-  /** Positive qualities cost karma (positive number), negative ones give karma (negative number). */
+  name: z.string().default(''),
+  kind: z.enum(['positive', 'negative']).default('positive'),
+  /** Karma cost (positive qualities) or bonus (negative qualities), as a positive number. */
   karma: int(0),
   rating: int(1),
   notes: text(),
@@ -58,7 +57,7 @@ export const QualitySchema = z.object({
 
 export const ContactSchema = z.object({
   id: id(),
-  name: z.string(),
+  name: z.string().default(''),
   role: text(),
   connection: int(1),
   loyalty: int(1),
@@ -67,14 +66,35 @@ export const ContactSchema = z.object({
 
 export const GearSchema = z.object({
   id: id(),
-  name: z.string(),
+  name: z.string().default(''),
   category: text(),
-  rating: z.number().int().optional(),
+  /** 0 = no rating. */
+  rating: int(0),
   quantity: int(1),
   cost: int(0),
-  /** Armor rating this item adds to Defense Rating while equipped. */
-  armor: z.number().int().optional(),
+  /** Armor rating this item adds to Defense Rating while equipped (0 = not armor). */
+  armor: int(0),
   equipped: z.boolean().default(false),
+  notes: text(),
+  source: SourceRefSchema.optional(),
+})
+
+export const WeaponSchema = z.object({
+  id: id(),
+  name: z.string().default(''),
+  /** Skill used to attack, e.g. 'firearms' or 'close-combat'. */
+  skillId: z.string().default('firearms'),
+  /** Specialization this weapon falls under (e.g. 'Pistols'); matching ones add the bonus. */
+  specialization: text(),
+  /** Damage Value as printed, e.g. '4P'. */
+  damage: text(),
+  /** Attack Ratings at Close / Near / Medium / Far / Extreme; null = can't be used at that range. */
+  attackRatings: z.array(z.number().int().nullable()).length(5).default([null, null, null, null, null]),
+  /** Firing modes, e.g. 'SA/BF'. */
+  modes: text(),
+  /** Ammo capacity and type, e.g. '15(c)'. */
+  ammo: text(),
+  cost: int(0),
   notes: text(),
   source: SourceRefSchema.optional(),
 })
@@ -104,6 +124,7 @@ export const CharacterSchema = z.object({
   qualities: z.array(QualitySchema).default([]),
   contacts: z.array(ContactSchema).default([]),
   gear: z.array(GearSchema).default([]),
+  weapons: z.array(WeaponSchema).default([]),
 
   nuyen: int(0),
   karma: z
@@ -136,6 +157,9 @@ export type CharacterSkill = z.infer<typeof SkillSchema>
 export type Quality = z.infer<typeof QualitySchema>
 export type Contact = z.infer<typeof ContactSchema>
 export type GearItem = z.infer<typeof GearSchema>
+export type Weapon = z.infer<typeof WeaponSchema>
+export type KnowledgeSkill = z.infer<typeof KnowledgeSkillSchema>
+export type Language = z.infer<typeof LanguageSchema>
 
 export function createCharacter(overrides: Partial<Character> = {}): Character {
   return CharacterSchema.parse(overrides)

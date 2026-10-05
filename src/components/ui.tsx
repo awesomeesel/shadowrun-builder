@@ -12,7 +12,7 @@ export function Section({
   aside?: ReactNode
 }) {
   return (
-    <section className={`card p-4 ${className}`}>
+    <section className={`card min-w-0 p-4 ${className}`}>
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <h2 className="font-display text-sm tracking-widest text-accent uppercase">{title}</h2>
         {aside}
