@@ -1,5 +1,8 @@
 import { noAutofill } from '../components/noAutofill'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { Cloud, CloudDownload, CloudUpload } from 'lucide-react'
+import type { RemoteBook } from '../cloud/books'
+import { downloadRemoteBook, remoteBooks, uploadBookToDrive, useCloud } from '../cloud/cloud'
 import { useEffect, useRef, useState, type ComponentProps, type DragEvent } from 'react'
 import { Link } from 'react-router'
 import { KNOWN_BOOKS } from '../books/catalog'
@@ -81,6 +84,7 @@ export function Library() {
         {error && <div className="rounded border border-danger/50 bg-danger/10 px-4 py-3 text-sm">{error}</div>}
 
         {books && books.length > 0 && <SearchPanel />}
+        <DriveBooksPanel />
 
         <ul className="grid gap-3">
           {adding.map((name) => (
@@ -162,6 +166,7 @@ function BookRow({ book }: { book: Book }) {
         >
           {status}
         </div>
+        <BookDriveStatus book={book} />
       </div>
       <div className="flex gap-2">
         <Link className="btn" to={`/book/${book.id}`}>
@@ -170,7 +175,10 @@ function BookRow({ book }: { book: Book }) {
         <button
           className="btn hover:border-danger hover:text-danger"
           onClick={() => {
-            if (confirm(`Remove "${book.title}" from the library? The PDF file on your computer is not affected.`)) {
+            const where = book.driveFileId ? ' The copy in your Google Drive is kept.' : ''
+            if (
+              confirm(`Remove "${book.title}" from this device? The PDF file on your computer is not affected.${where}`)
+            ) {
               void deleteBook(book.id)
             }
           }}
@@ -263,5 +271,128 @@ function DraftInput({
       onBlur={commit}
       onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
     />
+  )
+}
+
+const percent = (fraction: number) => `${Math.round(fraction * 100)}%`
+
+/** Upload button or "in Drive" note for one book, when Drive sync is connected. */
+function BookDriveStatus({ book }: { book: Book }) {
+  const cloud = useCloud()
+  const [progress, setProgress] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  if (cloud.status === 'off' || cloud.status === 'disconnected') return null
+  if (book.driveFileId) {
+    return (
+      <div className="mt-1 flex items-center gap-1 text-xs text-muted">
+        <Cloud className="size-3.5 text-accent" /> Saved in your Google Drive
+      </div>
+    )
+  }
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+      <button
+        className="btn px-2 py-1 text-xs"
+        disabled={progress !== null}
+        onClick={() => {
+          setError(null)
+          setProgress(0)
+          uploadBookToDrive(book, setProgress)
+            .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+            .finally(() => setProgress(null))
+        }}
+      >
+        <CloudUpload className="size-3.5" />
+        {progress === null ? 'Save to Google Drive' : `Uploading ${percent(progress)}`}
+      </button>
+      {error && <span className="text-danger">{error}</span>}
+    </div>
+  )
+}
+
+/** Books saved in the user's Drive from another device, ready to download here. */
+function DriveBooksPanel() {
+  const cloud = useCloud()
+  const [remote, setRemote] = useState<RemoteBook[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [progress, setProgress] = useState<Record<string, number>>({})
+  const connected = cloud.status !== 'off' && cloud.status !== 'disconnected'
+  const localCount = useLiveQuery(() => db.books.count())
+
+  const load = () => {
+    setError(null)
+    remoteBooks().then(setRemote, (e) => setError(e instanceof Error ? e.message : String(e)))
+  }
+
+  // Look automatically while the sign-in is fresh; otherwise wait for a click.
+  useEffect(() => {
+    if (connected && cloud.status === 'idle') load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected, cloud.status === 'idle', localCount])
+
+  if (!connected) return null
+  const missing = remote?.filter((r) => !r.local) ?? []
+
+  return (
+    <section className="card p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <h2 className="mr-auto flex items-center gap-1.5 font-display text-sm tracking-widest text-accent uppercase">
+          <Cloud className="size-4" /> Books in your Google Drive
+        </h2>
+        <button className="btn px-2 py-1 text-xs" onClick={load}>
+          Check again
+        </button>
+      </div>
+      {error && <p className="text-sm text-danger">{error}</p>}
+      {remote === null && !error && <p className="text-sm text-muted">Looking in your Drive…</p>}
+      {remote && remote.length === 0 && (
+        <p className="text-sm text-muted">
+          No books saved yet. Use "Save to Google Drive" on a book above to use it on your other devices.
+        </p>
+      )}
+      {remote && remote.length > 0 && missing.length === 0 && (
+        <p className="text-sm text-muted">All {remote.length} books in your Drive are on this device.</p>
+      )}
+      {missing.length > 0 && (
+        <ul className="grid gap-2">
+          {missing.map((r) => {
+            const p = progress[r.file.id]
+            return (
+              <li
+                key={r.file.id}
+                className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-bg/50 p-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold">{r.title}</div>
+                  <div className="truncate text-xs text-muted">
+                    {r.code && `${r.code} · `}
+                    {r.file.size ? `${Math.round(r.file.size / 1024 / 1024)} MB` : ''}
+                  </div>
+                </div>
+                <button
+                  className="btn btn-primary"
+                  disabled={p !== undefined}
+                  onClick={() => {
+                    setProgress((all) => ({ ...all, [r.file.id]: 0 }))
+                    downloadRemoteBook(r, (f) => setProgress((all) => ({ ...all, [r.file.id]: f })))
+                      .then(load, (e) => setError(e instanceof Error ? e.message : String(e)))
+                      .finally(() =>
+                        setProgress((all) => {
+                          const next = { ...all }
+                          delete next[r.file.id]
+                          return next
+                        }),
+                      )
+                  }}
+                >
+                  <CloudDownload className="size-4" />
+                  {p === undefined ? 'Download to this device' : `Downloading ${percent(p)}`}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </section>
   )
 }

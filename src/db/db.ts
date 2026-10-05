@@ -17,6 +17,8 @@ export interface Book extends PageMapping {
   indexedPages: number
   /** EXTRACTOR_VERSION the catalog was last built with; 0 = not built. */
   extractedVersion?: number
+  /** Google Drive file holding this PDF, once uploaded. */
+  driveFileId?: string
 }
 
 export interface BookFile {
@@ -38,6 +40,21 @@ export interface BookPageLayout extends PageLayout {
   page: number
 }
 
+/** Where a character lives in Google Drive and which version both sides last agreed on. */
+export interface SyncState {
+  /** Character id. */
+  id: string
+  driveFileId: string
+  /** The character's updatedAt when it was last uploaded or downloaded. */
+  syncedUpdatedAt: string
+}
+
+/** A character deleted on this device, so the next sync can remove it from Drive too. */
+export interface DeletedCharacter {
+  id: string
+  deletedAt: string
+}
+
 /** A rules item recognised in one of the user's books. */
 export type CatalogEntry = ExtractedEntry & { id: string; bookId: string }
 
@@ -48,6 +65,8 @@ export const db = new Dexie('shadowrun-builder') as Dexie & {
   bookText: Dexie.Table<BookPageText, [string, number]>
   bookPages: Dexie.Table<BookPageLayout, [string, number]>
   catalog: EntityTable<CatalogEntry, 'id'>
+  syncState: EntityTable<SyncState, 'id'>
+  deletedCharacters: EntityTable<DeletedCharacter, 'id'>
 }
 
 db.version(1).stores({
@@ -77,3 +96,9 @@ db.version(3)
         book.extractedVersion = 0
       })
   })
+
+// Version 4 adds Google Drive sync bookkeeping.
+db.version(4).stores({
+  syncState: 'id',
+  deletedCharacters: 'id',
+})

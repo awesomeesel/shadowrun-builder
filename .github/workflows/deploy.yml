@@ -27,6 +27,9 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+        env:
+          # Public OAuth client ID for Google Drive sync (a repository variable, not a secret).
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

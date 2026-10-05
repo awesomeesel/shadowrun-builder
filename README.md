@@ -7,6 +7,7 @@ A fast, local-first character builder and manager for **Shadowrun 6th Edition**,
 - Characters are stored in your browser (IndexedDB). Nothing is sent to a server.
 - Import and export characters as `.sr6char.json` files, or back up everything at once.
 - Works on desktop and mobile.
+- Optional Google Drive sync: each player keeps characters and PDFs in their own Drive (see [GOOGLE_DRIVE_SETUP.md](GOOGLE_DRIVE_SETUP.md)).
 
 No rulebook text or art is included. Add your own SR6 PDFs in the Library and page references (e.g. CRB 245) open the right page.
 

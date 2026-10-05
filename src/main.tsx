@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { initCloud } from './cloud/cloud'
 import { resumeIndexing } from './db/books'
 
 createRoot(document.getElementById('root')!).render(
@@ -12,3 +13,6 @@ createRoot(document.getElementById('root')!).render(
 
 // Finish extracting rulebook text if a previous session was closed mid-way.
 void resumeIndexing()
+
+// Google Drive sync, if this build has a Google client ID.
+initCloud()

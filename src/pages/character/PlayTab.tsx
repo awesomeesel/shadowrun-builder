@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useOutletContext } from 'react-router'
+import { keepDriveSignedIn } from '../../cloud/cloud'
 import { RollResult } from '../../components/Dice'
 import { noAutofill } from '../../components/noAutofill'
 import { MonitorTrack, Stat } from '../../components/sheetParts'
@@ -79,7 +80,13 @@ function NoSession({ character, update }: CharacterContext) {
             onChange={(e) => setTitle(e.target.value)}
             aria-label="Session name"
           />
-          <button className="btn btn-primary px-4 py-2" onClick={() => update((c) => startSession(c, title.trim()))}>
+          <button
+            className="btn btn-primary px-4 py-2"
+            onClick={() => {
+              keepDriveSignedIn()
+              update((c) => startSession(c, title.trim()))
+            }}
+          >
             <Play className="size-4" /> Start session
           </button>
         </div>
@@ -630,6 +637,7 @@ function EndSessionDialog({ character, update, onClose }: CharacterContext & { o
           <button
             className="btn btn-primary"
             onClick={() => {
+              keepDriveSignedIn()
               update((c) => endSession(c, { clearStun, clearPhysical }))
               onClose()
             }}

@@ -2,6 +2,7 @@ import { ArrowLeft, Dices, Download, ListChecks, Pencil, ScrollText, Wand2 } fro
 import { useEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { Portrait } from '../../components/art'
+import { CloudButton } from '../../components/CloudSync'
 import { METATYPE_COLORS } from '../../components/metatypeColors'
 import { METATYPES } from '../../rules/sr6/metatypes'
 import { useCharacterDraft, type SaveState } from '../../hooks/useCharacterDraft'
@@ -70,6 +71,7 @@ export function CharacterPage() {
             </div>
           </div>
           <SaveIndicator state={saveState} />
+          <CloudButton />
           <button
             className="btn"
             onClick={() => downloadText(characterFileName(character), serializeCharacter(character))}

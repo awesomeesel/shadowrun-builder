@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { BookOpen, Copy, Download, FileInput, Library, Trash2, UserPlus, Wand2, Zap } from 'lucide-react'
 import { Logo, Portrait, Skyline } from '../components/art'
+import { CloudButton } from '../components/CloudSync'
 import { METATYPE_COLORS } from '../components/metatypeColors'
 import { useRef, useState, type DragEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
@@ -111,6 +112,7 @@ export function CharacterList() {
               </h1>
               <p className="text-xs text-muted">Sixth World character builder &amp; runner's companion</p>
             </div>
+            <CloudButton />
             <Link to="/library" className="btn">
               <Library className="size-4" /> <span className="hidden sm:inline">Library</span>
             </Link>
