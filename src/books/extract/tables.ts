@@ -167,7 +167,8 @@ function splitRating(text: string): { name: string; rating: RatingRange | null }
 
 function toEntry(columns: Column[], c: string[], page: number, category: string): ExtractedEntry | null {
   const split = splitRating(cleanName(c[0]))
-  const name = split.name
+  // Some tables list one item by rating ("Rating 5"); name those rows after the table.
+  const name = /^rating\b/i.test(split.name) ? `${category} ${split.name.toLowerCase()}` : split.name
   // Real names have letters; a leading damage value like "1P + special" is a spilled cell.
   if (!/[A-Za-z]{2}/.test(name) || /^\d+[PS]\b/.test(name) || name.length > 60) return null
   const col = (pattern: RegExp) => {

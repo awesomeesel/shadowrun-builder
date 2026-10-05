@@ -96,7 +96,50 @@ export function GuidePanel({
 }
 
 /** Big tappable cards for choosing a runner role. */
-export function RolePicker({ value, onChange }: { value: string; onChange: (role: string) => void }) {
+export function RolePicker({
+  value,
+  onChange,
+  allowOther = true,
+  bare = false,
+}: {
+  value: string
+  onChange: (role: string) => void
+  /** Offer "Something else" (no role). */
+  allowOther?: boolean
+  /** Just the grid, without the card and explanation. */
+  bare?: boolean
+}) {
+  const grid = (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      {[...ROLES, ...(allowOther ? [null] : [])].map((role) => {
+        const id = role?.id ?? ''
+        const active = value === id
+        return (
+          <button
+            key={id || 'other'}
+            onClick={() => onChange(id)}
+            aria-pressed={active}
+            className={`flex gap-3 rounded-lg border p-3 text-left transition-colors ${
+              active ? 'border-accent bg-accent/10' : 'border-line bg-bg/50 hover:border-accent/50'
+            }`}
+          >
+            <span
+              className={`grid size-10 shrink-0 place-items-center rounded-lg ${active ? 'bg-accent/20 text-accent' : 'bg-raised text-muted'}`}
+            >
+              {role ? ROLE_ICONS[role.id] : <CircleHelp className="size-5" />}
+            </span>
+            <span className="min-w-0">
+              <span className="block font-semibold">{role?.name ?? 'Something else'}</span>
+              <span className="block text-xs text-muted">
+                {role?.blurb ?? 'No suggestions; build it your own way.'}
+              </span>
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+  if (bare) return grid
   return (
     <section className="card p-4">
       <h2 className="mb-1 font-display text-sm tracking-widest text-accent uppercase">What kind of runner?</h2>
@@ -104,34 +147,7 @@ export function RolePicker({ value, onChange }: { value: string; onChange: (role
         Pick the role closest to your idea. The wizard then suggests priorities, attributes, skills and gear for it. You
         can ignore every suggestion.
       </p>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {[...ROLES, null].map((role) => {
-          const id = role?.id ?? ''
-          const active = value === id
-          return (
-            <button
-              key={id || 'other'}
-              onClick={() => onChange(id)}
-              aria-pressed={active}
-              className={`flex gap-3 rounded-lg border p-3 text-left transition-colors ${
-                active ? 'border-accent bg-accent/10' : 'border-line bg-bg/50 hover:border-accent/50'
-              }`}
-            >
-              <span
-                className={`grid size-10 shrink-0 place-items-center rounded-lg ${active ? 'bg-accent/20 text-accent' : 'bg-raised text-muted'}`}
-              >
-                {role ? ROLE_ICONS[role.id] : <CircleHelp className="size-5" />}
-              </span>
-              <span className="min-w-0">
-                <span className="block font-semibold">{role?.name ?? 'Something else'}</span>
-                <span className="block text-xs text-muted">
-                  {role?.blurb ?? 'No suggestions; build it your own way.'}
-                </span>
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      {grid}
     </section>
   )
 }

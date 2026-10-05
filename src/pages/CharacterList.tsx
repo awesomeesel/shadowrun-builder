@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { BookOpen, Copy, Download, FileInput, Library, Trash2, UserPlus, Wand2 } from 'lucide-react'
+import { BookOpen, Copy, Download, FileInput, Library, Trash2, UserPlus, Wand2, Zap } from 'lucide-react'
 import { Logo, Portrait, Skyline } from '../components/art'
 import { METATYPE_COLORS } from '../components/metatypeColors'
 import { useRef, useState, type DragEvent } from 'react'
@@ -18,6 +18,7 @@ import {
 import { startBuild } from '../rules/sr6/build'
 import { computeDerived } from '../rules/sr6/derived'
 import { METATYPES } from '../rules/sr6/metatypes'
+import { QuickMakeDialog } from './QuickMakeDialog'
 
 type Notice = { kind: 'success' | 'error'; text: string }
 
@@ -33,6 +34,7 @@ export function CharacterList() {
   const fileInput = useRef<HTMLInputElement>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [quickMake, setQuickMake] = useState(false)
 
   /** Start a new character with the priority build system. */
   async function handleNew() {
@@ -117,6 +119,9 @@ export function CharacterList() {
             <button className="btn btn-primary px-4 py-2" onClick={handleNew}>
               <Wand2 className="size-4" /> New character
             </button>
+            <button className="btn py-2" onClick={() => setQuickMake(true)} title="A finished runner in one click">
+              <Zap className="size-4 text-amber" /> Quick make
+            </button>
             <button className="btn py-2" onClick={handleQuickEntry} title="Type in a character that already exists">
               <UserPlus className="size-4" /> Enter existing
             </button>
@@ -156,7 +161,12 @@ export function CharacterList() {
         )}
 
         {characters === undefined ? null : characters.length === 0 ? (
-          <EmptyState onNew={handleNew} onQuickEntry={handleQuickEntry} onImport={() => fileInput.current?.click()} />
+          <EmptyState
+            onNew={handleNew}
+            onQuickMake={() => setQuickMake(true)}
+            onQuickEntry={handleQuickEntry}
+            onImport={() => fileInput.current?.click()}
+          />
         ) : (
           <>
             <h2 className="mb-3 font-display text-sm tracking-widest text-muted uppercase">
@@ -176,6 +186,7 @@ export function CharacterList() {
         )}
       </main>
 
+      {quickMake && <QuickMakeDialog onClose={() => setQuickMake(false)} />}
       {dragging && (
         <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-bg/80 text-lg text-accent">
           <div className="rounded-xl border-2 border-dashed border-accent px-10 py-8">
@@ -257,10 +268,12 @@ function CharacterCard({
 
 function EmptyState({
   onNew,
+  onQuickMake,
   onQuickEntry,
   onImport,
 }: {
   onNew: () => void
+  onQuickMake: () => void
   onQuickEntry: () => void
   onImport: () => void
 }) {
@@ -269,12 +282,16 @@ function EmptyState({
       <div className="p-8">
         <h2 className="mb-2 font-display text-2xl">No runners yet</h2>
         <p className="mb-6 text-sm text-muted">
-          The wizard walks you through building a new runner step by step. Already have a character on paper? Type it
-          in, or import a file. You can also drag files onto this page.
+          The wizard walks you through building a new runner step by step, or Quick make gives you a finished one in one
+          click. Already have a character on paper? Type it in, or import a file. You can also drag files onto this
+          page.
         </p>
         <div className="flex flex-wrap justify-center gap-2">
           <button className="btn btn-primary px-4 py-2" onClick={onNew}>
             <Wand2 className="size-4" /> New character
+          </button>
+          <button className="btn py-2" onClick={onQuickMake}>
+            <Zap className="size-4 text-amber" /> Quick make
           </button>
           <button className="btn py-2" onClick={onQuickEntry}>
             <UserPlus className="size-4" /> Enter existing

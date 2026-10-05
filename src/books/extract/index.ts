@@ -4,7 +4,7 @@ import { extractTables } from './tables'
 import type { ExtractedEntry } from './types'
 
 /** Bump when extraction improves so stored catalogs are rebuilt from the saved page layouts. */
-export const EXTRACTOR_VERSION = 4
+export const EXTRACTOR_VERSION = 5
 
 /** Everything the app can recognise in a book: gear tables plus qualities, powers, spells and forms. */
 export function extractBook(pages: PageLayout[]): ExtractedEntry[] {

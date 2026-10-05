@@ -250,6 +250,17 @@ export const LedgerEntrySchema = z.object({
   note: text(),
 })
 
+/** A dice roll made during a session, kept for the session summary. */
+export const RollRecordSchema = z.object({
+  label: text(),
+  pool: int(0),
+  hits: int(0),
+  glitch: z.boolean().default(false),
+  criticalGlitch: z.boolean().default(false),
+  /** Total for initiative rolls (score + dice); null for normal tests. */
+  total: z.number().int().nullable().default(null),
+})
+
 /** A finished play session, kept as a log on the character. */
 export const SessionRecordSchema = z.object({
   id: id(),
@@ -259,6 +270,14 @@ export const SessionRecordSchema = z.object({
   nuyen: int(0),
   karma: int(0),
   notes: text(),
+  /** Money and karma changes made during the session. */
+  entries: z.array(z.object({ note: text(), nuyen: int(0), karma: int(0) })).default([]),
+  /** Damage on the monitors when the session ended, before any healing. */
+  damage: z.object({ physical: int(0), stun: int(0) }).prefault({}),
+  /** Edge at the start and end; null for sessions logged before this was tracked. */
+  edgeStart: z.number().int().nullable().default(null),
+  edgeEnd: z.number().int().nullable().default(null),
+  rolls: z.array(RollRecordSchema).default([]),
 })
 
 /** State that only matters at the table: current Edge, loaded ammo and the running session. */
@@ -273,6 +292,8 @@ export const PlaySchema = z
         title: text(),
         startedAt: z.string(),
         notes: text(),
+        edgeStart: z.number().int().nullable().default(null),
+        rolls: z.array(RollRecordSchema).default([]),
       })
       .nullable()
       .default(null),
@@ -357,6 +378,7 @@ export type Weapon = z.infer<typeof WeaponSchema>
 export type Build = z.infer<typeof BuildSchema>
 export type LedgerEntry = z.infer<typeof LedgerEntrySchema>
 export type SessionRecord = z.infer<typeof SessionRecordSchema>
+export type RollRecord = z.infer<typeof RollRecordSchema>
 export type Bonuses = z.infer<typeof BonusesSchema>
 export type Augmentation = z.infer<typeof AugmentationSchema>
 export type Spell = z.infer<typeof SpellSchema>
