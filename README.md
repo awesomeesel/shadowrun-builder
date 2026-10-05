@@ -1,12 +1,14 @@
 # Shadowrun Builder
 
+**Live app:** https://awesomeesel.github.io/shadowrun-builder/
+
 A fast, local-first character builder and manager for **Shadowrun 6th Edition**, running in the browser.
 
 - Characters are stored in your browser (IndexedDB). Nothing is sent to a server.
 - Import and export characters as `.sr6char.json` files, or back up everything at once.
 - Works on desktop and mobile.
 
-No rulebook text or art is included. Planned: link your own SR6 PDFs so page references open the right page.
+No rulebook text or art is included. Add your own SR6 PDFs in the Library and page references (e.g. CRB 245) open the right page.
 
 ## Development
 
@@ -23,3 +25,7 @@ npm run build    # production build in dist/
 - `src/model/` — character schema (zod) and the import/export file format
 - `src/db/` — IndexedDB storage (Dexie)
 - `src/pages/` — UI screens
+
+## Deployment
+
+Every push to `main` runs the tests, builds the app and publishes it to GitHub Pages (`.github/workflows/deploy.yml`).
