@@ -1,4 +1,4 @@
-import { Backpack, BookOpen, Car, Cpu, Crosshair, Flame, Radio, Star, Users, Wifi } from 'lucide-react'
+import { Backpack, IdCard, BookOpen, Car, Cpu, Crosshair, Flame, Radio, Star, Users, Wifi } from 'lucide-react'
 import { noAutofill } from '../../components/noAutofill'
 import type { EntryKind } from '../../books/extract'
 import { AddFromBooks } from '../../components/CatalogPicker'
@@ -7,6 +7,12 @@ import { ListEditor, type FieldDef } from '../../components/ListEditor'
 import { useState } from 'react'
 import { DecimalInput, NumberInput, Section } from '../../components/ui'
 import {
+  LicenseSchema,
+  LifestyleSchema,
+  SinSchema,
+  type License,
+  type Lifestyle,
+  type Sin,
   AdeptPowerSchema,
   AugmentationSchema,
   ComplexFormSchema,
@@ -61,6 +67,9 @@ function sourceField<T extends { source?: SourceRef }>(span: 3 | 4 = 4): FieldDe
 const fromBooks = (update: Update, kinds: EntryKind[]) => <AddFromBooks kinds={kinds} onAdd={addFromCatalog(update)} />
 
 type ListKey =
+  | 'sins'
+  | 'licenses'
+  | 'lifestyles'
   | 'qualities'
   | 'weapons'
   | 'gear'
@@ -588,6 +597,60 @@ export function VehiclesSection({ character, update }: { character: Character; u
         addLabel="Type in vehicle or drone"
         extra={fromBooks(update, ['vehicle'])}
         emptyText="No vehicles or drones."
+      />
+    </Section>
+  )
+}
+
+const sinFields: FieldDef<Sin>[] = [
+  { kind: 'text', key: 'name', label: 'SIN name', span: 5, wide: true, placeholder: 'e.g. Jack Smith' },
+  { kind: 'number', key: 'rating', label: 'Rating (0 = real)', span: 2, min: 0 },
+  { kind: 'text', key: 'notes', label: 'Notes', span: 5, wide: true },
+]
+
+const licenseFields: FieldDef<License>[] = [
+  { kind: 'text', key: 'name', label: 'License', span: 4, wide: true, placeholder: 'e.g. Concealed carry' },
+  { kind: 'text', key: 'sin', label: 'On SIN', span: 3 },
+  { kind: 'number', key: 'rating', label: 'Rating', span: 2, min: 0 },
+  { kind: 'text', key: 'notes', label: 'Notes', span: 3, wide: true },
+]
+
+const lifestyleFields: FieldDef<Lifestyle>[] = [
+  { kind: 'text', key: 'name', label: 'Lifestyle', span: 4, wide: true, placeholder: 'e.g. Coffin motel' },
+  { kind: 'text', key: 'level', label: 'Level', span: 2, placeholder: 'Low' },
+  { kind: 'number', key: 'cost', label: 'Cost ¥/month', span: 2, min: 0 },
+  { kind: 'number', key: 'monthsPaid', label: 'Months paid', span: 2, min: 0 },
+  { kind: 'text', key: 'notes', label: 'Notes', span: 2, wide: true },
+]
+
+export function IdentitySection({ character, update }: { character: Character; update: Update }) {
+  return (
+    <Section title="SINs, licenses & lifestyle" icon={<IdCard className="size-4" />} className="lg:col-span-2">
+      <ListEditor
+        items={character.sins}
+        onChange={setList(update, 'sins')}
+        fields={sinFields}
+        newItem={() => SinSchema.parse({})}
+        addLabel="Add SIN"
+        emptyText="No SINs."
+      />
+      <h3 className="mt-5 mb-2 text-xs tracking-wider text-muted uppercase">Licenses</h3>
+      <ListEditor
+        items={character.licenses}
+        onChange={setList(update, 'licenses')}
+        fields={licenseFields}
+        newItem={() => LicenseSchema.parse({ sin: character.sins[0]?.name ?? '' })}
+        addLabel="Add license"
+        emptyText="No licenses."
+      />
+      <h3 className="mt-5 mb-2 text-xs tracking-wider text-muted uppercase">Lifestyle</h3>
+      <ListEditor
+        items={character.lifestyles}
+        onChange={setList(update, 'lifestyles')}
+        fields={lifestyleFields}
+        newItem={() => LifestyleSchema.parse({})}
+        addLabel="Add lifestyle"
+        emptyText="No lifestyle."
       />
     </Section>
   )

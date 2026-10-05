@@ -136,7 +136,8 @@ export function computeDerived(character: Character): DerivedStats {
       score: a.reaction + a.intuition,
       dice: Math.min(SPECIAL_RULES.maxInitiativeDice, 1 + extraDice),
     },
-    astralInitiative: { score: a.intuition * 2, dice: 2 },
+    // Logic + Intuition, matching Commlink's calculation. VERIFY against the Core Rulebook.
+    astralInitiative: { score: a.logic + a.intuition, dice: 2 },
     physicalMonitor,
     stunMonitor,
     // TODO: verify overflow box count against the SR6 Core Rulebook.
@@ -274,10 +275,29 @@ export function weaponPool(character: Character, weapon: Weapon): WeaponPool {
   const base = skillPool(effectiveAttributes(character), skill, owned)
   if (base.pool === null) return { pool: null, bonus: 0 }
 
-  const wanted = weapon.specialization.trim().toLowerCase()
-  const matches = (text: string | undefined) => wanted !== '' && text?.trim().toLowerCase() === wanted
+  const matches = (text: string | undefined) => specializationCovers(text ?? '', weapon.specialization)
   let bonus = 0
   if (base.expertisePool !== null && matches(owned?.expertise)) bonus = EXPERTISE_BONUS
   else if (base.specializationPool !== null && matches(owned?.specialization)) bonus = SPECIALIZATION_BONUS
   return { pool: base.pool + bonus, bonus }
+}
+
+/** Singular, lower-case words: "Heavy Pistols" → ["heavy", "pistol"]. */
+function words(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map((w) => (w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w))
+}
+
+/**
+ * Whether a skill specialization applies to a weapon's category: exact match,
+ * or every word of the specialization appears in the category, so "Rifles"
+ * covers "Assault Rifles" and "Pistols" covers "Heavy Pistols".
+ */
+export function specializationCovers(specialization: string, weaponCategory: string): boolean {
+  const spec = words(specialization)
+  const category = words(weaponCategory)
+  return spec.length > 0 && category.length > 0 && spec.every((w) => category.includes(w))
 }

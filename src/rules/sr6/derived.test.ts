@@ -8,7 +8,7 @@ import {
   createCharacter,
   type Character,
 } from '../../model/character'
-import { computeDerived, ownedSkillPools, untrainedSkillPools, weaponPool } from './derived'
+import { computeDerived, ownedSkillPools, specializationCovers, untrainedSkillPools, weaponPool } from './derived'
 
 function runner(overrides: Partial<Character> = {}): Character {
   return createCharacter({
@@ -33,7 +33,7 @@ describe('computeDerived', () => {
   it('computes core stats from attributes', () => {
     const d = computeDerived(runner())
     expect(d.initiative).toEqual({ score: 9, dice: 1 })
-    expect(d.astralInitiative).toEqual({ score: 10, dice: 2 })
+    expect(d.astralInitiative).toEqual({ score: 7, dice: 2 }) // LOG 2 + INT 5
     expect(d.physicalMonitor.boxes).toBe(11) // 8 + ceil(5 / 2)
     expect(d.stunMonitor.boxes).toBe(10) // 8 + ceil(3 / 2)
     expect(d.defenseRating).toBe(5)
@@ -198,5 +198,18 @@ describe('augmentations and special attributes', () => {
     const m = computeDerived(runner({ attributes: { ...runner().attributes, resonance: 6 } })).matrix!
     expect(m.device).toBeUndefined()
     expect([m.deviceRating, m.attack, m.sleaze, m.dataProcessing, m.firewall]).toEqual([6, 2, 5, 2, 3])
+  })
+})
+
+describe('specializationCovers', () => {
+  it.each([
+    ['Rifles', 'Assault Rifles', true],
+    ['Pistols', 'Heavy Pistols', true],
+    ['Heavy pistols', 'Heavy Pistols', true],
+    ['Automatics', 'Submachine guns', false],
+    ['Rifles', 'Shotguns', false],
+    ['', 'Rifles', false],
+  ])('%s covers %s: %s', (spec, category, expected) => {
+    expect(specializationCovers(spec, category)).toBe(expected)
   })
 })

@@ -23,6 +23,7 @@ import {
   ContactsSection,
   EssenceInput,
   GearSection,
+  IdentitySection,
   KnowledgeSection,
   QualitiesSection,
   WeaponsSection,
@@ -52,6 +53,7 @@ export function EditTab() {
       <GearSection character={character} update={update} />
       <ContactsSection character={character} update={update} />
       <KnowledgeSection character={character} update={update} />
+      <IdentitySection character={character} update={update} />
       <AugmentationsSection character={character} update={update} />
       {(character.attributes.magic > 0 || character.spells.length > 0 || character.adeptPowers.length > 0) && (
         <MagicSection character={character} update={update} />
@@ -85,7 +87,7 @@ export function BasicsSection({
   update: Update
   showMetatype?: boolean
 }) {
-  const textField = (key: 'name' | 'realName' | 'playerName' | 'concept', label: string) => (
+  const textField = (key: 'name' | 'realName' | 'playerName' | 'concept' | 'gender' | 'age', label: string) => (
     <Field label={label}>
       <input
         {...noAutofill}
@@ -146,6 +148,16 @@ export function BasicsSection({
             </select>
           </Field>
         )}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {textField('gender', 'Gender')}
+        {textField('age', 'Age')}
+        <Field label="Height (cm)">
+          <NumberInput value={character.height} min={0} onChange={(height) => update((c) => ({ ...c, height }))} />
+        </Field>
+        <Field label="Weight (kg)">
+          <NumberInput value={character.weight} min={0} onChange={(weight) => update((c) => ({ ...c, weight }))} />
+        </Field>
       </div>
     </Section>
   )
@@ -255,7 +267,7 @@ function SkillsSection({ character, update }: { character: Character; update: Up
 function ResourcesSection({ character, update }: { character: Character; update: Update }) {
   return (
     <Section title="Resources" icon={<Coins className="size-4" />}>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Field label="Nuyen (¥)">
           <NumberInput value={character.nuyen} onChange={(nuyen) => update((c) => ({ ...c, nuyen }))} />
         </Field>
@@ -270,6 +282,12 @@ function ResourcesSection({ character, update }: { character: Character; update:
             value={character.karma.career}
             onChange={(career) => update((c) => ({ ...c, karma: { ...c.karma, career } }))}
           />
+        </Field>
+        <Field label="Heat">
+          <NumberInput value={character.heat} min={0} onChange={(heat) => update((c) => ({ ...c, heat }))} />
+        </Field>
+        <Field label="Reputation">
+          <NumberInput value={character.reputation} onChange={(reputation) => update((c) => ({ ...c, reputation }))} />
         </Field>
       </div>
     </Section>

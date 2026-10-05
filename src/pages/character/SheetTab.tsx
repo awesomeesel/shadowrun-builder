@@ -14,6 +14,7 @@ import {
   Target,
   Users,
   Wifi,
+  IdCard,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useOutletContext } from 'react-router'
@@ -59,6 +60,18 @@ export function SheetTab() {
           <div className="text-sm text-muted">
             {[METATYPES[character.metatype].name, character.concept].filter(Boolean).join(' · ')}
           </div>
+          {(character.gender || character.age || character.height > 0 || character.weight > 0) && (
+            <div className="text-xs text-muted">
+              {[
+                character.gender,
+                character.age && `age ${character.age}`,
+                character.height > 0 && `${character.height} cm`,
+                character.weight > 0 && `${character.weight} kg`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </div>
+          )}
           <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-12">
             {visibleAttributes.map((a) => (
               <Stat
@@ -408,8 +421,49 @@ export function SheetTab() {
           <Row label="Nuyen" value={`${character.nuyen.toLocaleString()} ¥`} />
           <Row label="Karma available" value={character.karma.available} />
           <Row label="Career karma" value={character.karma.career} />
+          <Row label="Heat" value={character.heat} />
+          <Row label="Reputation" value={character.reputation} />
         </dl>
       </Section>
+
+      {(character.sins.length > 0 || character.licenses.length > 0 || character.lifestyles.length > 0) && (
+        <Section title="SINs, licenses & lifestyle" icon={<IdCard className="size-4" />}>
+          <ul className="grid gap-1 text-sm">
+            {character.sins.map((sin) => (
+              <li key={sin.id} className="flex justify-between gap-3">
+                <span>
+                  SIN: {sin.name || 'Unnamed'}
+                  {sin.notes && <div className="text-xs text-muted">{sin.notes}</div>}
+                </span>
+                <span className="shrink-0 text-xs text-muted">{sin.rating > 0 ? `Rating ${sin.rating}` : 'Real'}</span>
+              </li>
+            ))}
+            {character.licenses.map((license) => (
+              <li key={license.id} className="flex justify-between gap-3">
+                <span>
+                  License: {license.name || 'Unnamed'}
+                  {license.sin && <span className="text-muted"> · on {license.sin}</span>}
+                </span>
+                {license.rating > 0 && <span className="shrink-0 text-xs text-muted">Rating {license.rating}</span>}
+              </li>
+            ))}
+            {character.lifestyles.map((lifestyle) => (
+              <li key={lifestyle.id} className="flex justify-between gap-3">
+                <span>
+                  Lifestyle: {lifestyle.name || lifestyle.level || 'Unnamed'}
+                  {lifestyle.level && lifestyle.name !== lifestyle.level && (
+                    <span className="text-muted"> · {lifestyle.level}</span>
+                  )}
+                </span>
+                <span className="shrink-0 text-xs text-muted">
+                  {lifestyle.monthsPaid > 0 && `${lifestyle.monthsPaid} mo paid`}
+                  {lifestyle.cost > 0 && ` · ${lifestyle.cost.toLocaleString()}¥/mo`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
     </div>
   )
 }

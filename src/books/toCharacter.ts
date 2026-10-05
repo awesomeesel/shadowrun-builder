@@ -9,10 +9,10 @@ import {
   SpellSchema,
   VehicleSchema,
   WeaponSchema,
-  type Bonuses,
   type Character,
   type SourceRef,
 } from '../model/character'
+import { knownBonuses } from '../rules/sr6/bonuses'
 import type { GradeId } from '../rules/sr6/special'
 import type { ExtractedEntry, RatingRange } from './extract/types'
 import { atRating } from './extract/values'
@@ -69,23 +69,6 @@ function sourceRef(entry: ExtractedEntry, book: Book | undefined): SourceRef | u
   if (!book) return undefined
   const printed = parseInt(pdfPageToPrinted(book, entry.page), 10)
   return Number.isNaN(printed) ? undefined : { book: book.code || book.title, page: printed }
-}
-
-// Well-known bonuses that tables don't list. VERIFY against the Core Rulebook.
-const KNOWN_BONUSES: [RegExp, (rating: number) => Bonuses][] = [
-  [/^wired reflexes/i, (r) => ({ attributes: { reaction: r }, initiativeDice: r })],
-  [/^synaptic booster/i, (r) => ({ attributes: { reaction: r }, initiativeDice: r })],
-  [/^reaction enhancers?/i, (r) => ({ attributes: { reaction: r }, initiativeDice: 0 })],
-  [/^muscle toner/i, (r) => ({ attributes: { agility: r }, initiativeDice: 0 })],
-  [/^muscle augmentation/i, (r) => ({ attributes: { strength: r }, initiativeDice: 0 })],
-  [/^cerebral booster/i, (r) => ({ attributes: { logic: r }, initiativeDice: 0 })],
-  [/^improved reflexes/i, (r) => ({ attributes: { reaction: r }, initiativeDice: r })],
-]
-
-function knownBonuses(name: string, rating: number): Bonuses {
-  const r = Math.max(1, rating || parseInt(name.match(/(\d+)\s*$/)?.[1] ?? '1', 10))
-  for (const [pattern, bonus] of KNOWN_BONUSES) if (pattern.test(name)) return bonus(r)
-  return { attributes: {}, initiativeDice: 0 }
 }
 
 /** Turn a catalog entry into an item for the character, with a page reference to the book. */

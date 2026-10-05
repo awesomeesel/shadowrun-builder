@@ -12,7 +12,7 @@ import { CharacterSchema, createCharacter, migrateCharacter, type Character } fr
 import {
   ImportError,
   characterFileName,
-  parseCharacterFile,
+  parseImportFile,
   serializeBundle,
   serializeCharacter,
 } from '../model/fileFormat'
@@ -20,6 +20,9 @@ import { startBuild } from '../rules/sr6/build'
 import { computeDerived } from '../rules/sr6/derived'
 import { METATYPES } from '../rules/sr6/metatypes'
 import { QuickMakeDialog } from './QuickMakeDialog'
+import { ImportReportDialog } from './ImportReportDialog'
+import type { ImportReport } from '../model/importers/commlink'
+import { enrichFromCatalog } from '../books/enrich'
 
 type Notice = { kind: 'success' | 'error'; text: string }
 
@@ -36,6 +39,7 @@ export function CharacterList() {
   const [notice, setNotice] = useState<Notice | null>(null)
   const [dragging, setDragging] = useState(false)
   const [quickMake, setQuickMake] = useState(false)
+  const [report, setReport] = useState<{ name: string; characterId: string; report: ImportReport } | null>(null)
 
   /** Start a new character with the priority build system. */
   async function handleNew() {
@@ -52,9 +56,28 @@ export function CharacterList() {
   async function handleFiles(files: FileList | File[]) {
     const imported: Character[] = []
     const errors: string[] = []
+    let converted: { name: string; characterId: string; report: ImportReport } | null = null
     for (const file of Array.from(files)) {
       try {
-        imported.push(...(await importCharacters(parseCharacterFile(await file.text()))))
+        const { characters, report } = parseImportFile(await file.text())
+        let toImport = characters
+        if (report) {
+          // Characters from other tools lack prices and karma costs; fill them in from the user's books.
+          const catalog = await db.catalog.toArray()
+          if (catalog.length) {
+            const enriched = characters.map((c) => enrichFromCatalog(c, catalog))
+            toImport = enriched.map((e) => e.character)
+            const filled = enriched.reduce((sum, e) => sum + e.filled, 0)
+            report.notes = report.notes.map((n) =>
+              n.startsWith('Commlink exports no prices')
+                ? `Commlink exports no prices or quality karma costs; ${filled} were filled in from your books.`
+                : n,
+            )
+          }
+        }
+        const stored = await importCharacters(toImport)
+        imported.push(...stored)
+        if (report) converted = { name: stored[0].name, characterId: stored[0].id, report }
       } catch (error) {
         const message = error instanceof ImportError ? error.message : String(error)
         errors.push(`${file.name}: ${message}`)
@@ -62,6 +85,8 @@ export function CharacterList() {
     }
     if (errors.length > 0) {
       setNotice({ kind: 'error', text: errors.join('\n\n') })
+    } else if (converted) {
+      setReport(converted)
     } else if (imported.length === 1) {
       navigate(`/character/${imported[0].id}`)
     } else {
@@ -189,6 +214,7 @@ export function CharacterList() {
       </main>
 
       {quickMake && <QuickMakeDialog onClose={() => setQuickMake(false)} />}
+      {report && <ImportReportDialog {...report} onClose={() => setReport(null)} />}
       {dragging && (
         <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-bg/80 text-lg text-accent">
           <div className="rounded-xl border-2 border-dashed border-accent px-10 py-8">

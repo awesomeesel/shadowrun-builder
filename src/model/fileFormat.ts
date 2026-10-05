@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { CharacterSchema, migrateCharacter, type Character } from './character'
+import { fromCommlink, isCommlinkExport, type ImportReport } from './importers/commlink'
 
 export const CHARACTER_FILE_FORMAT = 'shadowrun-builder/character'
 export const BUNDLE_FILE_FORMAT = 'shadowrun-builder/bundle'
@@ -82,4 +83,25 @@ export function characterFileName(character: Character): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
   return (slug || 'character') + CHARACTER_FILE_EXTENSION
+}
+
+export interface ImportedFile {
+  characters: Character[]
+  /** Present when the file came from another tool and needed converting. */
+  report?: ImportReport
+}
+
+/** Read any supported file: our own exports, or a Commlink 6 export. */
+export function parseImportFile(json: string): ImportedFile {
+  let data: unknown
+  try {
+    data = JSON.parse(json)
+  } catch {
+    throw new ImportError('The file is not valid JSON.')
+  }
+  if (isCommlinkExport(data)) {
+    const { character, report } = fromCommlink(data)
+    return { characters: [character], report }
+  }
+  return { characters: parseCharacterFile(json) }
 }

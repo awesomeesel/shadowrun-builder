@@ -241,6 +241,34 @@ export const BuildSchema = z.object({
   role: text(),
 })
 
+/** A real or fake SIN. Rating 0 = the runner's real SIN (or unrated). */
+export const SinSchema = z.object({
+  id: id(),
+  name: z.string().default(''),
+  rating: int(0),
+  notes: text(),
+})
+
+export const LicenseSchema = z.object({
+  id: id(),
+  name: z.string().default(''),
+  /** Name of the SIN the license is registered to. */
+  sin: text(),
+  rating: int(0),
+  notes: text(),
+})
+
+export const LifestyleSchema = z.object({
+  id: id(),
+  name: z.string().default(''),
+  /** Level, e.g. Squatter, Low, Middle. */
+  level: text(),
+  /** Monthly cost in nuyen. */
+  cost: int(0),
+  monthsPaid: int(0),
+  notes: text(),
+})
+
 /** One change to nuyen or karma, e.g. a run's payment or karma awarded. */
 export const LedgerEntrySchema = z.object({
   id: id(),
@@ -314,6 +342,14 @@ export const CharacterSchema = z.object({
   metatype: z.enum(METATYPE_IDS).default('human'),
   /** Portrait as a data: URL. */
   portrait: z.string().optional(),
+  gender: text(),
+  age: text(),
+  /** Height in centimetres; 0 = not set. */
+  height: int(0),
+  /** Weight in kilograms; 0 = not set. */
+  weight: int(0),
+  heat: int(0),
+  reputation: int(0),
 
   attributes: AttributesSchema,
   /** Essence lost to things not listed as augmentations, in hundredths (150 = 1.5) to avoid float drift. */
@@ -335,6 +371,9 @@ export const CharacterSchema = z.object({
   complexForms: z.array(ComplexFormSchema).default([]),
   matrixDevices: z.array(MatrixDeviceSchema).default([]),
   vehicles: z.array(VehicleSchema).default([]),
+  sins: z.array(SinSchema).default([]),
+  licenses: z.array(LicenseSchema).default([]),
+  lifestyles: z.array(LifestyleSchema).default([]),
 
   nuyen: int(0),
   karma: z
@@ -373,6 +412,9 @@ export type SourceRef = z.infer<typeof SourceRefSchema>
 export type CharacterSkill = z.infer<typeof SkillSchema>
 export type Quality = z.infer<typeof QualitySchema>
 export type Contact = z.infer<typeof ContactSchema>
+export type Sin = z.infer<typeof SinSchema>
+export type License = z.infer<typeof LicenseSchema>
+export type Lifestyle = z.infer<typeof LifestyleSchema>
 export type GearItem = z.infer<typeof GearSchema>
 export type Weapon = z.infer<typeof WeaponSchema>
 export type Build = z.infer<typeof BuildSchema>
