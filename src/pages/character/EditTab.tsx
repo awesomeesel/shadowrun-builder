@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useOutletContext } from 'react-router'
+import { Link, useOutletContext } from 'react-router'
 import { Field, NumberInput, Section } from '../../components/ui'
 import type { Character } from '../../model/character'
 import {
@@ -26,14 +26,26 @@ export function EditTab() {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <BasicsSection character={character} update={update} />
-      <AttributesSection character={character} update={update} />
-      <SkillsSection character={character} update={update} />
+      {character.mode === 'build' ? (
+        <section className="card p-4 text-sm text-muted">
+          Attributes, skills, karma and nuyen are managed on the{' '}
+          <Link to="../build" relative="path" className="text-accent hover:underline">
+            Build
+          </Link>{' '}
+          tab until the build is finished.
+        </section>
+      ) : (
+        <>
+          <AttributesSection character={character} update={update} />
+          <SkillsSection character={character} update={update} />
+        </>
+      )}
       <QualitiesSection character={character} update={update} />
       <WeaponsSection character={character} update={update} />
       <GearSection character={character} update={update} />
       <ContactsSection character={character} update={update} />
       <KnowledgeSection character={character} update={update} />
-      <ResourcesSection character={character} update={update} />
+      {character.mode !== 'build' && <ResourcesSection character={character} update={update} />}
       <Section title="Notes" className="lg:col-span-2">
         <textarea
           className="input min-h-32 w-full"

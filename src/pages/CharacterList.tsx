@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import { addCharacter, deleteCharacter, duplicateCharacter, importCharacters } from '../db/characters'
 import { db } from '../db/db'
 import { downloadText } from '../lib/download'
-import type { Character } from '../model/character'
+import { createCharacter, type Character } from '../model/character'
 import {
   ImportError,
   characterFileName,
@@ -12,6 +12,7 @@ import {
   serializeBundle,
   serializeCharacter,
 } from '../model/fileFormat'
+import { startBuild } from '../rules/sr6/build'
 import { METATYPES } from '../rules/sr6/metatypes'
 
 type Notice = { kind: 'success' | 'error'; text: string }
@@ -23,7 +24,14 @@ export function CharacterList() {
   const [notice, setNotice] = useState<Notice | null>(null)
   const [dragging, setDragging] = useState(false)
 
+  /** Start a new character with the priority build system. */
   async function handleNew() {
+    const character = await addCharacter(startBuild(createCharacter()))
+    navigate(`/character/${character.id}/build`)
+  }
+
+  /** Start a blank character for typing in one that already exists. */
+  async function handleQuickEntry() {
     const character = await addCharacter()
     navigate(`/character/${character.id}/edit`)
   }
@@ -86,6 +94,9 @@ export function CharacterList() {
         <button className="btn btn-primary" onClick={handleNew}>
           New character
         </button>
+        <button className="btn" onClick={handleQuickEntry} title="Type in a character that already exists">
+          Enter existing
+        </button>
         <button className="btn" onClick={() => fileInput.current?.click()}>
           Import
         </button>
@@ -120,7 +131,7 @@ export function CharacterList() {
         )}
 
         {characters === undefined ? null : characters.length === 0 ? (
-          <EmptyState onNew={handleNew} onImport={() => fileInput.current?.click()} />
+          <EmptyState onNew={handleNew} onQuickEntry={handleQuickEntry} onImport={() => fileInput.current?.click()} />
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {characters.map((character) => (
@@ -180,16 +191,28 @@ function Portrait({ character }: { character: Character }) {
   )
 }
 
-function EmptyState({ onNew, onImport }: { onNew: () => void; onImport: () => void }) {
+function EmptyState({
+  onNew,
+  onQuickEntry,
+  onImport,
+}: {
+  onNew: () => void
+  onQuickEntry: () => void
+  onImport: () => void
+}) {
   return (
     <div className="card mx-auto max-w-md p-8 text-center">
       <h2 className="mb-2 text-lg font-semibold">No runners yet</h2>
       <p className="mb-6 text-sm text-muted">
-        Create a new character, or import one from a file. You can also drag files onto this page.
+        Build a new character with the priority system, type in one you already have, or import one from a file.
+        You can also drag files onto this page.
       </p>
-      <div className="flex justify-center gap-3">
+      <div className="flex flex-wrap justify-center gap-3">
         <button className="btn btn-primary" onClick={onNew}>
           New character
+        </button>
+        <button className="btn" onClick={onQuickEntry}>
+          Enter existing
         </button>
         <button className="btn" onClick={onImport}>
           Import

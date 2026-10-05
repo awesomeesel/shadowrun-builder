@@ -48,6 +48,11 @@ export function CharacterPage() {
           </button>
         </div>
         <nav className="mx-auto flex max-w-5xl px-4 sm:px-8">
+          {character.mode === 'build' && (
+            <NavLink to="build" className={tab}>
+              Build
+            </NavLink>
+          )}
           <NavLink to="" end className={tab}>
             Sheet
           </NavLink>

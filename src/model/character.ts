@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { ATTRIBUTE_IDS, type AttributeId } from '../rules/sr6/attributes'
+import { MAGIC_TYPES, PRIORITY_LEVELS, type MagicTypeId } from '../rules/sr6/creation'
 import { METATYPE_IDS } from '../rules/sr6/metatypes'
 
 /**
@@ -99,6 +100,36 @@ export const WeaponSchema = z.object({
   source: SourceRefSchema.optional(),
 })
 
+const allocation = () =>
+  z
+    .object({
+      /** Metatype adjustment points (Edge, Magic/Resonance and metatype-boosted attributes only). */
+      adjustment: int(0),
+      /** Attribute or skill points from the priority table. */
+      points: int(0),
+      /** Ratings bought with karma, on top of the points. */
+      karma: int(0),
+    })
+    .prefault({})
+
+/** Priority-build allocations. Attribute values and skill ratings are derived from these while building. */
+export const BuildSchema = z.object({
+  priorities: z
+    .object({
+      metatype: z.enum(PRIORITY_LEVELS).default('C'),
+      attributes: z.enum(PRIORITY_LEVELS).default('A'),
+      skills: z.enum(PRIORITY_LEVELS).default('B'),
+      magic: z.enum(PRIORITY_LEVELS).default('E'),
+      resources: z.enum(PRIORITY_LEVELS).default('D'),
+    })
+    .prefault({}),
+  magicType: z.enum(Object.keys(MAGIC_TYPES) as [MagicTypeId, ...MagicTypeId[]]).default('mundane'),
+  attributes: z.object(Object.fromEntries(ATTRIBUTE_IDS.map((a) => [a, allocation()])) as Record<AttributeId, ReturnType<typeof allocation>>).prefault({}),
+  /** Keyed by the character skill's id. */
+  skills: z.record(z.string(), allocation()).default({}),
+  karmaForNuyen: int(0),
+})
+
 export const CharacterSchema = z.object({
   id: id(),
   schemaVersion: z.literal(CHARACTER_SCHEMA_VERSION).default(CHARACTER_SCHEMA_VERSION),
@@ -136,6 +167,9 @@ export const CharacterSchema = z.object({
     })
     .prefault({}),
 
+  /** Present while the character is being built with the priority system. */
+  build: BuildSchema.optional(),
+
   /** Damage boxes currently filled, for tracking during play. */
   damage: z
     .object({
@@ -158,6 +192,7 @@ export type Quality = z.infer<typeof QualitySchema>
 export type Contact = z.infer<typeof ContactSchema>
 export type GearItem = z.infer<typeof GearSchema>
 export type Weapon = z.infer<typeof WeaponSchema>
+export type Build = z.infer<typeof BuildSchema>
 export type KnowledgeSkill = z.infer<typeof KnowledgeSkillSchema>
 export type Language = z.infer<typeof LanguageSchema>
 

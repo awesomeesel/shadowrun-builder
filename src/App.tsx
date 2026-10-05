@@ -2,6 +2,7 @@ import { RouterProvider, createHashRouter } from 'react-router'
 import { BookViewer } from './pages/BookViewer'
 import { CharacterList } from './pages/CharacterList'
 import { Library } from './pages/Library'
+import { BuildTab } from './pages/character/BuildTab'
 import { CharacterPage } from './pages/character/CharacterPage'
 import { EditTab } from './pages/character/EditTab'
 import { SheetTab } from './pages/character/SheetTab'
@@ -17,6 +18,7 @@ const router = createHashRouter([
     children: [
       { index: true, element: <SheetTab /> },
       { path: 'edit', element: <EditTab /> },
+      { path: 'build', element: <BuildTab /> },
     ],
   },
 ])
