@@ -80,6 +80,9 @@ export function CharacterList() {
     >
       <header className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-4 sm:px-8">
         <h1 className="mr-auto font-display text-xl tracking-wide text-accent">Shadowrun Builder</h1>
+        <Link to="/library" className="btn">
+          Library
+        </Link>
         <button className="btn btn-primary" onClick={handleNew}>
           New character
         </button>

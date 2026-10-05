@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useOutletContext } from 'react-router'
+import { SourceLink } from '../../components/SourceLink'
 import { Section } from '../../components/ui'
 import type { Character } from '../../model/character'
 import { ATTRIBUTE_IDS, ATTRIBUTE_LABELS } from '../../rules/sr6/attributes'
@@ -130,6 +131,7 @@ export function SheetTab() {
               <li key={q.id}>
                 <span className={q.kind === 'negative' ? 'text-danger' : ''}>{q.name || 'Unnamed quality'}</span>
                 {q.rating > 1 && <span className="text-muted"> {q.rating}</span>}
+                {q.source && <SourceLink source={q.source} className="ml-2" />}
                 {q.notes && <div className="text-xs text-muted">{q.notes}</div>}
               </li>
             ))}
@@ -146,6 +148,7 @@ export function SheetTab() {
                   {g.quantity > 1 && <span className="text-muted">{g.quantity}× </span>}
                   {g.name || 'Unnamed item'}
                   {g.rating > 0 && <span className="text-muted"> (R{g.rating})</span>}
+                  {g.source && <SourceLink source={g.source} className="ml-2" />}
                   {g.notes && <div className="text-xs text-muted">{g.notes}</div>}
                 </span>
                 {g.armor > 0 && (
@@ -380,6 +383,7 @@ function WeaponTable({ character, wounds }: { character: Character; wounds: numb
               <tr key={w.id} className="border-t border-line/60">
                 <td className="py-1.5">
                   {w.name || 'Unnamed weapon'}
+                  {w.source && <SourceLink source={w.source} className="ml-2" />}
                   {w.notes && <div className="text-xs text-muted">{w.notes}</div>}
                 </td>
                 <td className="py-1.5 text-center">{w.damage || '–'}</td>

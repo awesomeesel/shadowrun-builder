@@ -1,5 +1,7 @@
 import { RouterProvider, createHashRouter } from 'react-router'
+import { BookViewer } from './pages/BookViewer'
 import { CharacterList } from './pages/CharacterList'
+import { Library } from './pages/Library'
 import { CharacterPage } from './pages/character/CharacterPage'
 import { EditTab } from './pages/character/EditTab'
 import { SheetTab } from './pages/character/SheetTab'
@@ -7,6 +9,8 @@ import { SheetTab } from './pages/character/SheetTab'
 // Hash routing works on any static host without server rewrite rules.
 const router = createHashRouter([
   { path: '/', element: <CharacterList /> },
+  { path: '/library', element: <Library /> },
+  { path: '/book/:bookId', element: <BookViewer /> },
   {
     path: '/character/:id',
     element: <CharacterPage />,

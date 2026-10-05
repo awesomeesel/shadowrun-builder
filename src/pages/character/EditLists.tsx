@@ -14,10 +14,22 @@ import {
   type KnowledgeSkill,
   type Language,
   type Quality,
+  type SourceRef,
   type Weapon,
 } from '../../model/character'
+import { SourceInput } from '../../components/SourceLink'
 import { SKILLS } from '../../rules/sr6/skills'
 import type { Update } from './CharacterPage'
+
+function sourceField<T extends { source?: SourceRef }>(): FieldDef<T> {
+  return {
+    kind: 'custom',
+    label: 'Source',
+    span: 4,
+    wide: true,
+    render: (item, set) => <SourceInput value={item.source} onChange={(source) => set({ source } as Partial<T>)} />,
+  }
+}
 
 type ListKey = 'qualities' | 'weapons' | 'gear' | 'contacts' | 'knowledgeSkills' | 'languages'
 
@@ -39,7 +51,8 @@ const qualityFields: FieldDef<Quality>[] = [
   },
   { kind: 'number', key: 'rating', label: 'Rating', span: 2, min: 1 },
   { kind: 'number', key: 'karma', label: 'Karma', span: 2, min: 0 },
-  { kind: 'text', key: 'notes', label: 'Notes', span: 12, wide: true },
+  { kind: 'text', key: 'notes', label: 'Notes', span: 8, wide: true },
+  sourceField<Quality>(),
 ]
 
 const ATTACK_RANGES = ['Close', 'Near', 'Medium', 'Far', 'Extreme']
@@ -83,7 +96,8 @@ const weaponFields: FieldDef<Weapon>[] = [
   { kind: 'text', key: 'modes', label: 'Modes', span: 2, placeholder: 'SA/BF' },
   { kind: 'text', key: 'ammo', label: 'Ammo', span: 2, placeholder: '15(c)' },
   { kind: 'number', key: 'cost', label: 'Cost ¥', span: 2, min: 0 },
-  { kind: 'text', key: 'notes', label: 'Notes / accessories', span: 12, wide: true },
+  { kind: 'text', key: 'notes', label: 'Notes / accessories', span: 8, wide: true },
+  sourceField<Weapon>(),
 ]
 
 const gearFields: FieldDef<GearItem>[] = [
@@ -94,7 +108,8 @@ const gearFields: FieldDef<GearItem>[] = [
   { kind: 'number', key: 'armor', label: 'Armor', span: 1, min: 0 },
   { kind: 'checkbox', key: 'equipped', label: 'Worn', span: 1 },
   { kind: 'number', key: 'cost', label: 'Cost ¥', span: 2, min: 0 },
-  { kind: 'text', key: 'notes', label: 'Notes', span: 12, wide: true },
+  { kind: 'text', key: 'notes', label: 'Notes', span: 8, wide: true },
+  sourceField<GearItem>(),
 ]
 
 const contactFields: FieldDef<Contact>[] = [
