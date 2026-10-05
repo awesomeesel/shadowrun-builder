@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { ContactSchema, QualitySchema, createCharacter, type Build, type Character } from '../../model/character'
+import {
+  AdeptPowerSchema,
+  AugmentationSchema,
+  ContactSchema,
+  QualitySchema,
+  SpellSchema,
+  createCharacter,
+  type Build,
+  type Character,
+} from '../../model/character'
 import { applyBuild, evaluateBuild, finishBuild, startBuild } from './build'
 
 /** A fresh build with priorities metatype C, attributes A, skills B, magic E, resources D. */
@@ -129,6 +138,33 @@ describe('evaluateBuild', () => {
     expect(e.karma.breakdown).toMatchObject({ qualities: -4, contacts: 2, knowledge: 3, nuyen: 5 })
     expect(e.karma.remaining).toBe(50 - (-4 + 2 + 3 + 5))
     expect(e.nuyen.total).toBe(60_000)
+  })
+})
+
+describe('magic and augmentations in builds', () => {
+  it('charges karma for spells and nuyen for graded augmentations', () => {
+    let c = fresh({
+      spells: [SpellSchema.parse({ name: 'Manabolt' }), SpellSchema.parse({ name: 'Heal' })],
+      augmentations: [AugmentationSchema.parse({ name: 'Cybereyes', cost: 10_000, grade: 'alpha' })],
+    })
+    c = withBuild(c, (b) => {
+      b.priorities.magic = 'B'
+      b.priorities.skills = 'E'
+      b.magicType = 'magician'
+    })
+    const e = evaluateBuild(c)!
+    expect(e.karma.breakdown.magic).toBe(10)
+    expect(e.nuyen.spent).toBe(12_000)
+  })
+
+  it('limits adept powers to available power points', () => {
+    let c = fresh({ adeptPowers: [AdeptPowerSchema.parse({ name: 'Killing Hands', powerPoints: 3.5 })] })
+    c = withBuild(c, (b) => {
+      b.priorities.magic = 'B'
+      b.priorities.skills = 'E'
+      b.magicType = 'adept'
+    })
+    expect(messages(c).some((m) => m.includes('use 3.5 power points; only 3 available'))).toBe(true)
   })
 })
 

@@ -66,3 +66,33 @@ export function NumberInput({
     />
   )
 }
+
+/** Decimal input that accepts a comma or a dot, e.g. "0,5" or "1.25". */
+export function DecimalInput({
+  value,
+  onChange,
+  min = 0,
+  max,
+  className = '',
+}: {
+  value: number
+  onChange: (value: number) => void
+  min?: number
+  max?: number
+  className?: string
+}) {
+  const [draft, setDraft] = useState<string | null>(null)
+  return (
+    <input
+      className={`input w-full text-center ${className}`}
+      inputMode="decimal"
+      value={draft ?? String(value)}
+      onChange={(e) => {
+        setDraft(e.target.value)
+        const parsed = parseFloat(e.target.value.replace(',', '.'))
+        if (!Number.isNaN(parsed) && parsed >= min && (max === undefined || parsed <= max)) onChange(parsed)
+      }}
+      onBlur={() => setDraft(null)}
+    />
+  )
+}

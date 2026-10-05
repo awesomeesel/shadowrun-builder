@@ -8,7 +8,9 @@ import {
   PRIORITY_TABLE,
 } from './creation'
 import { METATYPES, attributeMaximum } from './metatypes'
+import { computeDerived } from './derived'
 import { SKILLS_BY_ID } from './skills'
+import { AUGMENTATION_GRADES, SPECIAL_CREATION_RULES } from './special'
 
 const POINT_ATTRIBUTES: readonly AttributeId[] = [...PHYSICAL_ATTRIBUTES, ...MENTAL_ATTRIBUTES]
 const MAGIC_SKILLS = new Set(['astral', 'conjuring', 'enchanting', 'sorcery'])
@@ -30,6 +32,7 @@ export interface KarmaBreakdown {
   qualities: number
   knowledge: number
   contacts: number
+  magic: number
   nuyen: number
 }
 
@@ -192,13 +195,42 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
   )
   const contactKarma = Math.max(0, -freeContactKarma.remaining)
 
+  // Spells, adept powers, complex forms
+  const casts = build.magicType === 'magician' || build.magicType === 'aspected' || build.magicType === 'mysticAdept'
+  if (character.spells.length > 0 && !casts) warning(`Only magicians and mystic adepts can cast spells.`)
+  const hasPowers = build.magicType === 'adept' || build.magicType === 'mysticAdept'
+  if (character.adeptPowers.length > 0 && !hasPowers) warning(`Only adepts and mystic adepts can have adept powers.`)
+  if (character.complexForms.length > 0 && build.magicType !== 'technomancer') {
+    warning(`Only technomancers can use complex forms.`)
+  }
+  if (build.magicType !== 'mysticAdept' && character.powerPointsBought > 0) {
+    error(`Only mystic adepts buy power points with karma.`)
+  }
+  const derived = computeDerived(applyBuild(character))
+  if (derived.magic && hasPowers && derived.magic.powerPoints.used > derived.magic.powerPoints.available) {
+    error(
+      `Adept powers use ${derived.magic.powerPoints.used} power points; only ${derived.magic.powerPoints.available} available.`,
+    )
+  }
+  if (build.magicType === 'mysticAdept' && character.powerPointsBought > buildAttributeValue(build, 'magic')) {
+    error(`A mystic adept can't buy more power points than their Magic.`)
+  }
+  const magicKarma =
+    character.spells.length * SPECIAL_CREATION_RULES.spellKarma +
+    character.complexForms.length * SPECIAL_CREATION_RULES.complexFormKarma +
+    character.powerPointsBought * SPECIAL_CREATION_RULES.powerPointKarma
+
   // Nuyen
   if (build.karmaForNuyen > RULES.maxKarmaForNuyen) {
     error(`At most ${RULES.maxKarmaForNuyen} karma can be converted to nuyen.`)
   }
   const nuyen = budget(
     priority('resources').nuyen + build.karmaForNuyen * RULES.nuyenPerKarma,
-    sumBy(character.gear, (g) => g.cost * g.quantity) + sumBy(character.weapons, (w) => w.cost),
+    sumBy(character.gear, (g) => g.cost * g.quantity) +
+      sumBy(character.weapons, (w) => w.cost) +
+      sumBy(character.augmentations, (a) => Math.round(a.cost * AUGMENTATION_GRADES[a.grade].cost)) +
+      sumBy(character.matrixDevices, (d) => d.cost) +
+      sumBy(character.vehicles, (v) => v.cost),
   )
 
   const breakdown: KarmaBreakdown = {
@@ -207,6 +239,7 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
     qualities: positive - negative,
     knowledge: knowledgeKarma,
     contacts: contactKarma,
+    magic: magicKarma,
     nuyen: build.karmaForNuyen,
   }
   const karma = {

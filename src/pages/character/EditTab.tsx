@@ -13,6 +13,11 @@ import { METATYPE_IDS, METATYPES, attributeMaximum } from '../../rules/sr6/metat
 import { SKILLS, SKILLS_BY_ID } from '../../rules/sr6/skills'
 import type { CharacterContext, Update } from './CharacterPage'
 import {
+  AugmentationsSection,
+  ComplexFormsSection,
+  MagicSection,
+  MatrixDevicesSection,
+  VehiclesSection,
   ContactsSection,
   EssenceInput,
   GearSection,
@@ -45,6 +50,15 @@ export function EditTab() {
       <GearSection character={character} update={update} />
       <ContactsSection character={character} update={update} />
       <KnowledgeSection character={character} update={update} />
+      <AugmentationsSection character={character} update={update} />
+      {(character.attributes.magic > 0 || character.spells.length > 0 || character.adeptPowers.length > 0) && (
+        <MagicSection character={character} update={update} />
+      )}
+      {(character.attributes.resonance > 0 || character.complexForms.length > 0) && (
+        <ComplexFormsSection character={character} update={update} />
+      )}
+      <MatrixDevicesSection character={character} update={update} />
+      <VehiclesSection character={character} update={update} />
       {character.mode !== 'build' && <ResourcesSection character={character} update={update} />}
       <Section title="Notes" className="lg:col-span-2">
         <textarea

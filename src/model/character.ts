@@ -2,6 +2,14 @@ import { z } from 'zod'
 import { ATTRIBUTE_IDS, type AttributeId } from '../rules/sr6/attributes'
 import { MAGIC_TYPES, PRIORITY_LEVELS, type MagicTypeId } from '../rules/sr6/creation'
 import { METATYPE_IDS } from '../rules/sr6/metatypes'
+import {
+  AUGMENTATION_GRADES,
+  AUGMENTATION_KINDS,
+  SPELL_CATEGORIES,
+  TRADITIONS,
+  type GradeId,
+  type TraditionId,
+} from '../rules/sr6/special'
 
 /**
  * Bump when the stored/exported shape changes in a way old data can't satisfy
@@ -100,6 +108,96 @@ export const WeaponSchema = z.object({
   source: SourceRefSchema.optional(),
 })
 
+/** Modifiers an augmentation or adept power gives, e.g. +2 Reaction and +1 initiative die. */
+export const BonusesSchema = z
+  .object({
+    attributes: z.partialRecord(z.enum(ATTRIBUTE_IDS), z.number().int()).default({}),
+    initiativeDice: int(0),
+  })
+  .prefault({})
+
+export const AugmentationSchema = z.object({
+  id: id(),
+  name: z.string().default(''),
+  kind: z.enum(AUGMENTATION_KINDS).default('cyberware'),
+  grade: z.enum(Object.keys(AUGMENTATION_GRADES) as [GradeId, ...GradeId[]]).default('standard'),
+  rating: int(0),
+  /** Essence cost as printed, before the grade multiplier. */
+  essence: z.number().min(0).default(0),
+  /** Price as printed, before the grade multiplier. */
+  cost: int(0),
+  bonuses: BonusesSchema,
+  notes: text(),
+  source: SourceRefSchema.optional(),
+})
+
+export const SpellSchema = z.object({
+  id: id(),
+  name: z.string().default(''),
+  category: z.enum(SPELL_CATEGORIES).default('combat'),
+  type: z.enum(['physical', 'mana']).default('mana'),
+  range: text(),
+  duration: text(),
+  drain: text(),
+  notes: text(),
+  source: SourceRefSchema.optional(),
+})
+
+export const AdeptPowerSchema = z.object({
+  id: id(),
+  name: z.string().default(''),
+  level: int(0),
+  /** Total power point cost for this power at its level. */
+  powerPoints: z.number().min(0).default(0),
+  bonuses: BonusesSchema,
+  notes: text(),
+  source: SourceRefSchema.optional(),
+})
+
+export const ComplexFormSchema = z.object({
+  id: id(),
+  name: z.string().default(''),
+  duration: text(),
+  fading: text(),
+  notes: text(),
+  source: SourceRefSchema.optional(),
+})
+
+export const MatrixDeviceSchema = z.object({
+  id: id(),
+  name: z.string().default(''),
+  kind: z.enum(['commlink', 'cyberdeck', 'rcc', 'other']).default('commlink'),
+  deviceRating: int(1),
+  attack: int(0),
+  sleaze: int(0),
+  dataProcessing: int(0),
+  firewall: int(0),
+  /** The device used for Matrix stats on the sheet. */
+  active: z.boolean().default(false),
+  cost: int(0),
+  notes: text(),
+  source: SourceRefSchema.optional(),
+})
+
+export const VehicleSchema = z.object({
+  id: id(),
+  name: z.string().default(''),
+  kind: z.enum(['vehicle', 'drone']).default('vehicle'),
+  /** Handling as printed, e.g. '4/3' (on-road/off-road). */
+  handling: text(),
+  acceleration: text(),
+  speedInterval: text(),
+  topSpeed: text(),
+  body: int(0),
+  armor: int(0),
+  pilot: int(0),
+  sensor: int(0),
+  seats: text(),
+  cost: int(0),
+  notes: text(),
+  source: SourceRefSchema.optional(),
+})
+
 const allocation = () =>
   z
     .object({
@@ -146,7 +244,7 @@ export const CharacterSchema = z.object({
   portrait: z.string().optional(),
 
   attributes: AttributesSchema,
-  /** Essence lost to augmentations, in hundredths (e.g. 150 = 1.5 Essence) to avoid float drift. */
+  /** Essence lost to things not listed as augmentations, in hundredths (150 = 1.5) to avoid float drift. */
   essenceLoss: int(0),
 
   skills: z.array(SkillSchema).default([]),
@@ -156,6 +254,15 @@ export const CharacterSchema = z.object({
   contacts: z.array(ContactSchema).default([]),
   gear: z.array(GearSchema).default([]),
   weapons: z.array(WeaponSchema).default([]),
+  augmentations: z.array(AugmentationSchema).default([]),
+  tradition: z.enum(Object.keys(TRADITIONS) as [TraditionId, ...TraditionId[]]).default('hermetic'),
+  spells: z.array(SpellSchema).default([]),
+  adeptPowers: z.array(AdeptPowerSchema).default([]),
+  /** Power points a mystic adept has bought with karma. */
+  powerPointsBought: int(0),
+  complexForms: z.array(ComplexFormSchema).default([]),
+  matrixDevices: z.array(MatrixDeviceSchema).default([]),
+  vehicles: z.array(VehicleSchema).default([]),
 
   nuyen: int(0),
   karma: z
@@ -193,6 +300,13 @@ export type Contact = z.infer<typeof ContactSchema>
 export type GearItem = z.infer<typeof GearSchema>
 export type Weapon = z.infer<typeof WeaponSchema>
 export type Build = z.infer<typeof BuildSchema>
+export type Bonuses = z.infer<typeof BonusesSchema>
+export type Augmentation = z.infer<typeof AugmentationSchema>
+export type Spell = z.infer<typeof SpellSchema>
+export type AdeptPower = z.infer<typeof AdeptPowerSchema>
+export type ComplexForm = z.infer<typeof ComplexFormSchema>
+export type MatrixDevice = z.infer<typeof MatrixDeviceSchema>
+export type Vehicle = z.infer<typeof VehicleSchema>
 export type KnowledgeSkill = z.infer<typeof KnowledgeSkillSchema>
 export type Language = z.infer<typeof LanguageSchema>
 

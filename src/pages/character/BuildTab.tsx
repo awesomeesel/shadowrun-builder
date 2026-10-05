@@ -85,7 +85,7 @@ export function BuildTab() {
 
       <section className="card flex flex-wrap items-center gap-3 p-4 lg:col-span-2">
         <p className="mr-auto text-sm text-muted">
-          Qualities, contacts, knowledge skills, gear and weapons are entered on the{' '}
+          Qualities, contacts, knowledge skills, gear, augmentations, spells and other items are entered on the{' '}
           <Link to="../edit" relative="path" className="text-accent hover:underline">
             Edit
           </Link>{' '}
@@ -497,6 +497,7 @@ function KarmaSection({
       `${evaluation.freeKnowledge.spent} of ${evaluation.freeKnowledge.total} free used`,
     ],
     ['Contacts', b.contacts, `${evaluation.freeContactKarma.spent} of ${evaluation.freeContactKarma.total} free karma used`],
+    ['Spells, complex forms, power points', b.magic],
     ['Converted to nuyen', b.nuyen],
   ]
   return (
@@ -538,7 +539,7 @@ function KarmaSection({
           }
         />
         <span className="ml-auto text-muted">
-          Gear & weapons: {evaluation.nuyen.spent.toLocaleString()} / {evaluation.nuyen.total.toLocaleString()} ¥
+          Gear, augmentations & vehicles: {evaluation.nuyen.spent.toLocaleString()} / {evaluation.nuyen.total.toLocaleString()} ¥
         </span>
       </div>
     </Section>

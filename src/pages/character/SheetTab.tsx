@@ -13,7 +13,9 @@ import {
   type SkillPool,
   weaponPool,
 } from '../../rules/sr6/derived'
+import { formatBonuses } from '../../rules/sr6/bonuses'
 import { METATYPES } from '../../rules/sr6/metatypes'
+import { AUGMENTATION_GRADES, TRADITIONS } from '../../rules/sr6/special'
 import type { CharacterContext } from './CharacterPage'
 
 type DamageTrack = keyof Character['damage']
@@ -43,9 +45,22 @@ export function SheetTab() {
           </div>
           <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-12">
             {visibleAttributes.map((a) => (
-              <Stat key={a} label={ATTRIBUTE_LABELS[a].short} value={character.attributes[a]} />
+              <Stat
+                key={a}
+                label={ATTRIBUTE_LABELS[a].short}
+                value={
+                  derived.attributes[a] === character.attributes[a]
+                    ? character.attributes[a]
+                    : `${character.attributes[a]} (${derived.attributes[a]})`
+                }
+                hint={
+                  derived.attributes[a] !== character.attributes[a]
+                    ? `Natural ${character.attributes[a]}, ${a === 'magic' || a === 'resonance' ? 'after Essence loss' : 'augmented'} ${derived.attributes[a]}`
+                    : undefined
+                }
+              />
             ))}
-            <Stat label="ESS" value={derived.essence.toFixed(2).replace(/\.?0+$/, '')} />
+            <Stat label="ESS" value={derived.essence} />
           </div>
         </div>
       </section>
@@ -65,12 +80,6 @@ export function SheetTab() {
         <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
           <PoolRow label="Defense (REA + INT)" pool={derived.pools.defense} wounds={wounds} />
           <PoolRow label="Damage resistance (BOD)" pool={derived.pools.damageResistance} />
-          {character.attributes.magic > 0 && (
-            <div className="col-span-2 flex justify-between">
-              <dt className="text-muted">Astral initiative</dt>
-              <dd>{formatInitiative(derived.astralInitiative)}</dd>
-            </div>
-          )}
         </dl>
       </Section>
 
@@ -197,6 +206,183 @@ export function SheetTab() {
         </Section>
       )}
 
+      {character.augmentations.length > 0 && (
+        <Section title="Augmentations">
+          <ul className="grid gap-1 text-sm">
+            {character.augmentations.map((aug) => (
+              <li key={aug.id} className="flex justify-between gap-3">
+                <span>
+                  {aug.name || 'Unnamed augmentation'}
+                  {aug.rating > 0 && <span className="text-muted"> R{aug.rating}</span>}
+                  {aug.grade !== 'standard' && <span className="text-muted"> · {AUGMENTATION_GRADES[aug.grade].name}</span>}
+                  {aug.source && <SourceLink source={aug.source} className="ml-2" />}
+                  {(formatBonuses(aug.bonuses) || aug.notes) && (
+                    <div className="text-xs text-muted">{[formatBonuses(aug.bonuses), aug.notes].filter(Boolean).join(' · ')}</div>
+                  )}
+                </span>
+                <span className="shrink-0 text-xs text-muted tabular-nums">
+                  {round2(aug.essence * AUGMENTATION_GRADES[aug.grade].essence)} Ess
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {derived.magic && (
+        <Section title="Magic" className="lg:col-span-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Stat label="Spellcasting" value={derived.magic.spellcasting ?? '–'} hint="Sorcery + Magic" />
+            <Stat
+              label="Drain resist"
+              value={derived.magic.drainResistance ?? '–'}
+              hint={`Willpower + tradition attribute (${TRADITIONS[character.tradition].name})`}
+            />
+            <Stat label="Astral init." value={formatInitiative(derived.astralInitiative)} />
+            {(character.adeptPowers.length > 0 ||
+              character.powerPointsBought > 0 ||
+              character.build?.magicType === 'adept' ||
+              character.build?.magicType === 'mysticAdept') && (
+              <Stat
+                label="Power points"
+                value={`${derived.magic.powerPoints.used}/${derived.magic.powerPoints.available}`}
+                tone={derived.magic.powerPoints.used > derived.magic.powerPoints.available ? 'danger' : undefined}
+              />
+            )}
+          </div>
+          {character.spells.length > 0 && (
+            <div className="-mx-4 mt-4 overflow-x-auto px-4">
+              <table className="w-full min-w-[28rem] text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-muted">
+                    <th className="pb-1 font-normal">Spell</th>
+                    <th className="pb-1 font-normal">Type</th>
+                    <th className="pb-1 text-center font-normal">Range</th>
+                    <th className="pb-1 text-center font-normal">Dur.</th>
+                    <th className="pb-1 text-right font-normal">Drain</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {character.spells.map((spell) => (
+                    <tr key={spell.id} className="border-t border-line/60">
+                      <td className="py-1.5">
+                        {spell.name || 'Unnamed spell'}
+                        {spell.source && <SourceLink source={spell.source} className="ml-2" />}
+                        {spell.notes && <div className="text-xs text-muted">{spell.notes}</div>}
+                      </td>
+                      <td className="py-1.5 text-xs text-muted capitalize">
+                        {spell.category} · {spell.type === 'mana' ? 'M' : 'P'}
+                      </td>
+                      <td className="py-1.5 text-center">{spell.range || '–'}</td>
+                      <td className="py-1.5 text-center">{spell.duration || '–'}</td>
+                      <td className="py-1.5 text-right tabular-nums">{spell.drain || '–'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {character.adeptPowers.length > 0 && (
+            <ul className="mt-4 grid gap-1 text-sm">
+              {character.adeptPowers.map((power) => (
+                <li key={power.id} className="flex justify-between gap-3">
+                  <span>
+                    {power.name || 'Unnamed power'}
+                    {power.level > 0 && <span className="text-muted"> {power.level}</span>}
+                    {power.source && <SourceLink source={power.source} className="ml-2" />}
+                    {power.notes && <div className="text-xs text-muted">{power.notes}</div>}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted tabular-nums">{power.powerPoints} PP</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+      )}
+
+      {derived.resonance && (
+        <Section title="Resonance">
+          <div className="grid grid-cols-2 gap-2">
+            <Stat label="Tasking" value={derived.resonance.tasking ?? '–'} hint="Tasking + Resonance" />
+            <Stat label="Fading resist" value={derived.resonance.fadingResistance} />
+          </div>
+          {character.complexForms.length > 0 && (
+            <ul className="mt-3 grid gap-1 text-sm">
+              {character.complexForms.map((form) => (
+                <li key={form.id} className="flex justify-between gap-3">
+                  <span>
+                    {form.name || 'Unnamed complex form'}
+                    {form.source && <SourceLink source={form.source} className="ml-2" />}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted">
+                    {[form.duration, form.fading && `Fading ${form.fading}`].filter(Boolean).join(' · ')}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+      )}
+
+      {derived.matrix && (
+        <Section title="Matrix">
+          <div className="mb-2 text-sm">
+            {derived.matrix.device ? derived.matrix.device.name || 'Unnamed device' : 'Living persona'}
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            <Stat label="DR" value={derived.matrix.deviceRating} />
+            <Stat label="A" value={derived.matrix.attack} />
+            <Stat label="S" value={derived.matrix.sleaze} />
+            <Stat label="D" value={derived.matrix.dataProcessing} />
+            <Stat label="F" value={derived.matrix.firewall} />
+          </div>
+          <dl className="mt-3 grid gap-y-1 text-sm">
+            <Row label="Initiative (AR)" value={formatInitiative(derived.matrix.arInitiative)} />
+            <Row label="Initiative (VR cold)" value={formatInitiative(derived.matrix.coldSimInitiative)} />
+            <Row label="Initiative (VR hot)" value={formatInitiative(derived.matrix.hotSimInitiative)} />
+            <Row label="Matrix condition monitor" value={derived.matrix.monitor} />
+          </dl>
+        </Section>
+      )}
+
+      {character.vehicles.length > 0 && (
+        <Section title="Vehicles & drones" className="lg:col-span-2">
+          <div className="-mx-4 overflow-x-auto px-4">
+            <table className="w-full min-w-[36rem] text-sm">
+              <thead>
+                <tr className="text-left text-xs text-muted">
+                  <th className="pb-1 font-normal">Vehicle</th>
+                  {['Hand', 'Accel', 'Spd int', 'Top', 'Body', 'Armor', 'Pilot', 'Sensor', 'Seats'].map((h) => (
+                    <th key={h} className="pb-1 text-center font-normal">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {character.vehicles.map((v) => (
+                  <tr key={v.id} className="border-t border-line/60">
+                    <td className="py-1.5">
+                      {v.name || 'Unnamed vehicle'}
+                      {v.kind === 'drone' && <span className="text-xs text-muted"> · drone</span>}
+                      {v.source && <SourceLink source={v.source} className="ml-2" />}
+                      {v.notes && <div className="text-xs text-muted">{v.notes}</div>}
+                    </td>
+                    {[v.handling, v.acceleration, v.speedInterval, v.topSpeed, v.body, v.armor, v.pilot, v.sensor, v.seats].map(
+                      (value, i) => (
+                        <td key={i} className="py-1.5 text-center tabular-nums">
+                          {value === '' || value === 0 ? <span className="text-muted">–</span> : value}
+                        </td>
+                      ),
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
+
       <Section title="Resources">
         <dl className="grid gap-y-1 text-sm">
           <Row label="Nuyen" value={`${character.nuyen.toLocaleString()} ¥`} />
@@ -206,6 +392,10 @@ export function SheetTab() {
       </Section>
     </div>
   )
+}
+
+function round2(value: number) {
+  return Math.round(value * 100) / 100
 }
 
 function formatInitiative({ score, dice }: Initiative) {
