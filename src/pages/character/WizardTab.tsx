@@ -504,7 +504,7 @@ export function WizardTab() {
   const stepDone = (s: Step) => s.checklist.every((c) => c.done)
 
   return (
-    <div className="grid grid-cols-1 gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <nav className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4 pb-1" aria-label="Build steps">
         {steps.map((s, i) => (
           <button
@@ -558,7 +558,7 @@ export function WizardTab() {
 
       {(step.id === 'review' || errors.length > 0) && <IssueList evaluation={evaluation} />}
 
-      <div className="grid grid-cols-1 gap-4">{step.content}</div>
+      <div className="flex min-w-0 flex-col gap-4">{step.content}</div>
 
       <div className="flex justify-between gap-3 border-t border-line pt-4">
         <button className="btn" onClick={() => go(index - 1)} disabled={index === 0}>

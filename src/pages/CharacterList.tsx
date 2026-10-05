@@ -98,6 +98,8 @@ export function CharacterList() {
     >
       <header className="relative overflow-hidden border-b border-line">
         <Skyline className="pointer-events-none absolute inset-x-0 bottom-0 h-full w-full opacity-60" />
+        {/* Darkens the left side so the title and buttons stand out from the lit windows. */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-bg via-bg/75 to-bg/20" />
         <div className="relative mx-auto max-w-5xl px-4 pt-5 pb-8 sm:px-8 sm:pb-12">
           <div className="flex items-center gap-3">
             <Logo className="size-10" />
