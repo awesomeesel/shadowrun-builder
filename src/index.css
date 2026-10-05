@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-bg: #0d1117;
+  --color-surface: #151b24;
+  --color-line: #263040;
+  --color-fg: #e6edf3;
+  --color-muted: #8b98a8;
+  --color-accent: #3ee8b5;
+  --color-danger: #ff5c7a;
+  --font-display: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-bg font-sans text-fg antialiased;
+    color-scheme: dark;
+  }
+
+  /* Hide number spinners; the inputs are small and spinners eat the space. */
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-line bg-surface;
+  }
+
+  .btn {
+    @apply rounded border border-line bg-surface px-3 py-1.5 text-sm transition-colors hover:border-accent/60 disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .btn-primary {
+    @apply border-accent/60 bg-accent/15 text-accent hover:bg-accent/25;
+  }
+
+  .input {
+    @apply rounded border border-line bg-bg px-2 py-1.5 text-sm outline-none focus:border-accent/70;
+  }
+}
