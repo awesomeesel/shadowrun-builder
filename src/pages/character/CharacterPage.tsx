@@ -49,9 +49,14 @@ export function CharacterPage() {
         </div>
         <nav className="mx-auto flex max-w-5xl px-4 sm:px-8">
           {character.mode === 'build' && (
-            <NavLink to="build" className={tab}>
-              Build
-            </NavLink>
+            <>
+              <NavLink to="wizard" className={tab}>
+                Wizard
+              </NavLink>
+              <NavLink to="build" className={tab} title="All build choices on one page">
+                Build
+              </NavLink>
+            </>
           )}
           <NavLink to="" end className={tab}>
             Sheet

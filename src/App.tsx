@@ -6,6 +6,7 @@ import { BuildTab } from './pages/character/BuildTab'
 import { CharacterPage } from './pages/character/CharacterPage'
 import { EditTab } from './pages/character/EditTab'
 import { SheetTab } from './pages/character/SheetTab'
+import { WizardTab } from './pages/character/WizardTab'
 
 // Hash routing works on any static host without server rewrite rules.
 const router = createHashRouter([
@@ -19,6 +20,7 @@ const router = createHashRouter([
       { index: true, element: <SheetTab /> },
       { path: 'edit', element: <EditTab /> },
       { path: 'build', element: <BuildTab /> },
+      { path: 'wizard', element: <WizardTab /> },
     ],
   },
 ])

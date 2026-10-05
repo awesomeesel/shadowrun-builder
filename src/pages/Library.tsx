@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState, type ComponentProps, type DragEvent } from 'react'
 import { Link } from 'react-router'
 import { KNOWN_BOOKS } from '../books/catalog'
+import { EXTRACTOR_VERSION } from '../books/extract'
 import { pdfPageToPrinted } from '../books/pages'
 import { addBook, deleteBook, searchBooks, updateBook, type SearchHit } from '../db/books'
 import { db, type Book } from '../db/db'
@@ -108,6 +109,12 @@ export function Library() {
 
 function BookRow({ book }: { book: Book }) {
   const indexing = book.indexedPages < book.pageCount
+  const catalogSize = useLiveQuery(() => db.catalog.where('bookId').equals(book.id).count(), [book.id])
+  const status = indexing
+    ? `reading pages ${Math.round((book.indexedPages / book.pageCount) * 100)}%`
+    : book.extractedVersion !== EXTRACTOR_VERSION
+      ? 'finding rules items…'
+      : `${catalogSize ?? 0} rules items found`
   const codeTaken = useLiveQuery(
     () => db.books.where('code').equals(book.code).count().then((n) => book.code !== '' && n > 1),
     [book.code],
@@ -142,7 +149,7 @@ function BookRow({ book }: { book: Book }) {
         />
         <div className="mt-1 truncate text-xs text-muted">
           {book.fileName} · {book.pageCount} pages · {(book.size / 1024 / 1024).toFixed(0)} MB
-          {indexing && ` · indexing text ${Math.round((book.indexedPages / book.pageCount) * 100)}%`}
+          {` · ${status}`}
         </div>
       </div>
       <div className="flex gap-2">

@@ -46,6 +46,7 @@ export function ListEditor<T extends Identified>({
   newItem,
   addLabel,
   emptyText,
+  extra,
 }: {
   items: T[]
   onChange: (items: T[]) => void
@@ -53,6 +54,8 @@ export function ListEditor<T extends Identified>({
   newItem: () => T
   addLabel: string
   emptyText: string
+  /** Extra controls next to the add button, e.g. "Add from books". */
+  extra?: ReactNode
 }) {
   const patch = (id: string, change: Partial<T>) =>
     onChange(items.map((item) => (item.id === id ? { ...item, ...change } : item)))
@@ -84,9 +87,12 @@ export function ListEditor<T extends Identified>({
           </li>
         ))}
       </ul>
-      <button className="btn w-full" onClick={() => onChange([...items, newItem()])}>
-        + {addLabel}
-      </button>
+      <div className={`grid gap-2 ${extra ? 'sm:grid-cols-2' : ''}`}>
+        {extra}
+        <button className="btn w-full" onClick={() => onChange([...items, newItem()])}>
+          + {addLabel}
+        </button>
+      </div>
     </div>
   )
 }

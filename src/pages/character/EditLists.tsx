@@ -1,3 +1,5 @@
+import type { EntryKind } from '../../books/extract'
+import { AddFromBooks, type AddItem } from '../../components/CatalogPicker'
 import { ListEditor, type FieldDef } from '../../components/ListEditor'
 import { useState } from 'react'
 import { DecimalInput, NumberInput, Section } from '../../components/ui'
@@ -52,6 +54,20 @@ function sourceField<T extends { source?: SourceRef }>(span: 3 | 4 = 4): FieldDe
     render: (item, set) => <SourceInput value={item.source} onChange={(source) => set({ source } as Partial<T>)} />,
   }
 }
+
+/** Append an item picked from the book catalog to the right list. */
+function addFromCatalog(update: Update): AddItem {
+  return (list, item) =>
+    update((c) => {
+      // The first device becomes the one used for Matrix stats.
+      const added = list === 'matrixDevices' && !c.matrixDevices.some((d) => d.active) ? { ...item, active: true } : item
+      return { ...c, [list]: [...c[list], added] }
+    })
+}
+
+const fromBooks = (update: Update, kinds: EntryKind[]) => (
+  <AddFromBooks kinds={kinds} onAdd={addFromCatalog(update)} />
+)
 
 type ListKey =
   | 'qualities'
@@ -190,7 +206,8 @@ export function QualitiesSection({ character, update }: { character: Character; 
         onChange={setList(update, 'qualities')}
         fields={qualityFields}
         newItem={() => QualitySchema.parse({})}
-        addLabel="Add quality"
+        addLabel="Type in quality"
+        extra={fromBooks(update, ['quality'])}
         emptyText="No qualities."
       />
     </Section>
@@ -205,7 +222,8 @@ export function WeaponsSection({ character, update }: { character: Character; up
         onChange={setList(update, 'weapons')}
         fields={weaponFields}
         newItem={() => WeaponSchema.parse({})}
-        addLabel="Add weapon"
+        addLabel="Type in weapon"
+        extra={fromBooks(update, ['weapon'])}
         emptyText="No weapons."
       />
     </Section>
@@ -220,7 +238,8 @@ export function GearSection({ character, update }: { character: Character; updat
         onChange={setList(update, 'gear')}
         fields={gearFields}
         newItem={() => GearSchema.parse({})}
-        addLabel="Add item"
+        addLabel="Type in item"
+        extra={fromBooks(update, ['armor', 'gear'])}
         emptyText="No gear. Armor counts toward Defense Rating when it has an armor value and is marked as worn."
       />
     </Section>
@@ -449,7 +468,8 @@ export function AugmentationsSection({ character, update }: { character: Charact
         onChange={setList(update, 'augmentations')}
         fields={augmentationFields}
         newItem={() => AugmentationSchema.parse({})}
-        addLabel="Add augmentation"
+        addLabel="Type in augmentation"
+        extra={fromBooks(update, ['augmentation'])}
         emptyText="No cyberware or bioware. Enter Essence and cost as printed; the grade multiplier is applied for you."
       />
     </Section>
@@ -494,7 +514,8 @@ export function MagicSection({ character, update }: { character: Character; upda
         onChange={setList(update, 'spells')}
         fields={spellFields}
         newItem={() => SpellSchema.parse({})}
-        addLabel="Add spell"
+        addLabel="Type in spell"
+        extra={fromBooks(update, ['spell'])}
         emptyText="No spells."
       />
       <h3 className="mt-5 mb-2 flex justify-between text-xs tracking-wider text-muted uppercase">
@@ -510,7 +531,8 @@ export function MagicSection({ character, update }: { character: Character; upda
         onChange={setList(update, 'adeptPowers')}
         fields={adeptPowerFields}
         newItem={() => AdeptPowerSchema.parse({})}
-        addLabel="Add adept power"
+        addLabel="Type in adept power"
+        extra={fromBooks(update, ['adeptPower'])}
         emptyText="No adept powers."
       />
     </Section>
@@ -525,7 +547,8 @@ export function ComplexFormsSection({ character, update }: { character: Characte
         onChange={setList(update, 'complexForms')}
         fields={complexFormFields}
         newItem={() => ComplexFormSchema.parse({})}
-        addLabel="Add complex form"
+        addLabel="Type in complex form"
+        extra={fromBooks(update, ['complexForm'])}
         emptyText="No complex forms."
       />
     </Section>
@@ -549,7 +572,8 @@ export function MatrixDevicesSection({ character, update }: { character: Charact
         onChange={onChange}
         fields={matrixDeviceFields}
         newItem={() => MatrixDeviceSchema.parse({ active: character.matrixDevices.length === 0 })}
-        addLabel="Add device"
+        addLabel="Type in device"
+        extra={fromBooks(update, ['matrixDevice'])}
         emptyText="No commlink, cyberdeck or RCC. The active device is used for Matrix stats on the sheet."
       />
     </Section>
@@ -564,7 +588,8 @@ export function VehiclesSection({ character, update }: { character: Character; u
         onChange={setList(update, 'vehicles')}
         fields={vehicleFields}
         newItem={() => VehicleSchema.parse({})}
-        addLabel="Add vehicle or drone"
+        addLabel="Type in vehicle or drone"
+        extra={fromBooks(update, ['vehicle'])}
         emptyText="No vehicles or drones."
       />
     </Section>

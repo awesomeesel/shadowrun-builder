@@ -1,5 +1,6 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { db } from '../db/db'
+import type { PageLayout, PdfItem } from './layout'
 
 type PdfJs = typeof import('pdfjs-dist')
 
@@ -55,12 +56,17 @@ export function closeBook(bookId: string) {
   void doc?.then(destroyPdf).catch(() => {})
 }
 
-export async function pageText(doc: PDFDocumentProxy, pageNumber: number): Promise<string> {
+/** Positioned text of a page, for rebuilding lines, columns and tables. */
+export async function pageLayout(doc: PDFDocumentProxy, pageNumber: number): Promise<PageLayout> {
   const page = await doc.getPage(pageNumber)
+  const { width } = page.getViewport({ scale: 1 })
   const content = await page.getTextContent()
   page.cleanup()
-  return content.items
-    .map((item) => ('str' in item ? item.str + (item.hasEOL ? '\n' : '') : ''))
-    .join('')
-    .replace(/[ \t]+/g, ' ')
+  const round = (n: number) => Math.round(n * 10) / 10
+  const items: PdfItem[] = []
+  for (const item of content.items) {
+    if (!('str' in item) || !item.str.trim()) continue
+    items.push([round(item.transform[4]), round(item.transform[5]), round(item.height), item.str, round(item.width)])
+  }
+  return { width, items }
 }

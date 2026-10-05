@@ -74,7 +74,15 @@ export function EditTab() {
   )
 }
 
-function BasicsSection({ character, update }: { character: Character; update: Update }) {
+export function BasicsSection({
+  character,
+  update,
+  showMetatype = true,
+}: {
+  character: Character
+  update: Update
+  showMetatype?: boolean
+}) {
   const textField = (key: 'name' | 'realName' | 'playerName' | 'concept', label: string) => (
     <Field label={label}>
       <input
@@ -117,6 +125,7 @@ function BasicsSection({ character, update }: { character: Character; update: Up
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {textField('concept', 'Concept')}
         {textField('playerName', 'Player')}
+        {showMetatype && (
         <Field label="Metatype">
           <select
             className="input w-full"
@@ -133,6 +142,7 @@ function BasicsSection({ character, update }: { character: Character; update: Up
             ))}
           </select>
         </Field>
+        )}
       </div>
     </Section>
   )

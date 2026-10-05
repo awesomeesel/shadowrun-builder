@@ -27,7 +27,7 @@ export function CharacterList() {
   /** Start a new character with the priority build system. */
   async function handleNew() {
     const character = await addCharacter(startBuild(createCharacter()))
-    navigate(`/character/${character.id}/build`)
+    navigate(`/character/${character.id}/wizard`)
   }
 
   /** Start a blank character for typing in one that already exists. */

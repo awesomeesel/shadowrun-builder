@@ -10,7 +10,6 @@ import {
   type AttributeId,
 } from '../../rules/sr6/attributes'
 import {
-  applyBuild,
   buildAttributeValue,
   canUseAdjustment,
   evaluateBuild,
@@ -32,8 +31,9 @@ import {
 import { METATYPE_IDS, METATYPES, attributeMaximum } from '../../rules/sr6/metatypes'
 import { SKILLS, SKILLS_BY_ID } from '../../rules/sr6/skills'
 import type { CharacterContext } from './CharacterPage'
+import { makeUpdateBuild, type UpdateBuild } from './updateBuild'
 
-type UpdateBuild = (change: (build: Build, character: Character) => void) => void
+
 
 export function BuildTab() {
   const { character, update } = useOutletContext<CharacterContext>()
@@ -52,13 +52,7 @@ export function BuildTab() {
     )
   }
 
-  /** Mutate a copy of the build (and character, for metatype), then re-derive attributes and skills. */
-  const updateBuild: UpdateBuild = (change) =>
-    update((c) => {
-      const next = { ...c, build: structuredClone(c.build!) }
-      change(next.build, next)
-      return applyBuild(next)
-    })
+  const updateBuild = makeUpdateBuild(update)
 
   const errors = evaluation.issues.filter((i) => i.severity === 'error')
 
@@ -104,7 +98,7 @@ export function BuildTab() {
   )
 }
 
-function BudgetBar({ evaluation }: { evaluation: BuildEvaluation }) {
+export function BudgetBar({ evaluation }: { evaluation: BuildEvaluation }) {
   const items: [string, Budget, string?][] = [
     ['Adjustment', evaluation.adjustmentPoints],
     ['Attributes', evaluation.attributePoints],
@@ -131,7 +125,7 @@ function BudgetBar({ evaluation }: { evaluation: BuildEvaluation }) {
   )
 }
 
-function IssueList({ evaluation }: { evaluation: BuildEvaluation }) {
+export function IssueList({ evaluation }: { evaluation: BuildEvaluation }) {
   const [showWarnings, setShowWarnings] = useState(false)
   const errors = evaluation.issues.filter((i) => i.severity === 'error')
   const warnings = evaluation.issues.filter((i) => i.severity === 'warning')
@@ -178,7 +172,7 @@ function priorityDescription(category: PriorityCategory, level: PriorityLevel): 
   }
 }
 
-function PrioritiesSection({
+export function PrioritiesSection({
   build,
   character,
   updateBuild,
@@ -305,7 +299,7 @@ function Stepper({
   )
 }
 
-function AttributesSection({
+export function AttributesSection({
   build,
   character,
   updateBuild,
@@ -381,7 +375,7 @@ function AttributesSection({
   )
 }
 
-function SkillsSection({
+export function SkillsSection({
   build,
   character,
   updateBuild,
@@ -477,7 +471,7 @@ function SkillsSection({
   )
 }
 
-function KarmaSection({
+export function KarmaSection({
   build,
   evaluation,
   updateBuild,
