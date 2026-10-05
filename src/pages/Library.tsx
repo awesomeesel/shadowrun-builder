@@ -1,3 +1,4 @@
+import { noAutofill } from '../components/noAutofill'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState, type ComponentProps, type DragEvent } from 'react'
 import { Link } from 'react-router'
@@ -73,9 +74,8 @@ export function Library() {
 
       <main className="mx-auto grid max-w-5xl gap-6 px-4 py-6 sm:px-8">
         <p className="text-sm text-muted">
-          Add the Shadowrun 6 PDFs you own. They are stored only in this browser and are never uploaded. Page
-          references like <span className="text-fg">CRB 245</span> open the right page, and you can search the text of
-          every book.
+          Add the Shadowrun 6 PDFs you own. They are stored only in this browser and are never uploaded. Page references
+          like <span className="text-fg">CRB 245</span> open the right page, and you can search the text of every book.
         </p>
 
         {error && <div className="rounded border border-danger/50 bg-danger/10 px-4 py-3 text-sm">{error}</div>}
@@ -88,7 +88,9 @@ export function Library() {
               Reading {name}…
             </li>
           ))}
-          {books?.map((book) => <BookRow key={book.id} book={book} />)}
+          {books?.map((book) => (
+            <BookRow key={book.id} book={book} />
+          ))}
         </ul>
 
         {books?.length === 0 && adding.length === 0 && (
@@ -116,7 +118,12 @@ function BookRow({ book }: { book: Book }) {
       ? 'finding rules items…'
       : `${catalogSize ?? 0} rules items found`
   const codeTaken = useLiveQuery(
-    () => db.books.where('code').equals(book.code).count().then((n) => book.code !== '' && n > 1),
+    () =>
+      db.books
+        .where('code')
+        .equals(book.code)
+        .count()
+        .then((n) => book.code !== '' && n > 1),
     [book.code],
   )
 
@@ -147,9 +154,13 @@ function BookRow({ book }: { book: Book }) {
           onCommit={(title) => void updateBook(book.id, { title: title.trim() || book.fileName })}
           aria-label="Title"
         />
-        <div className="mt-1 truncate text-xs text-muted">
+        <div className="mt-1 truncate text-xs text-muted" title={book.fileName}>
           {book.fileName} · {book.pageCount} pages · {(book.size / 1024 / 1024).toFixed(0)} MB
-          {` · ${status}`}
+        </div>
+        <div
+          className={`mt-0.5 text-xs ${indexing || book.extractedVersion !== EXTRACTOR_VERSION ? 'text-muted' : 'text-accent'}`}
+        >
+          {status}
         </div>
       </div>
       <div className="flex gap-2">
@@ -190,6 +201,7 @@ function SearchPanel() {
   return (
     <section>
       <input
+        {...noAutofill}
         type="search"
         className="input w-full py-2 text-base"
         placeholder="Search all books, e.g. Ares Predator, Analytical Mind…"
@@ -244,6 +256,7 @@ function DraftInput({
   }
   return (
     <input
+      {...noAutofill}
       {...props}
       value={draft ?? value}
       onChange={(e) => setDraft(e.target.value)}

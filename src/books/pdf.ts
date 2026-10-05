@@ -8,13 +8,12 @@ let pdfjsPromise: Promise<PdfJs> | undefined
 
 /** Load pdf.js on first use so it isn't part of the main bundle. */
 export function loadPdfJs(): Promise<PdfJs> {
-  pdfjsPromise ??= Promise.all([
-    import('pdfjs-dist'),
-    import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
-  ]).then(([pdfjs, worker]) => {
-    pdfjs.GlobalWorkerOptions.workerSrc = worker.default
-    return pdfjs
-  })
+  pdfjsPromise ??= Promise.all([import('pdfjs-dist'), import('pdfjs-dist/build/pdf.worker.min.mjs?url')]).then(
+    ([pdfjs, worker]) => {
+      pdfjs.GlobalWorkerOptions.workerSrc = worker.default
+      return pdfjs
+    },
+  )
   return pdfjsPromise
 }
 

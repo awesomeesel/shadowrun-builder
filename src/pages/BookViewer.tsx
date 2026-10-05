@@ -1,3 +1,4 @@
+import { noAutofill } from '../components/noAutofill'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
 import { useEffect, useRef, useState } from 'react'
@@ -124,7 +125,12 @@ export function BookViewer() {
         </h1>
         {book && (
           <div className="flex items-center gap-1 text-sm">
-            <button className="btn px-2" onClick={() => goTo(pdfPage - 1)} disabled={pdfPage <= 1} aria-label="Previous page">
+            <button
+              className="btn px-2"
+              onClick={() => goTo(pdfPage - 1)}
+              disabled={pdfPage <= 1}
+              aria-label="Previous page"
+            >
               ‹
             </button>
             <PageInput
@@ -183,6 +189,7 @@ function PageInput({ label, onSubmit }: { label: string; onSubmit: (printed: num
       }}
     >
       <input
+        {...noAutofill}
         className="input w-16 py-1 text-center"
         aria-label="Page"
         value={value}

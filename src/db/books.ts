@@ -138,7 +138,8 @@ export async function searchBooks(query: string, limit = 50): Promise<SearchHit[
     if (index === -1 || !book) return
     const start = Math.max(0, index - 60)
     const end = Math.min(row.text.length, index + needle.length + 80)
-    const snippet = (start > 0 ? '…' : '') + row.text.slice(start, end).replace(/\s+/g, ' ') + (end < row.text.length ? '…' : '')
+    const snippet =
+      (start > 0 ? '…' : '') + row.text.slice(start, end).replace(/\s+/g, ' ') + (end < row.text.length ? '…' : '')
     hits.push({ book, page: row.page, snippet })
   })
   return hits
@@ -147,7 +148,5 @@ export async function searchBooks(query: string, limit = 50): Promise<SearchHit[
 /** Find the library book a reference points to, by code or title. */
 export function findBook(books: Book[], ref: string): Book | undefined {
   const wanted = ref.trim().toLowerCase()
-  return (
-    books.find((b) => b.code.toLowerCase() === wanted) ?? books.find((b) => b.title.toLowerCase() === wanted)
-  )
+  return books.find((b) => b.code.toLowerCase() === wanted) ?? books.find((b) => b.title.toLowerCase() === wanted)
 }

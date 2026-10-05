@@ -17,7 +17,11 @@ import {
  */
 export const CHARACTER_SCHEMA_VERSION = 1
 
-const id = () => z.string().min(1).default(() => crypto.randomUUID())
+const id = () =>
+  z
+    .string()
+    .min(1)
+    .default(() => crypto.randomUUID())
 const text = () => z.string().default('')
 const int = (fallback = 0) => z.number().int().default(fallback)
 
@@ -222,11 +226,58 @@ export const BuildSchema = z.object({
     })
     .prefault({}),
   magicType: z.enum(Object.keys(MAGIC_TYPES) as [MagicTypeId, ...MagicTypeId[]]).default('mundane'),
-  attributes: z.object(Object.fromEntries(ATTRIBUTE_IDS.map((a) => [a, allocation()])) as Record<AttributeId, ReturnType<typeof allocation>>).prefault({}),
+  attributes: z
+    .object(
+      Object.fromEntries(ATTRIBUTE_IDS.map((a) => [a, allocation()])) as Record<
+        AttributeId,
+        ReturnType<typeof allocation>
+      >,
+    )
+    .prefault({}),
   /** Keyed by the character skill's id. */
   skills: z.record(z.string(), allocation()).default({}),
   karmaForNuyen: int(0),
+  /** Role picked in the wizard, e.g. 'samurai'; drives suggestions only. */
+  role: text(),
 })
+
+/** One change to nuyen or karma, e.g. a run's payment or karma awarded. */
+export const LedgerEntrySchema = z.object({
+  id: id(),
+  date: z.string().default(() => new Date().toISOString()),
+  nuyen: int(0),
+  karma: int(0),
+  note: text(),
+})
+
+/** A finished play session, kept as a log on the character. */
+export const SessionRecordSchema = z.object({
+  id: id(),
+  title: text(),
+  startedAt: z.string(),
+  endedAt: z.string(),
+  nuyen: int(0),
+  karma: int(0),
+  notes: text(),
+})
+
+/** State that only matters at the table: current Edge, loaded ammo and the running session. */
+export const PlaySchema = z
+  .object({
+    /** Edge points available right now; null until the first session starts. */
+    edge: z.number().int().nullable().default(null),
+    /** Rounds loaded per weapon id. */
+    ammo: z.record(z.string(), z.number().int()).default({}),
+    session: z
+      .object({
+        title: text(),
+        startedAt: z.string(),
+        notes: text(),
+      })
+      .nullable()
+      .default(null),
+  })
+  .prefault({})
 
 export const CharacterSchema = z.object({
   id: id(),
@@ -277,6 +328,10 @@ export const CharacterSchema = z.object({
   /** Present while the character is being built with the priority system. */
   build: BuildSchema.optional(),
 
+  play: PlaySchema,
+  ledger: z.array(LedgerEntrySchema).default([]),
+  sessions: z.array(SessionRecordSchema).default([]),
+
   /** Damage boxes currently filled, for tracking during play. */
   damage: z
     .object({
@@ -300,6 +355,8 @@ export type Contact = z.infer<typeof ContactSchema>
 export type GearItem = z.infer<typeof GearSchema>
 export type Weapon = z.infer<typeof WeaponSchema>
 export type Build = z.infer<typeof BuildSchema>
+export type LedgerEntry = z.infer<typeof LedgerEntrySchema>
+export type SessionRecord = z.infer<typeof SessionRecordSchema>
 export type Bonuses = z.infer<typeof BonusesSchema>
 export type Augmentation = z.infer<typeof AugmentationSchema>
 export type Spell = z.infer<typeof SpellSchema>

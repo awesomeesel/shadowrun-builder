@@ -236,7 +236,11 @@ function skillPool(attributes: Attributes, skill: SkillDef, owned: CharacterSkil
 function ownedPool(character: Character, attributes: Attributes, skillId: string): number | null {
   const skill = SKILLS_BY_ID.get(skillId)
   if (!skill) return null
-  return skillPool(attributes, skill, character.skills.find((s) => s.skillId === skillId)).pool
+  return skillPool(
+    attributes,
+    skill,
+    character.skills.find((s) => s.skillId === skillId),
+  ).pool
 }
 
 /** Pools for the character's own skills, in the order they were added. */

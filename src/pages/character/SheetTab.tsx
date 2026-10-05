@@ -1,15 +1,33 @@
+import {
+  Backpack,
+  BookOpen,
+  Brain,
+  Car,
+  Coins,
+  Cpu,
+  Crosshair,
+  Flame,
+  HeartPulse,
+  Radio,
+  Star,
+  Swords,
+  Target,
+  Users,
+  Wifi,
+} from 'lucide-react'
 import { useState } from 'react'
 import { Link, useOutletContext } from 'react-router'
 import { SourceLink } from '../../components/SourceLink'
+import { Portrait } from '../../components/art'
+import { MonitorTrack, PoolRow, Row, Stat } from '../../components/sheetParts'
 import { Section } from '../../components/ui'
+import { armorHint, formatInitiative, formatPool, round2 } from '../../rules/sr6/format'
 import type { Character } from '../../model/character'
 import { ATTRIBUTE_IDS, ATTRIBUTE_LABELS } from '../../rules/sr6/attributes'
 import {
   computeDerived,
   ownedSkillPools,
   untrainedSkillPools,
-  type ConditionMonitor,
-  type Initiative,
   type SkillPool,
   weaponPool,
 } from '../../rules/sr6/derived'
@@ -36,9 +54,7 @@ export function SheetTab() {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <section className="card flex gap-4 p-4 lg:col-span-2">
-        {character.portrait && (
-          <img src={character.portrait} alt="" className="size-20 shrink-0 rounded object-cover sm:size-24" />
-        )}
+        <Portrait src={character.portrait} metatype={character.metatype} className="size-20 sm:size-24" />
         <div className="min-w-0 flex-1">
           <div className="text-sm text-muted">
             {[METATYPES[character.metatype].name, character.concept].filter(Boolean).join(' · ')}
@@ -65,17 +81,12 @@ export function SheetTab() {
         </div>
       </section>
 
-      <Section title="Combat">
+      <Section title="Combat" icon={<Swords className="size-4" />}>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Stat label="Initiative" value={formatInitiative(derived.initiative)} large />
           <Stat label="Defense Rating" value={derived.defenseRating} large hint={armorHint(derived.armor)} />
           <Stat label="Unarmed AR" value={derived.unarmedAttackRating} large />
-          <Stat
-            label="Wound mod."
-            value={wounds === 0 ? '—' : wounds}
-            large
-            tone={wounds < 0 ? 'danger' : undefined}
-          />
+          <Stat label="Wound mod." value={wounds === 0 ? '—' : wounds} large tone={wounds < 0 ? 'danger' : undefined} />
         </div>
         <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
           <PoolRow label="Defense (REA + INT)" pool={derived.pools.defense} wounds={wounds} />
@@ -83,13 +94,9 @@ export function SheetTab() {
         </dl>
       </Section>
 
-      <Section title="Condition">
+      <Section title="Condition" icon={<HeartPulse className="size-4" />}>
         <div className="grid gap-4">
-          <MonitorTrack
-            label="Physical"
-            monitor={derived.physicalMonitor}
-            onChange={(n) => setDamage('physical', n)}
-          />
+          <MonitorTrack label="Physical" monitor={derived.physicalMonitor} onChange={(n) => setDamage('physical', n)} />
           <MonitorTrack label="Stun" monitor={derived.stunMonitor} onChange={(n) => setDamage('stun', n)} />
           {derived.physicalMonitor.filled >= derived.physicalMonitor.boxes && (
             <MonitorTrack
@@ -104,6 +111,7 @@ export function SheetTab() {
 
       <Section
         title="Skills"
+        icon={<Target className="size-4" />}
         className="lg:row-span-2"
         aside={
           <label className="flex items-center gap-2 text-xs text-muted">
@@ -118,7 +126,7 @@ export function SheetTab() {
         />
       </Section>
 
-      <Section title="Attribute tests">
+      <Section title="Attribute tests" icon={<Brain className="size-4" />}>
         <dl className="grid gap-y-1 text-sm">
           <PoolRow label="Composure (WIL + CHA)" pool={derived.pools.composure} wounds={wounds} />
           <PoolRow label="Judge Intentions (WIL + INT)" pool={derived.pools.judgeIntentions} wounds={wounds} />
@@ -128,13 +136,13 @@ export function SheetTab() {
       </Section>
 
       {character.weapons.length > 0 && (
-        <Section title="Weapons" className="lg:col-span-2">
+        <Section title="Weapons" icon={<Crosshair className="size-4" />} className="lg:col-span-2">
           <WeaponTable character={character} wounds={wounds} />
         </Section>
       )}
 
       {character.qualities.length > 0 && (
-        <Section title="Qualities">
+        <Section title="Qualities" icon={<Star className="size-4" />}>
           <ul className="grid gap-1 text-sm">
             {character.qualities.map((q) => (
               <li key={q.id}>
@@ -149,7 +157,7 @@ export function SheetTab() {
       )}
 
       {character.gear.length > 0 && (
-        <Section title="Armor & gear">
+        <Section title="Armor & gear" icon={<Backpack className="size-4" />}>
           <ul className="grid gap-1 text-sm">
             {character.gear.map((g) => (
               <li key={g.id} className="flex justify-between gap-3">
@@ -172,7 +180,7 @@ export function SheetTab() {
       )}
 
       {character.contacts.length > 0 && (
-        <Section title="Contacts">
+        <Section title="Contacts" icon={<Users className="size-4" />}>
           <ul className="grid gap-1 text-sm">
             {character.contacts.map((c) => (
               <li key={c.id} className="flex justify-between gap-3">
@@ -191,7 +199,7 @@ export function SheetTab() {
       )}
 
       {(character.languages.length > 0 || character.knowledgeSkills.length > 0) && (
-        <Section title="Knowledge & languages">
+        <Section title="Knowledge & languages" icon={<BookOpen className="size-4" />}>
           <ul className="grid gap-1 text-sm">
             {character.languages.map((l) => (
               <li key={l.id} className="flex justify-between gap-3">
@@ -207,17 +215,21 @@ export function SheetTab() {
       )}
 
       {character.augmentations.length > 0 && (
-        <Section title="Augmentations">
+        <Section title="Augmentations" icon={<Cpu className="size-4" />}>
           <ul className="grid gap-1 text-sm">
             {character.augmentations.map((aug) => (
               <li key={aug.id} className="flex justify-between gap-3">
                 <span>
                   {aug.name || 'Unnamed augmentation'}
                   {aug.rating > 0 && <span className="text-muted"> R{aug.rating}</span>}
-                  {aug.grade !== 'standard' && <span className="text-muted"> · {AUGMENTATION_GRADES[aug.grade].name}</span>}
+                  {aug.grade !== 'standard' && (
+                    <span className="text-muted"> · {AUGMENTATION_GRADES[aug.grade].name}</span>
+                  )}
                   {aug.source && <SourceLink source={aug.source} className="ml-2" />}
                   {(formatBonuses(aug.bonuses) || aug.notes) && (
-                    <div className="text-xs text-muted">{[formatBonuses(aug.bonuses), aug.notes].filter(Boolean).join(' · ')}</div>
+                    <div className="text-xs text-muted">
+                      {[formatBonuses(aug.bonuses), aug.notes].filter(Boolean).join(' · ')}
+                    </div>
                   )}
                 </span>
                 <span className="shrink-0 text-xs text-muted tabular-nums">
@@ -230,7 +242,7 @@ export function SheetTab() {
       )}
 
       {derived.magic && (
-        <Section title="Magic" className="lg:col-span-2">
+        <Section title="Magic" icon={<Flame className="size-4" />} className="lg:col-span-2">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Stat label="Spellcasting" value={derived.magic.spellcasting ?? '–'} hint="Sorcery + Magic" />
             <Stat
@@ -301,7 +313,7 @@ export function SheetTab() {
       )}
 
       {derived.resonance && (
-        <Section title="Resonance">
+        <Section title="Resonance" icon={<Radio className="size-4" />}>
           <div className="grid grid-cols-2 gap-2">
             <Stat label="Tasking" value={derived.resonance.tasking ?? '–'} hint="Tasking + Resonance" />
             <Stat label="Fading resist" value={derived.resonance.fadingResistance} />
@@ -325,7 +337,7 @@ export function SheetTab() {
       )}
 
       {derived.matrix && (
-        <Section title="Matrix">
+        <Section title="Matrix" icon={<Wifi className="size-4" />}>
           <div className="mb-2 text-sm">
             {derived.matrix.device ? derived.matrix.device.name || 'Unnamed device' : 'Living persona'}
           </div>
@@ -346,7 +358,7 @@ export function SheetTab() {
       )}
 
       {character.vehicles.length > 0 && (
-        <Section title="Vehicles & drones" className="lg:col-span-2">
+        <Section title="Vehicles & drones" icon={<Car className="size-4" />} className="lg:col-span-2">
           <div className="-mx-4 overflow-x-auto px-4">
             <table className="w-full min-w-[36rem] text-sm">
               <thead>
@@ -368,13 +380,21 @@ export function SheetTab() {
                       {v.source && <SourceLink source={v.source} className="ml-2" />}
                       {v.notes && <div className="text-xs text-muted">{v.notes}</div>}
                     </td>
-                    {[v.handling, v.acceleration, v.speedInterval, v.topSpeed, v.body, v.armor, v.pilot, v.sensor, v.seats].map(
-                      (value, i) => (
-                        <td key={i} className="py-1.5 text-center tabular-nums">
-                          {value === '' || value === 0 ? <span className="text-muted">–</span> : value}
-                        </td>
-                      ),
-                    )}
+                    {[
+                      v.handling,
+                      v.acceleration,
+                      v.speedInterval,
+                      v.topSpeed,
+                      v.body,
+                      v.armor,
+                      v.pilot,
+                      v.sensor,
+                      v.seats,
+                    ].map((value, i) => (
+                      <td key={i} className="py-1.5 text-center tabular-nums">
+                        {value === '' || value === 0 ? <span className="text-muted">–</span> : value}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
@@ -383,115 +403,13 @@ export function SheetTab() {
         </Section>
       )}
 
-      <Section title="Resources">
+      <Section title="Resources" icon={<Coins className="size-4" />}>
         <dl className="grid gap-y-1 text-sm">
           <Row label="Nuyen" value={`${character.nuyen.toLocaleString()} ¥`} />
           <Row label="Karma available" value={character.karma.available} />
           <Row label="Career karma" value={character.karma.career} />
         </dl>
       </Section>
-    </div>
-  )
-}
-
-function round2(value: number) {
-  return Math.round(value * 100) / 100
-}
-
-function formatInitiative({ score, dice }: Initiative) {
-  return `${score} + ${dice}D6`
-}
-
-function armorHint(armor: number) {
-  return armor > 0 ? `incl. armor ${armor}` : 'no armor equipped'
-}
-
-function Stat({
-  label,
-  value,
-  large = false,
-  hint,
-  tone,
-}: {
-  label: string
-  value: string | number
-  large?: boolean
-  hint?: string
-  tone?: 'danger'
-}) {
-  return (
-    <div className="rounded border border-line bg-bg/60 px-2 py-1.5 text-center" title={hint}>
-      <div className="text-[10px] tracking-wider text-muted uppercase">{label}</div>
-      <div className={`${large ? 'text-xl' : 'text-lg'} font-semibold tabular-nums ${tone === 'danger' ? 'text-danger' : ''}`}>
-        {value}
-      </div>
-    </div>
-  )
-}
-
-function Row({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex justify-between gap-4">
-      <dt className="text-muted">{label}</dt>
-      <dd className="tabular-nums">{value}</dd>
-    </div>
-  )
-}
-
-/** A dice pool, with the wound modifier applied when one is given. */
-function PoolRow({ label, pool, wounds = 0 }: { label: string; pool: number; wounds?: number }) {
-  return <Row label={label} value={formatPool(pool, wounds)} />
-}
-
-function formatPool(pool: number, wounds: number) {
-  return Math.max(0, pool + wounds)
-}
-
-function MonitorTrack({
-  label,
-  monitor,
-  onChange,
-  showModifiers = true,
-}: {
-  label: string
-  monitor: ConditionMonitor
-  onChange: (filled: number) => void
-  showModifiers?: boolean
-}) {
-  const filled = Math.min(monitor.filled, monitor.boxes)
-  return (
-    <div>
-      <div className="mb-1.5 flex justify-between text-xs">
-        <span className="text-muted">{label}</span>
-        <span className="tabular-nums">
-          {filled} / {monitor.boxes}
-          {filled > 0 && (
-            <button className="ml-3 text-muted hover:text-fg" onClick={() => onChange(0)}>
-              Clear
-            </button>
-          )}
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-1">
-        {Array.from({ length: monitor.boxes }, (_, i) => {
-          const box = i + 1
-          const isFilled = box <= filled
-          const endsStep = showModifiers && box % 3 === 0
-          return (
-            <button
-              key={box}
-              aria-label={`${label} box ${box}`}
-              // Clicking the last filled box un-fills it; any other box fills up to it.
-              onClick={() => onChange(box === filled ? box - 1 : box)}
-              className={`relative size-7 rounded-sm border text-[10px] ${
-                isFilled ? 'border-danger bg-danger/70 text-bg' : 'border-line bg-bg hover:border-accent/60'
-              } ${endsStep ? 'mr-2' : ''}`}
-            >
-              {endsStep ? `-${box / 3}` : ''}
-            </button>
-          )
-        })}
-      </div>
     </div>
   )
 }
@@ -520,13 +438,8 @@ function SkillTable({ pools, wounds }: { pools: SkillPool[]; wounds: number }) {
         {pools.map((p) => (
           <tr key={p.skill.id} className={`border-t border-line/60 ${p.owned ? '' : 'text-muted'}`}>
             <td className="py-1.5">
-              {p.skill.name}{' '}
-              <span className="text-xs text-muted">{ATTRIBUTE_LABELS[p.skill.attribute].short}</span>
-              {p.owned?.specialization && (
-                <div className="text-xs text-muted">
-                  {p.owned.specialization} (+2)
-                </div>
-              )}
+              {p.skill.name} <span className="text-xs text-muted">{ATTRIBUTE_LABELS[p.skill.attribute].short}</span>
+              {p.owned?.specialization && <div className="text-xs text-muted">{p.owned.specialization} (+2)</div>}
               {p.owned?.expertise && <div className="text-xs text-muted">{p.owned.expertise} (+3)</div>}
             </td>
             <td className="py-1.5 text-center tabular-nums">{p.rating || '–'}</td>
@@ -584,7 +497,10 @@ function WeaponTable({ character, wounds }: { character: Character; wounds: numb
                 ))}
                 <td className="py-1.5 text-center text-xs">{w.modes || '–'}</td>
                 <td className="py-1.5 text-center text-xs">{w.ammo || '–'}</td>
-                <td className="py-1.5 text-right font-semibold tabular-nums" title={bonus ? `includes +${bonus} specialization` : undefined}>
+                <td
+                  className="py-1.5 text-right font-semibold tabular-nums"
+                  title={bonus ? `includes +${bonus} specialization` : undefined}
+                >
                   {pool === null ? <span className="font-normal text-muted">n/a</span> : formatPool(pool, wounds)}
                 </td>
               </tr>

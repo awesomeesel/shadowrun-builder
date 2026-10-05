@@ -117,7 +117,11 @@ export function toCharacterItem(
         list,
         item: WeaponSchema.parse({
           name: entry.name,
-          skillId: /melee|blade|club|whip|taser/i.test(entry.category) ? 'close-combat' : /exotic|launcher/i.test(entry.category) ? 'exotic-weapons' : 'firearms',
+          skillId: /melee|blade|club|whip|taser/i.test(entry.category)
+            ? 'close-combat'
+            : /exotic|launcher/i.test(entry.category)
+              ? 'exotic-weapons'
+              : 'firearms',
           specialization: entry.category,
           damage: entry.damage,
           attackRatings: entry.attackRatings,
@@ -130,7 +134,14 @@ export function toCharacterItem(
     case 'armor':
       return {
         list,
-        item: GearSchema.parse({ name: entry.name, category: entry.category, armor: entry.defense, rating: r, cost, source }),
+        item: GearSchema.parse({
+          name: entry.name,
+          category: entry.category,
+          armor: entry.defense,
+          rating: r,
+          cost,
+          source,
+        }),
       }
     case 'gear':
       return { list, item: GearSchema.parse({ name: entry.name, category: entry.category, rating: r, cost, source }) }
@@ -186,7 +197,13 @@ export function toCharacterItem(
         list,
         item: MatrixDeviceSchema.parse({
           name: entry.name,
-          kind: /deck/i.test(entry.category) ? 'cyberdeck' : /rigger|rcc/i.test(entry.category) ? 'rcc' : /commlink/i.test(entry.category) ? 'commlink' : 'other',
+          kind: /deck/i.test(entry.category)
+            ? 'cyberdeck'
+            : /rigger|rcc/i.test(entry.category)
+              ? 'rcc'
+              : /commlink/i.test(entry.category)
+                ? 'commlink'
+                : 'other',
           deviceRating: entry.deviceRating,
           attack: offensive ? first : 0,
           sleaze: offensive ? second : 0,
@@ -225,15 +242,25 @@ export function entrySummary(entry: ExtractedEntry): string {
     e.cost ? `${e.cost.perRating ? `R${e.cost.squared ? '²' : ''}×` : ''}${e.cost.base.toLocaleString()}¥` : ''
   switch (entry.kind) {
     case 'weapon':
-      return [entry.damage, entry.modes, entry.attackRatings.map((a) => a ?? '–').join('/'), entry.ammo, yen(entry)].filter(Boolean).join(' · ')
+      return [entry.damage, entry.modes, entry.attackRatings.map((a) => a ?? '–').join('/'), entry.ammo, yen(entry)]
+        .filter(Boolean)
+        .join(' · ')
     case 'augmentation':
-      return [entry.essence ? `Ess ${entry.essence.perRating ? 'R×' : ''}${entry.essence.base}` : '', entry.rating ? `R${entry.rating.min}–${entry.rating.max}` : '', yen(entry)].filter(Boolean).join(' · ')
+      return [
+        entry.essence ? `Ess ${entry.essence.perRating ? 'R×' : ''}${entry.essence.base}` : '',
+        entry.rating ? `R${entry.rating.min}–${entry.rating.max}` : '',
+        yen(entry),
+      ]
+        .filter(Boolean)
+        .join(' · ')
     case 'armor':
       return [`+${entry.defense} DR`, yen(entry)].join(' · ')
     case 'gear':
       return [entry.rating ? `R${entry.rating.min}–${entry.rating.max}` : '', yen(entry)].filter(Boolean).join(' · ')
     case 'matrixDevice':
-      return [`DR ${entry.deviceRating}`, entry.attributes && `${entry.attributeNames} ${entry.attributes}`, yen(entry)].filter(Boolean).join(' · ')
+      return [`DR ${entry.deviceRating}`, entry.attributes && `${entry.attributeNames} ${entry.attributes}`, yen(entry)]
+        .filter(Boolean)
+        .join(' · ')
     case 'vehicle':
       return [`Hand ${entry.handling}`, `Body ${entry.body}`, `Armor ${entry.armor}`, yen(entry)].join(' · ')
     case 'quality':
@@ -241,7 +268,9 @@ export function entrySummary(entry: ExtractedEntry): string {
     case 'adeptPower':
       return `${entry.powerPoints} PP${entry.perLevel ? ' per level' : ''}${entry.activation ? ` · ${entry.activation}` : ''}`
     case 'spell':
-      return [entry.range, entry.type, entry.duration, entry.drain && `Drain ${entry.drain}`].filter(Boolean).join(' · ')
+      return [entry.range, entry.type, entry.duration, entry.drain && `Drain ${entry.drain}`]
+        .filter(Boolean)
+        .join(' · ')
     case 'complexForm':
       return [entry.duration, entry.fading && `Fade ${entry.fading}`].filter(Boolean).join(' · ')
   }

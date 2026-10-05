@@ -5,6 +5,7 @@ import { Library } from './pages/Library'
 import { BuildTab } from './pages/character/BuildTab'
 import { CharacterPage } from './pages/character/CharacterPage'
 import { EditTab } from './pages/character/EditTab'
+import { PlayTab } from './pages/character/PlayTab'
 import { SheetTab } from './pages/character/SheetTab'
 import { WizardTab } from './pages/character/WizardTab'
 
@@ -21,6 +22,7 @@ const router = createHashRouter([
       { path: 'edit', element: <EditTab /> },
       { path: 'build', element: <BuildTab /> },
       { path: 'wizard', element: <WizardTab /> },
+      { path: 'play', element: <PlayTab /> },
     ],
   },
 ])

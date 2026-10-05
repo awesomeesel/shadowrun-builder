@@ -85,10 +85,7 @@ export function columnSplit(width: number): number {
 export function readingOrder(page: PageLayout): Line[] {
   const split = columnSplit(page.width)
   const body = contentItems(page)
-  return [
-    ...groupLines(body.filter((i) => i[0] < split)),
-    ...groupLines(body.filter((i) => i[0] >= split)),
-  ]
+  return [...groupLines(body.filter((i) => i[0] < split)), ...groupLines(body.filter((i) => i[0] >= split))]
 }
 
 /** The most common fragment height on the page: the body text size. */

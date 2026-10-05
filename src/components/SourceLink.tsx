@@ -1,3 +1,4 @@
+import { noAutofill } from './noAutofill'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { Link } from 'react-router'
@@ -14,7 +15,10 @@ export function SourceLink({ source, className = '' }: { source: SourceRef; clas
 
   if (!book) {
     return (
-      <span className={`text-xs text-muted ${className}`} title={`Add ${source.book} to your library to open this page`}>
+      <span
+        className={`text-xs text-muted ${className}`}
+        title={`Add ${source.book} to your library to open this page`}
+      >
         {label}
       </span>
     )
@@ -44,6 +48,7 @@ export function SourceInput({
   return (
     <div className="flex items-center gap-2">
       <input
+        {...noAutofill}
         className={`input w-full ${invalid ? 'border-danger' : ''}`}
         placeholder="CRB 245"
         value={text}

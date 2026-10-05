@@ -1,4 +1,6 @@
+import { noAutofill } from './noAutofill'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import type { EntryKind } from '../books/extract'
@@ -42,14 +44,16 @@ export function CatalogPicker({
   kinds,
   onAdd,
   onClose,
+  initialQuery = '',
 }: {
   kinds: EntryKind[]
   onAdd: AddItem
   onClose: () => void
+  initialQuery?: string
 }) {
   const entries = useLiveQuery(() => db.catalog.where('kind').anyOf(kinds).toArray(), [kinds.join()])
   const books = useLiveQuery(() => db.books.toArray())
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(initialQuery)
   const [kind, setKind] = useState<EntryKind | 'all'>('all')
   const [selected, setSelected] = useState<string | null>(null)
   const [added, setAdded] = useState<string[]>([])
@@ -72,7 +76,10 @@ export function CatalogPicker({
   const indexing = books?.some((b) => b.indexedPages < b.pageCount || b.extractedVersion === 0)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/60 sm:items-center sm:p-6" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/60 sm:items-center sm:p-6"
+      onClick={onClose}
+    >
       <div
         className="flex w-full max-w-2xl flex-col overflow-hidden border-line bg-surface sm:max-h-[85vh] sm:rounded-lg sm:border"
         onClick={(e) => e.stopPropagation()}
@@ -81,6 +88,7 @@ export function CatalogPicker({
       >
         <div className="flex items-center gap-2 border-b border-line p-3">
           <input
+            {...noAutofill}
             autoFocus
             type="search"
             className="input flex-1 py-2 text-base"
@@ -236,5 +244,33 @@ function EntryRow({
         </div>
       )}
     </li>
+  )
+}
+
+/** Clickable search suggestions (e.g. "wired reflexes") that open the picker pre-filtered. */
+export function SuggestionChips({
+  suggestions,
+  onAdd,
+}: {
+  suggestions: { query: string; kinds: EntryKind[] }[]
+  onAdd: AddItem
+}) {
+  const [open, setOpen] = useState<{ query: string; kinds: EntryKind[] } | null>(null)
+  if (suggestions.length === 0) return null
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {suggestions.map((s) => (
+        <button
+          key={s.query}
+          onClick={() => setOpen(s)}
+          className="chip cursor-pointer border-accent/30 text-fg hover:border-accent hover:text-accent"
+        >
+          <Search className="size-3" /> {s.query}
+        </button>
+      ))}
+      {open && (
+        <CatalogPicker kinds={open.kinds} initialQuery={open.query} onAdd={onAdd} onClose={() => setOpen(null)} />
+      )}
+    </div>
   )
 }

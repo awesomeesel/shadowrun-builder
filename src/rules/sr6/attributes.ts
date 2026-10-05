@@ -2,11 +2,7 @@ export const PHYSICAL_ATTRIBUTES = ['body', 'agility', 'reaction', 'strength'] a
 export const MENTAL_ATTRIBUTES = ['willpower', 'logic', 'intuition', 'charisma'] as const
 export const SPECIAL_ATTRIBUTES = ['edge', 'magic', 'resonance'] as const
 
-export const ATTRIBUTE_IDS = [
-  ...PHYSICAL_ATTRIBUTES,
-  ...MENTAL_ATTRIBUTES,
-  ...SPECIAL_ATTRIBUTES,
-] as const
+export const ATTRIBUTE_IDS = [...PHYSICAL_ATTRIBUTES, ...MENTAL_ATTRIBUTES, ...SPECIAL_ATTRIBUTES] as const
 
 export type AttributeId = (typeof ATTRIBUTE_IDS)[number]
 

@@ -7,10 +7,18 @@ export interface KnownBook {
 }
 
 export const KNOWN_BOOKS: KnownBook[] = [
-  { code: 'CRB', title: 'Core Rulebook', match: ['core rule', 'core-rule', 'corerule', 'core_rule', 'sixth world core'] },
+  {
+    code: 'CRB',
+    title: 'Core Rulebook',
+    match: ['core rule', 'core-rule', 'corerule', 'core_rule', 'sixth world core'],
+  },
   { code: 'FS', title: 'Firing Squad', match: ['firing squad', 'firing-squad', 'firingsquad', 'firing_squad'] },
   { code: 'SW', title: 'Street Wyrd', match: ['street wyrd', 'street-wyrd', 'streetwyrd', 'street_wyrd'] },
-  { code: 'HS', title: 'Hack & Slash', match: ['hack & slash', 'hack and slash', 'hack-and-slash', 'hack_slash', 'hackslash', 'hack-slash'] },
+  {
+    code: 'HS',
+    title: 'Hack & Slash',
+    match: ['hack & slash', 'hack and slash', 'hack-and-slash', 'hack_slash', 'hackslash', 'hack-slash'],
+  },
   { code: 'DC', title: 'Double Clutch', match: ['double clutch', 'double-clutch', 'doubleclutch', 'double_clutch'] },
   { code: 'BS', title: 'Body Shop', match: ['body shop', 'body-shop', 'bodyshop', 'body_shop'] },
   { code: 'SWC', title: 'Sixth World Companion', match: ['companion'] },

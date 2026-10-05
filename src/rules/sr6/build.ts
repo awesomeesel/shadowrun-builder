@@ -106,7 +106,8 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
     used.set(level, [...(used.get(level) ?? []), PRIORITY_CATEGORY_LABELS[category]])
   }
   for (const [level, categories] of used) {
-    if (categories.length > 1) error(`Priority ${level} is used for ${categories.join(' and ')}; each letter can be used once.`)
+    if (categories.length > 1)
+      error(`Priority ${level} is used for ${categories.join(' and ')}; each letter can be used once.`)
   }
   if (!priority('metatype').metatypes.includes(character.metatype)) {
     error(`${METATYPES[character.metatype].name} isn't available at metatype priority ${build.priorities.metatype}.`)
@@ -166,19 +167,30 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
       skillKarma += RULES.expertiseKarma
       if (!skill.specialization.trim()) error(`${name} needs a specialization before an expertise.`)
     }
-    if (rating > RULES.maxSkillRating) error(`${name} ${rating} is above the creation maximum of ${RULES.maxSkillRating}.`)
+    if (rating > RULES.maxSkillRating)
+      error(`${name} ${rating} is above the creation maximum of ${RULES.maxSkillRating}.`)
     if (rating === RULES.maxSkillRating) skillsAtMax++
     if (rating === 0) warning(`${name} has no rating yet.`)
-    if (MAGIC_SKILLS.has(skill.skillId) && magicAttribute !== 'magic') warning(`${name} is only useful for awakened characters.`)
-    if (skill.skillId === 'tasking' && magicAttribute !== 'resonance') warning(`Tasking is only useful for technomancers.`)
+    if (MAGIC_SKILLS.has(skill.skillId) && magicAttribute !== 'magic')
+      warning(`${name} is only useful for awakened characters.`)
+    if (skill.skillId === 'tasking' && magicAttribute !== 'resonance')
+      warning(`Tasking is only useful for technomancers.`)
   }
   if (skillsAtMax > RULES.maxSkillsAtMax) {
-    error(`${skillsAtMax} skills are at rating ${RULES.maxSkillRating}; only ${RULES.maxSkillsAtMax} may be at creation.`)
+    error(
+      `${skillsAtMax} skills are at rating ${RULES.maxSkillRating}; only ${RULES.maxSkillsAtMax} may be at creation.`,
+    )
   }
 
   // Qualities
-  const positive = sumBy(character.qualities.filter((q) => q.kind === 'positive'), (q) => q.karma)
-  const negative = sumBy(character.qualities.filter((q) => q.kind === 'negative'), (q) => q.karma)
+  const positive = sumBy(
+    character.qualities.filter((q) => q.kind === 'positive'),
+    (q) => q.karma,
+  )
+  const negative = sumBy(
+    character.qualities.filter((q) => q.kind === 'negative'),
+    (q) => q.karma,
+  )
 
   // Knowledge skills and languages
   const nativeLanguages = character.languages.filter((l) => l.level === 'native').length
@@ -243,7 +255,10 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
     nuyen: build.karmaForNuyen,
   }
   const karma = {
-    ...budget(RULES.startingKarma, Object.values(breakdown).reduce((a, b) => a + b, 0)),
+    ...budget(
+      RULES.startingKarma,
+      Object.values(breakdown).reduce((a, b) => a + b, 0),
+    ),
     breakdown,
   }
 

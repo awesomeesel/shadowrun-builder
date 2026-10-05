@@ -1,3 +1,4 @@
+import { noAutofill } from './noAutofill'
 import type { ReactNode } from 'react'
 import { NumberInput } from './ui'
 
@@ -107,6 +108,7 @@ function renderField<T>(field: FieldDef<T>, item: T, set: Setter<T>): ReactNode 
     case 'text':
       return (
         <input
+          {...noAutofill}
           className="input w-full"
           value={String(value ?? '')}
           placeholder={field.placeholder}

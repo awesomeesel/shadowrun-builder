@@ -1,5 +1,8 @@
+import { Backpack, BookOpen, Car, Cpu, Crosshair, Flame, Radio, Star, Users, Wifi } from 'lucide-react'
+import { noAutofill } from '../../components/noAutofill'
 import type { EntryKind } from '../../books/extract'
-import { AddFromBooks, type AddItem } from '../../components/CatalogPicker'
+import { AddFromBooks } from '../../components/CatalogPicker'
+import { addFromCatalog } from './addFromCatalog'
 import { ListEditor, type FieldDef } from '../../components/ListEditor'
 import { useState } from 'react'
 import { DecimalInput, NumberInput, Section } from '../../components/ui'
@@ -55,19 +58,7 @@ function sourceField<T extends { source?: SourceRef }>(span: 3 | 4 = 4): FieldDe
   }
 }
 
-/** Append an item picked from the book catalog to the right list. */
-function addFromCatalog(update: Update): AddItem {
-  return (list, item) =>
-    update((c) => {
-      // The first device becomes the one used for Matrix stats.
-      const added = list === 'matrixDevices' && !c.matrixDevices.some((d) => d.active) ? { ...item, active: true } : item
-      return { ...c, [list]: [...c[list], added] }
-    })
-}
-
-const fromBooks = (update: Update, kinds: EntryKind[]) => (
-  <AddFromBooks kinds={kinds} onAdd={addFromCatalog(update)} />
-)
+const fromBooks = (update: Update, kinds: EntryKind[]) => <AddFromBooks kinds={kinds} onAdd={addFromCatalog(update)} />
 
 type ListKey =
   | 'qualities'
@@ -106,9 +97,9 @@ const qualityFields: FieldDef<Quality>[] = [
 
 const ATTACK_RANGES = ['Close', 'Near', 'Medium', 'Far', 'Extreme']
 
-const weaponSkillOptions = SKILLS.filter((s) => ['firearms', 'close-combat', 'exotic-weapons', 'athletics'].includes(s.id)).map(
-  (s) => ({ value: s.id, label: s.name }),
-)
+const weaponSkillOptions = SKILLS.filter((s) =>
+  ['firearms', 'close-combat', 'exotic-weapons', 'athletics'].includes(s.id),
+).map((s) => ({ value: s.id, label: s.name }))
 
 const weaponFields: FieldDef<Weapon>[] = [
   { kind: 'text', key: 'name', label: 'Weapon', span: 4, wide: true },
@@ -124,6 +115,7 @@ const weaponFields: FieldDef<Weapon>[] = [
       <div className="grid grid-cols-5 gap-1">
         {ATTACK_RANGES.map((range, i) => (
           <input
+            {...noAutofill}
             key={range}
             className="input w-full px-1 text-center"
             inputMode="numeric"
@@ -195,6 +187,7 @@ export function QualitiesSection({ character, update }: { character: Character; 
   return (
     <Section
       title="Qualities"
+      icon={<Star className="size-4" />}
       aside={
         <span className="text-xs text-muted">
           +{total('positive')} / −{total('negative')} karma
@@ -216,7 +209,7 @@ export function QualitiesSection({ character, update }: { character: Character; 
 
 export function WeaponsSection({ character, update }: { character: Character; update: Update }) {
   return (
-    <Section title="Weapons" className="lg:col-span-2">
+    <Section title="Weapons" icon={<Crosshair className="size-4" />} className="lg:col-span-2">
       <ListEditor
         items={character.weapons}
         onChange={setList(update, 'weapons')}
@@ -232,7 +225,7 @@ export function WeaponsSection({ character, update }: { character: Character; up
 
 export function GearSection({ character, update }: { character: Character; update: Update }) {
   return (
-    <Section title="Armor & gear" className="lg:col-span-2">
+    <Section title="Armor & gear" icon={<Backpack className="size-4" />} className="lg:col-span-2">
       <ListEditor
         items={character.gear}
         onChange={setList(update, 'gear')}
@@ -248,7 +241,7 @@ export function GearSection({ character, update }: { character: Character; updat
 
 export function ContactsSection({ character, update }: { character: Character; update: Update }) {
   return (
-    <Section title="Contacts">
+    <Section title="Contacts" icon={<Users className="size-4" />}>
       <ListEditor
         items={character.contacts}
         onChange={setList(update, 'contacts')}
@@ -263,7 +256,7 @@ export function ContactsSection({ character, update }: { character: Character; u
 
 export function KnowledgeSection({ character, update }: { character: Character; update: Update }) {
   return (
-    <Section title="Knowledge & languages">
+    <Section title="Knowledge & languages" icon={<BookOpen className="size-4" />}>
       <ListEditor
         items={character.languages}
         onChange={setList(update, 'languages')}
@@ -310,6 +303,7 @@ function BonusInput({ value, onChange }: { value: Bonuses; onChange: (value: Bon
   const invalid = draft !== null && parseBonuses(draft) === undefined
   return (
     <input
+      {...noAutofill}
       className={`input w-full ${invalid ? 'border-danger' : ''}`}
       placeholder="REA +2, +2D6"
       title="Attribute bonuses (e.g. REA +2, AGI +1) and extra initiative dice (e.g. +2D6)"
@@ -460,6 +454,7 @@ export function AugmentationsSection({ character, update }: { character: Charact
   return (
     <Section
       title="Augmentations"
+      icon={<Cpu className="size-4" />}
       className="lg:col-span-2"
       aside={<span className="text-xs text-muted">Essence {computeDerived(character).essence}</span>}
     >
@@ -480,7 +475,7 @@ export function MagicSection({ character, update }: { character: Character; upda
   const derived = computeDerived(character)
   const pp = derived.magic?.powerPoints
   return (
-    <Section title="Magic" className="lg:col-span-2">
+    <Section title="Magic" icon={<Flame className="size-4" />} className="lg:col-span-2">
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <label className="block">
           <span className="mb-1 block text-xs text-muted">Tradition</span>
@@ -504,7 +499,9 @@ export function MagicSection({ character, update }: { character: Character; upda
           <NumberInput
             value={character.powerPointsBought}
             min={0}
-            onChange={(powerPointsBought) => update((c) => ({ ...c, powerPointsBought: Math.max(0, powerPointsBought) }))}
+            onChange={(powerPointsBought) =>
+              update((c) => ({ ...c, powerPointsBought: Math.max(0, powerPointsBought) }))
+            }
           />
         </label>
       </div>
@@ -541,7 +538,7 @@ export function MagicSection({ character, update }: { character: Character; upda
 
 export function ComplexFormsSection({ character, update }: { character: Character; update: Update }) {
   return (
-    <Section title="Complex forms" className="lg:col-span-2">
+    <Section title="Complex forms" icon={<Radio className="size-4" />} className="lg:col-span-2">
       <ListEditor
         items={character.complexForms}
         onChange={setList(update, 'complexForms')}
@@ -566,7 +563,7 @@ export function MatrixDevicesSection({ character, update }: { character: Charact
     }))
   }
   return (
-    <Section title="Matrix devices" className="lg:col-span-2">
+    <Section title="Matrix devices" icon={<Wifi className="size-4" />} className="lg:col-span-2">
       <ListEditor
         items={character.matrixDevices}
         onChange={onChange}
@@ -582,7 +579,7 @@ export function MatrixDevicesSection({ character, update }: { character: Charact
 
 export function VehiclesSection({ character, update }: { character: Character; update: Update }) {
   return (
-    <Section title="Vehicles & drones" className="lg:col-span-2">
+    <Section title="Vehicles & drones" icon={<Car className="size-4" />} className="lg:col-span-2">
       <ListEditor
         items={character.vehicles}
         onChange={setList(update, 'vehicles')}

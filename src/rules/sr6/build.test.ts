@@ -128,7 +128,10 @@ describe('evaluateBuild', () => {
       // Charisma 1 gives 6 free contact karma; this contact costs 8.
       contacts: [ContactSchema.parse({ name: 'Fixer', connection: 5, loyalty: 3 })],
       // Logic 1 gives one free knowledge skill; the native language is free on top.
-      knowledgeSkills: [{ id: 'k1', name: 'Seattle gangs' }, { id: 'k2', name: 'Corporate politics' }],
+      knowledgeSkills: [
+        { id: 'k1', name: 'Seattle gangs' },
+        { id: 'k2', name: 'Corporate politics' },
+      ],
       languages: [{ id: 'l1', name: 'English', level: 'native' }],
     })
     c = withBuild(c, (b) => {

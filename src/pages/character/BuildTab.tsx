@@ -1,3 +1,5 @@
+import { BarChart3, Coins, ListOrdered, Target } from 'lucide-react'
+import { noAutofill } from '../../components/noAutofill'
 import { useState } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router'
 import { Section } from '../../components/ui'
@@ -32,8 +34,6 @@ import { METATYPE_IDS, METATYPES, attributeMaximum } from '../../rules/sr6/metat
 import { SKILLS, SKILLS_BY_ID } from '../../rules/sr6/skills'
 import type { CharacterContext } from './CharacterPage'
 import { makeUpdateBuild, type UpdateBuild } from './updateBuild'
-
-
 
 export function BuildTab() {
   const { character, update } = useOutletContext<CharacterContext>()
@@ -107,9 +107,13 @@ export function BudgetBar({ evaluation }: { evaluation: BuildEvaluation }) {
     ['Nuyen', evaluation.nuyen, '¥'],
   ]
   return (
-    <div className="sticky top-[5.6rem] z-[5] grid grid-cols-3 gap-2 rounded-lg border border-line bg-bg/95 p-2 backdrop-blur sm:grid-cols-5 lg:col-span-2">
+    <div className="sticky top-[var(--header-h,5.6rem)] z-[5] grid grid-cols-3 gap-2 rounded-lg border border-line bg-bg/95 p-2 backdrop-blur sm:grid-cols-5 lg:col-span-2">
       {items.map(([label, b, unit]) => (
-        <div key={label} className="text-center" title={`${b.spent.toLocaleString()} of ${b.total.toLocaleString()} spent`}>
+        <div
+          key={label}
+          className="text-center"
+          title={`${b.spent.toLocaleString()} of ${b.total.toLocaleString()} spent`}
+        >
           <div className="text-[10px] tracking-wider text-muted uppercase">{label}</div>
           <div
             className={`font-semibold tabular-nums ${
@@ -191,7 +195,7 @@ export function PrioritiesSection({
   }
 
   return (
-    <Section title="Priorities" className="lg:col-span-2">
+    <Section title="Priorities" icon={<ListOrdered className="size-4" />} className="lg:col-span-2">
       <div className="grid gap-3">
         {PRIORITY_CATEGORIES.map((category) => (
           <div key={category} className="grid items-center gap-2 sm:grid-cols-[9rem_auto_1fr]">
@@ -206,7 +210,9 @@ export function PrioritiesSection({
                     aria-checked={active}
                     onClick={() => choose(category, level)}
                     className={`size-8 rounded border text-sm font-semibold ${
-                      active ? 'border-accent bg-accent/20 text-accent' : 'border-line text-muted hover:border-accent/50'
+                      active
+                        ? 'border-accent bg-accent/20 text-accent'
+                        : 'border-line text-muted hover:border-accent/50'
                     }`}
                   >
                     {level}
@@ -303,22 +309,23 @@ export function AttributesSection({
   build,
   character,
   updateBuild,
+  highlight = [],
 }: {
   build: Build
   character: Character
   updateBuild: UpdateBuild
+  /** Attributes that matter most for the chosen role. */
+  highlight?: AttributeId[]
 }) {
   const awakened = MAGIC_TYPES[build.magicType].attribute
-  const rows: AttributeId[] = [...ATTRIBUTE_IDS].filter(
-    (a) => (a !== 'magic' && a !== 'resonance') || awakened === a,
-  )
+  const rows: AttributeId[] = [...ATTRIBUTE_IDS].filter((a) => (a !== 'magic' && a !== 'resonance') || awakened === a)
   const step = (attribute: AttributeId, field: 'adjustment' | 'points' | 'karma', delta: number) =>
     updateBuild((b) => {
       b.attributes[attribute][field] = Math.max(0, b.attributes[attribute][field] + delta)
     })
 
   return (
-    <Section title="Attributes">
+    <Section title="Attributes" icon={<BarChart3 className="size-4" />}>
       <table className="w-full text-sm">
         <thead>
           <tr className="text-xs text-muted">
@@ -335,11 +342,13 @@ export function AttributesSection({
             const label = ATTRIBUTE_LABELS[attribute]
             const value = buildAttributeValue(build, attribute)
             const max = attributeMaximum(character.metatype, attribute)
-            const takesPoints = (PHYSICAL_ATTRIBUTES as readonly string[]).includes(attribute) ||
+            const takesPoints =
+              (PHYSICAL_ATTRIBUTES as readonly string[]).includes(attribute) ||
               (MENTAL_ATTRIBUTES as readonly string[]).includes(attribute)
             return (
               <tr key={attribute} className="border-t border-line/60">
-                <td className="py-1">
+                <td className={`py-1 ${highlight.includes(attribute) ? 'text-accent' : ''}`}>
+                  {highlight.includes(attribute) && <span title="Key attribute for your role">★ </span>}
                   <span className="hidden sm:inline">{label.name} </span>
                   <span className="text-xs text-muted">{label.short}</span>
                 </td>
@@ -360,7 +369,11 @@ export function AttributesSection({
                   />
                 </td>
                 <td className="py-1">
-                  <Stepper label={`${label.name} karma`} value={alloc.karma} onStep={(d) => step(attribute, 'karma', d)} />
+                  <Stepper
+                    label={`${label.name} karma`}
+                    value={alloc.karma}
+                    onStep={(d) => step(attribute, 'karma', d)}
+                  />
                 </td>
                 <td className={`py-1 text-right font-semibold tabular-nums ${value > max ? 'text-danger' : ''}`}>
                   {value}
@@ -396,7 +409,7 @@ export function SkillsSection({
     })
 
   return (
-    <Section title="Skills">
+    <Section title="Skills" icon={<Target className="size-4" />}>
       {character.skills.length === 0 && <p className="mb-3 text-sm text-muted">No skills yet.</p>}
       <ul className="mb-3 grid gap-2">
         {character.skills.map((skill) => {
@@ -410,9 +423,17 @@ export function SkillsSection({
                   {def && <span className="ml-1 text-xs text-muted">{ATTRIBUTE_LABELS[def.attribute].short}</span>}
                 </span>
                 <span className="text-xs text-muted">Points</span>
-                <Stepper label={`${def?.name} points`} value={alloc.points} onStep={(d) => stepAlloc(skill.id, 'points', d)} />
+                <Stepper
+                  label={`${def?.name} points`}
+                  value={alloc.points}
+                  onStep={(d) => stepAlloc(skill.id, 'points', d)}
+                />
                 <span className="text-xs text-muted">Karma</span>
-                <Stepper label={`${def?.name} karma`} value={alloc.karma} onStep={(d) => stepAlloc(skill.id, 'karma', d)} />
+                <Stepper
+                  label={`${def?.name} karma`}
+                  value={alloc.karma}
+                  onStep={(d) => stepAlloc(skill.id, 'karma', d)}
+                />
                 <span className="w-6 text-right font-semibold tabular-nums">{skill.rating}</span>
                 <button
                   className="px-1 text-muted hover:text-danger"
@@ -429,12 +450,14 @@ export function SkillsSection({
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <input
+                  {...noAutofill}
                   className="input"
                   placeholder={`Specialization (${CREATION_RULES.specializationSkillPoints} pt)`}
                   value={skill.specialization}
                   onChange={(e) => setText(skill.id, 'specialization', e.target.value)}
                 />
                 <input
+                  {...noAutofill}
                   className="input"
                   placeholder={`Expertise (${CREATION_RULES.expertiseKarma} karma)`}
                   value={skill.expertise}
@@ -490,12 +513,16 @@ export function KarmaSection({
       b.knowledge,
       `${evaluation.freeKnowledge.spent} of ${evaluation.freeKnowledge.total} free used`,
     ],
-    ['Contacts', b.contacts, `${evaluation.freeContactKarma.spent} of ${evaluation.freeContactKarma.total} free karma used`],
+    [
+      'Contacts',
+      b.contacts,
+      `${evaluation.freeContactKarma.spent} of ${evaluation.freeContactKarma.total} free karma used`,
+    ],
     ['Spells, complex forms, power points', b.magic],
     ['Converted to nuyen', b.nuyen],
   ]
   return (
-    <Section title="Karma & resources" className="lg:col-span-2">
+    <Section title="Karma & resources" icon={<Coins className="size-4" />} className="lg:col-span-2">
       <dl className="grid gap-1 text-sm sm:grid-cols-2 sm:gap-x-8">
         <div className="flex justify-between">
           <dt className="text-muted">Starting karma</dt>
@@ -533,7 +560,8 @@ export function KarmaSection({
           }
         />
         <span className="ml-auto text-muted">
-          Gear, augmentations & vehicles: {evaluation.nuyen.spent.toLocaleString()} / {evaluation.nuyen.total.toLocaleString()} ¥
+          Gear, augmentations & vehicles: {evaluation.nuyen.spent.toLocaleString()} /{' '}
+          {evaluation.nuyen.total.toLocaleString()} ¥
         </span>
       </div>
     </Section>

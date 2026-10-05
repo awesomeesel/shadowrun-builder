@@ -1,10 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { BookOpen, Copy, Download, FileInput, Library, Trash2, UserPlus, Wand2 } from 'lucide-react'
+import { Logo, Portrait, Skyline } from '../components/art'
+import { METATYPE_COLORS } from '../components/metatypeColors'
 import { useRef, useState, type DragEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { addCharacter, deleteCharacter, duplicateCharacter, importCharacters } from '../db/characters'
 import { db } from '../db/db'
 import { downloadText } from '../lib/download'
-import { createCharacter, type Character } from '../model/character'
+import { CharacterSchema, createCharacter, migrateCharacter, type Character } from '../model/character'
 import {
   ImportError,
   characterFileName,
@@ -13,12 +16,19 @@ import {
   serializeCharacter,
 } from '../model/fileFormat'
 import { startBuild } from '../rules/sr6/build'
+import { computeDerived } from '../rules/sr6/derived'
 import { METATYPES } from '../rules/sr6/metatypes'
 
 type Notice = { kind: 'success' | 'error'; text: string }
 
 export function CharacterList() {
-  const characters = useLiveQuery(() => db.characters.orderBy('updatedAt').reverse().toArray())
+  // Parse stored records so ones saved by older versions get the newer fields' defaults.
+  const characters = useLiveQuery(async () =>
+    (await db.characters.orderBy('updatedAt').reverse().toArray()).flatMap((raw) => {
+      const parsed = CharacterSchema.safeParse(migrateCharacter(raw))
+      return parsed.success ? [parsed.data] : []
+    }),
+  )
   const navigate = useNavigate()
   const fileInput = useRef<HTMLInputElement>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
@@ -86,40 +96,53 @@ export function CharacterList() {
       }}
       onDrop={onDrop}
     >
-      <header className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-4 sm:px-8">
-        <h1 className="mr-auto font-display text-xl tracking-wide text-accent">Shadowrun Builder</h1>
-        <Link to="/library" className="btn">
-          Library
-        </Link>
-        <button className="btn btn-primary" onClick={handleNew}>
-          New character
-        </button>
-        <button className="btn" onClick={handleQuickEntry} title="Type in a character that already exists">
-          Enter existing
-        </button>
-        <button className="btn" onClick={() => fileInput.current?.click()}>
-          Import
-        </button>
-        <button className="btn" onClick={handleExportAll} disabled={!characters?.length}>
-          Export all
-        </button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept=".json,application/json"
-          multiple
-          hidden
-          onChange={(e) => {
-            if (e.target.files) void handleFiles(e.target.files)
-            e.target.value = ''
-          }}
-        />
+      <header className="relative overflow-hidden border-b border-line">
+        <Skyline className="pointer-events-none absolute inset-x-0 bottom-0 h-full w-full opacity-60" />
+        <div className="relative mx-auto max-w-5xl px-4 pt-5 pb-8 sm:px-8 sm:pb-12">
+          <div className="flex items-center gap-3">
+            <Logo className="size-10" />
+            <div className="mr-auto">
+              <h1 className="text-gradient font-display text-2xl leading-none font-bold tracking-wider uppercase sm:text-3xl">
+                Shadowrun Builder
+              </h1>
+              <p className="text-xs text-muted">Sixth World character builder &amp; runner's companion</p>
+            </div>
+            <Link to="/library" className="btn">
+              <Library className="size-4" /> <span className="hidden sm:inline">Library</span>
+            </Link>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <button className="btn btn-primary px-4 py-2" onClick={handleNew}>
+              <Wand2 className="size-4" /> New character
+            </button>
+            <button className="btn py-2" onClick={handleQuickEntry} title="Type in a character that already exists">
+              <UserPlus className="size-4" /> Enter existing
+            </button>
+            <button className="btn py-2" onClick={() => fileInput.current?.click()}>
+              <FileInput className="size-4" /> Import
+            </button>
+            <button className="btn py-2" onClick={handleExportAll} disabled={!characters?.length}>
+              <Download className="size-4" /> Export all
+            </button>
+          </div>
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".json,application/json"
+            multiple
+            hidden
+            onChange={(e) => {
+              if (e.target.files) void handleFiles(e.target.files)
+              e.target.value = ''
+            }}
+          />
+        </div>
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-8">
         {notice && (
           <div
-            className={`mb-6 flex items-start gap-3 rounded border px-4 py-3 text-sm whitespace-pre-wrap ${
+            className={`mb-6 flex items-start gap-3 rounded-lg border px-4 py-3 text-sm whitespace-pre-wrap ${
               notice.kind === 'error' ? 'border-danger/50 bg-danger/10' : 'border-accent/40 bg-accent/10'
             }`}
           >
@@ -133,61 +156,100 @@ export function CharacterList() {
         {characters === undefined ? null : characters.length === 0 ? (
           <EmptyState onNew={handleNew} onQuickEntry={handleQuickEntry} onImport={() => fileInput.current?.click()} />
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {characters.map((character) => (
-              <li key={character.id} className="card flex flex-col">
-                <Link to={`/character/${character.id}`} className="flex flex-1 gap-3 p-4 hover:bg-white/[0.03]">
-                  <Portrait character={character} />
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold">{character.name}</div>
-                    <div className="truncate text-sm text-muted">
-                      {[METATYPES[character.metatype]?.name, character.concept].filter(Boolean).join(' · ')}
-                    </div>
-                    <div className="mt-1 text-xs text-muted">
-                      Edited {new Date(character.updatedAt).toLocaleString()}
-                    </div>
-                  </div>
-                </Link>
-                <div className="flex border-t border-line text-sm">
-                  <button
-                    className="flex-1 py-2 text-muted hover:text-fg"
-                    onClick={() => downloadText(characterFileName(character), serializeCharacter(character))}
-                  >
-                    Export
-                  </button>
-                  <button
-                    className="flex-1 py-2 text-muted hover:text-fg"
-                    onClick={() => duplicateCharacter(character.id)}
-                  >
-                    Duplicate
-                  </button>
-                  <button className="flex-1 py-2 text-muted hover:text-danger" onClick={() => handleDelete(character)}>
-                    Delete
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <>
+            <h2 className="mb-3 font-display text-sm tracking-widest text-muted uppercase">
+              Your runners · {characters.length}
+            </h2>
+            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {characters.map((character) => (
+                <CharacterCard
+                  key={character.id}
+                  character={character}
+                  onDuplicate={() => duplicateCharacter(character.id)}
+                  onDelete={() => handleDelete(character)}
+                />
+              ))}
+            </ul>
+          </>
         )}
       </main>
 
       {dragging && (
-        <div className="pointer-events-none fixed inset-0 grid place-items-center bg-bg/80 text-lg text-accent">
-          <div className="rounded-lg border-2 border-dashed border-accent px-10 py-8">Drop character files to import</div>
+        <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-bg/80 text-lg text-accent">
+          <div className="rounded-xl border-2 border-dashed border-accent px-10 py-8">
+            Drop character files to import
+          </div>
         </div>
       )}
     </div>
   )
 }
 
-function Portrait({ character }: { character: Character }) {
-  if (character.portrait) {
-    return <img src={character.portrait} alt="" className="size-14 shrink-0 rounded object-cover" />
-  }
+function CharacterCard({
+  character,
+  onDuplicate,
+  onDelete,
+}: {
+  character: Character
+  onDuplicate: () => void
+  onDelete: () => void
+}) {
+  const color = METATYPE_COLORS[character.metatype]
+  const derived = computeDerived(character)
+  const status =
+    character.mode === 'build'
+      ? 'In creation'
+      : character.play.session
+        ? 'In session'
+        : `${character.sessions.length} sessions`
+  const target = character.mode === 'build' ? 'wizard' : character.play.session ? 'play' : ''
   return (
-    <div className="grid size-14 shrink-0 place-items-center rounded bg-accent/15 font-display text-xl text-accent">
-      {character.name.trim().charAt(0).toUpperCase() || '?'}
-    </div>
+    <li className="card group relative flex flex-col overflow-hidden transition-colors hover:border-accent/40">
+      <div className="h-1" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
+      <Link to={`/character/${character.id}/${target}`} className="flex flex-1 gap-3 p-4">
+        <Portrait src={character.portrait} metatype={character.metatype} className="size-16" />
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-display text-xl leading-tight font-semibold">{character.name}</div>
+          <div className="truncate text-sm">
+            <span style={{ color }}>{METATYPES[character.metatype].name}</span>
+            {character.concept && <span className="text-muted"> · {character.concept}</span>}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1">
+            <span className={`chip ${character.play.session ? 'border-accent/50 text-accent' : ''}`}>{status}</span>
+            {character.mode !== 'build' && (
+              <>
+                <span className="chip" title="Initiative">
+                  Init {derived.initiative.score}+{derived.initiative.dice}D6
+                </span>
+                <span className="chip" title="Karma available">
+                  {character.karma.available} K
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      </Link>
+      <div className="flex border-t border-line text-xs">
+        <button
+          className="flex flex-1 items-center justify-center gap-1 py-2 text-muted hover:text-fg"
+          onClick={() => downloadText(characterFileName(character), serializeCharacter(character))}
+        >
+          <Download className="size-3.5" /> Export
+        </button>
+        <button
+          className="flex flex-1 items-center justify-center gap-1 py-2 text-muted hover:text-fg"
+          onClick={onDuplicate}
+        >
+          <Copy className="size-3.5" /> Duplicate
+        </button>
+        <button
+          className="flex flex-1 items-center justify-center gap-1 py-2 text-muted hover:text-danger"
+          onClick={onDelete}
+        >
+          <Trash2 className="size-3.5" /> Delete
+        </button>
+      </div>
+    </li>
   )
 }
 
@@ -201,22 +263,34 @@ function EmptyState({
   onImport: () => void
 }) {
   return (
-    <div className="card mx-auto max-w-md p-8 text-center">
-      <h2 className="mb-2 text-lg font-semibold">No runners yet</h2>
-      <p className="mb-6 text-sm text-muted">
-        Build a new character with the priority system, type in one you already have, or import one from a file.
-        You can also drag files onto this page.
-      </p>
-      <div className="flex flex-wrap justify-center gap-3">
-        <button className="btn btn-primary" onClick={onNew}>
-          New character
-        </button>
-        <button className="btn" onClick={onQuickEntry}>
-          Enter existing
-        </button>
-        <button className="btn" onClick={onImport}>
-          Import
-        </button>
+    <div className="card mx-auto max-w-lg overflow-hidden text-center">
+      <div className="p-8">
+        <h2 className="mb-2 font-display text-2xl">No runners yet</h2>
+        <p className="mb-6 text-sm text-muted">
+          The wizard walks you through building a new runner step by step. Already have a character on paper? Type it
+          in, or import a file. You can also drag files onto this page.
+        </p>
+        <div className="flex flex-wrap justify-center gap-2">
+          <button className="btn btn-primary px-4 py-2" onClick={onNew}>
+            <Wand2 className="size-4" /> New character
+          </button>
+          <button className="btn py-2" onClick={onQuickEntry}>
+            <UserPlus className="size-4" /> Enter existing
+          </button>
+          <button className="btn py-2" onClick={onImport}>
+            <FileInput className="size-4" /> Import
+          </button>
+        </div>
+        <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted">
+          <BookOpen className="size-3.5" />
+          <span>
+            Tip: add your rulebook PDFs in the{' '}
+            <Link to="/library" className="text-accent hover:underline">
+              Library
+            </Link>{' '}
+            first, so you can pick gear and spells straight from your books.
+          </span>
+        </p>
       </div>
     </div>
   )

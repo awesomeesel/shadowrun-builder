@@ -101,7 +101,9 @@ describe('weaponPool', () => {
   const pistol = WeaponSchema.parse({ name: 'Ares Predator VI', skillId: 'firearms', specialization: 'Pistols' })
 
   it('adds a matching specialization', () => {
-    const c = runner({ skills: [{ id: 's', skillId: 'firearms', rating: 4, specialization: 'pistols', expertise: '' }] })
+    const c = runner({
+      skills: [{ id: 's', skillId: 'firearms', rating: 4, specialization: 'pistols', expertise: '' }],
+    })
     expect(weaponPool(c, pistol)).toEqual({ pool: 12, bonus: 2 })
   })
 
@@ -177,7 +179,14 @@ describe('augmentations and special attributes', () => {
   })
 
   it('uses the active device for Matrix stats', () => {
-    const deck = MatrixDeviceSchema.parse({ deviceRating: 5, attack: 7, sleaze: 6, dataProcessing: 5, firewall: 4, active: true })
+    const deck = MatrixDeviceSchema.parse({
+      deviceRating: 5,
+      attack: 7,
+      sleaze: 6,
+      dataProcessing: 5,
+      firewall: 4,
+      active: true,
+    })
     const m = computeDerived(runner({ matrixDevices: [deck] })).matrix!
     expect(m.monitor).toBe(11)
     expect(m.coldSimInitiative).toEqual({ score: 10, dice: 2 })

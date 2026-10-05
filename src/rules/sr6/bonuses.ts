@@ -12,7 +12,9 @@ export function parseBonuses(text: string): Bonuses | undefined {
   for (const raw of text.split(/[,;]/)) {
     const part = raw.trim().toUpperCase()
     if (!part) continue
-    const dice = part.match(/^\+?\s*(\d+)\s*D6(?:\s*INIT(?:IATIVE)?)?$/) ?? part.match(/^(?:ID|INIT(?:IATIVE)?(?: DICE)?)\s*\+?\s*(\d+)$/)
+    const dice =
+      part.match(/^\+?\s*(\d+)\s*D6(?:\s*INIT(?:IATIVE)?)?$/) ??
+      part.match(/^(?:ID|INIT(?:IATIVE)?(?: DICE)?)\s*\+?\s*(\d+)$/)
     if (dice) {
       result.initiativeDice += parseInt(dice[1], 10)
       continue

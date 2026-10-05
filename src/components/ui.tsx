@@ -1,3 +1,4 @@
+import { noAutofill } from './noAutofill'
 import { useState, type ReactNode } from 'react'
 
 export function Section({
@@ -5,16 +6,21 @@ export function Section({
   children,
   className = '',
   aside,
+  icon,
 }: {
   title: string
   children: ReactNode
   className?: string
   aside?: ReactNode
+  icon?: ReactNode
 }) {
   return (
     <section className={`card min-w-0 p-4 ${className}`}>
       <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h2 className="font-display text-sm tracking-widest text-accent uppercase">{title}</h2>
+        <h2 className="flex items-center gap-1.5 font-display text-sm tracking-widest text-accent uppercase">
+          {icon}
+          {title}
+        </h2>
         {aside}
       </div>
       {children}
@@ -51,6 +57,7 @@ export function NumberInput({
   const [draft, setDraft] = useState<string | null>(null)
   return (
     <input
+      {...noAutofill}
       type="number"
       inputMode="numeric"
       className={`input w-full text-center ${className}`}
@@ -84,6 +91,7 @@ export function DecimalInput({
   const [draft, setDraft] = useState<string | null>(null)
   return (
     <input
+      {...noAutofill}
       className={`input w-full text-center ${className}`}
       inputMode="decimal"
       value={draft ?? String(value)}

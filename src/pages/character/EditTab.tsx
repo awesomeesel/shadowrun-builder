@@ -1,3 +1,5 @@
+import { BarChart3, Coins, NotebookPen, Target, UserRound } from 'lucide-react'
+import { noAutofill } from '../../components/noAutofill'
 import { useState } from 'react'
 import { Link, useOutletContext } from 'react-router'
 import { Field, NumberInput, Section } from '../../components/ui'
@@ -60,7 +62,7 @@ export function EditTab() {
       <MatrixDevicesSection character={character} update={update} />
       <VehiclesSection character={character} update={update} />
       {character.mode !== 'build' && <ResourcesSection character={character} update={update} />}
-      <Section title="Notes" className="lg:col-span-2">
+      <Section title="Notes" icon={<NotebookPen className="size-4" />} className="lg:col-span-2">
         <textarea
           className="input min-h-32 w-full"
           value={character.notes}
@@ -86,6 +88,7 @@ export function BasicsSection({
   const textField = (key: 'name' | 'realName' | 'playerName' | 'concept', label: string) => (
     <Field label={label}>
       <input
+        {...noAutofill}
         className="input w-full"
         value={character[key]}
         onChange={(e) => {
@@ -107,7 +110,7 @@ export function BasicsSection({
   }
 
   return (
-    <Section title="Basics">
+    <Section title="Basics" icon={<UserRound className="size-4" />}>
       <div className="flex gap-4">
         <label className="group relative grid size-24 shrink-0 cursor-pointer place-items-center overflow-hidden rounded border border-line bg-white/[0.03] text-xs text-muted">
           {character.portrait ? (
@@ -126,22 +129,22 @@ export function BasicsSection({
         {textField('concept', 'Concept')}
         {textField('playerName', 'Player')}
         {showMetatype && (
-        <Field label="Metatype">
-          <select
-            className="input w-full"
-            value={character.metatype}
-            onChange={(e) => {
-              const metatype = e.target.value as Character['metatype']
-              update((c) => ({ ...c, metatype }))
-            }}
-          >
-            {METATYPE_IDS.map((m) => (
-              <option key={m} value={m}>
-                {METATYPES[m].name}
-              </option>
-            ))}
-          </select>
-        </Field>
+          <Field label="Metatype">
+            <select
+              className="input w-full"
+              value={character.metatype}
+              onChange={(e) => {
+                const metatype = e.target.value as Character['metatype']
+                update((c) => ({ ...c, metatype }))
+              }}
+            >
+              {METATYPE_IDS.map((m) => (
+                <option key={m} value={m}>
+                  {METATYPES[m].name}
+                </option>
+              ))}
+            </select>
+          </Field>
         )}
       </div>
     </Section>
@@ -166,7 +169,7 @@ function AttributesSection({ character, update }: { character: Character; update
     })
 
   return (
-    <Section title="Attributes">
+    <Section title="Attributes" icon={<BarChart3 className="size-4" />}>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {group(PHYSICAL_ATTRIBUTES)}
         {group(MENTAL_ATTRIBUTES)}
@@ -188,7 +191,7 @@ function SkillsSection({ character, update }: { character: Character; update: Up
   }
 
   return (
-    <Section title="Skills">
+    <Section title="Skills" icon={<Target className="size-4" />}>
       {character.skills.length === 0 && <p className="mb-3 text-sm text-muted">No skills yet.</p>}
       <ul className="mb-3 grid gap-2">
         {character.skills.map((skill) => {
@@ -206,6 +209,7 @@ function SkillsSection({ character, update }: { character: Character; update: Up
                 onChange={(rating) => patchSkill(skill.id, { rating })}
               />
               <input
+                {...noAutofill}
                 className="input order-last basis-full sm:order-none sm:basis-auto sm:flex-1"
                 placeholder="Specialization"
                 value={skill.specialization}
@@ -250,7 +254,7 @@ function SkillsSection({ character, update }: { character: Character; update: Up
 
 function ResourcesSection({ character, update }: { character: Character; update: Update }) {
   return (
-    <Section title="Resources">
+    <Section title="Resources" icon={<Coins className="size-4" />}>
       <div className="grid grid-cols-3 gap-3">
         <Field label="Nuyen (¥)">
           <NumberInput value={character.nuyen} onChange={(nuyen) => update((c) => ({ ...c, nuyen }))} />
