@@ -1,4 +1,4 @@
-import { noAutofill } from './noAutofill'
+import { noAutofill, noAutofillField } from './noAutofill'
 import type { ReactNode } from 'react'
 import { NumberInput } from './ui'
 
@@ -128,7 +128,12 @@ function renderField<T>(field: FieldDef<T>, item: T, set: Setter<T>): ReactNode 
       )
     case 'select':
       return (
-        <select className="input w-full" value={String(value)} onChange={(e) => setValue(e.target.value)}>
+        <select
+          {...noAutofillField}
+          className="input w-full"
+          value={String(value)}
+          onChange={(e) => setValue(e.target.value)}
+        >
           {field.options.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}

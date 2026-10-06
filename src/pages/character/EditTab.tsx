@@ -1,5 +1,5 @@
 import { BarChart3, Coins, NotebookPen, Target, UserRound } from 'lucide-react'
-import { noAutofill } from '../../components/noAutofill'
+import { noAutofill, noAutofillField } from '../../components/noAutofill'
 import { useState } from 'react'
 import { Link, useOutletContext } from 'react-router'
 import { Field, NumberInput, Section } from '../../components/ui'
@@ -66,6 +66,7 @@ export function EditTab() {
       {character.mode !== 'build' && <ResourcesSection character={character} update={update} />}
       <Section title="Notes" icon={<NotebookPen className="size-4" />} className="lg:col-span-2">
         <textarea
+          {...noAutofillField}
           className="input min-h-32 w-full"
           value={character.notes}
           onChange={(e) => {
@@ -133,6 +134,7 @@ export function BasicsSection({
         {showMetatype && (
           <Field label="Metatype">
             <select
+              {...noAutofillField}
               className="input w-full"
               value={character.metatype}
               onChange={(e) => {
@@ -240,6 +242,7 @@ function SkillsSection({ character, update }: { character: Character; update: Up
       </ul>
       {available.length > 0 && (
         <select
+          {...noAutofillField}
           className="input w-full"
           value={adding}
           onChange={(e) => {

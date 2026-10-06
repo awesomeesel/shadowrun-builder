@@ -1,3 +1,4 @@
+import { noAutofillField } from '../../components/noAutofill'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ArrowLeft, ArrowRight, BookOpen, Flag, Plus, Sparkles } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -214,6 +215,7 @@ export function WizardTab() {
                 shamans.
               </p>
               <select
+                {...noAutofillField}
                 className="input w-full sm:w-64"
                 value={character.tradition}
                 onChange={(e) => {

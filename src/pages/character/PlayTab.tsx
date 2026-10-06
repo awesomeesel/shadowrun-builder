@@ -18,7 +18,7 @@ import { useState, type ReactNode } from 'react'
 import { useOutletContext } from 'react-router'
 import { keepDriveSignedIn } from '../../cloud/cloud'
 import { RollResult } from '../../components/Dice'
-import { noAutofill } from '../../components/noAutofill'
+import { noAutofill, noAutofillField } from '../../components/noAutofill'
 import { MonitorTrack, Stat } from '../../components/sheetParts'
 import { NumberInput, Section } from '../../components/ui'
 import type { Character, SessionRecord } from '../../model/character'
@@ -284,6 +284,7 @@ function ActiveSession({ character, update }: CharacterContext) {
 
       <Section title="Session notes" icon={<NotebookPen className="size-4" />}>
         <textarea
+          {...noAutofillField}
           className="input min-h-28 w-full"
           placeholder="Who you met, what you found, who owes you…"
           value={session.notes}
@@ -547,6 +548,7 @@ function SessionEntry({
           <label className="block">
             <span className="mb-1 block text-xs font-semibold tracking-wider text-muted uppercase">Notes</span>
             <textarea
+              {...noAutofillField}
               className="input min-h-28 w-full"
               placeholder="What happened? Add notes here any time."
               value={s.notes}

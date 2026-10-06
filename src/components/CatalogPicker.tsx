@@ -1,4 +1,4 @@
-import { noAutofill } from './noAutofill'
+import { noAutofill, noAutofillField } from './noAutofill'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -217,7 +217,12 @@ function EntryRow({
               <span className="mb-1 block text-xs text-muted">
                 {entry.kind === 'quality' || entry.kind === 'adeptPower' ? 'Level' : 'Rating'}
               </span>
-              <select className="input" value={rating} onChange={(e) => setRating(Number(e.target.value))}>
+              <select
+                {...noAutofillField}
+                className="input"
+                value={rating}
+                onChange={(e) => setRating(Number(e.target.value))}
+              >
                 {Array.from({ length: range.max - range.min + 1 }, (_, i) => range.min + i).map((r) => (
                   <option key={r} value={r}>
                     {r}
@@ -229,7 +234,12 @@ function EntryRow({
           {entry.kind === 'augmentation' && (
             <label className="block">
               <span className="mb-1 block text-xs text-muted">Grade</span>
-              <select className="input" value={grade} onChange={(e) => setGrade(e.target.value as GradeId)}>
+              <select
+                {...noAutofillField}
+                className="input"
+                value={grade}
+                onChange={(e) => setGrade(e.target.value as GradeId)}
+              >
                 {(Object.keys(AUGMENTATION_GRADES) as GradeId[]).map((g) => (
                   <option key={g} value={g}>
                     {AUGMENTATION_GRADES[g].name}

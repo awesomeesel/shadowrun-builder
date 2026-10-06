@@ -1,5 +1,5 @@
 import { Backpack, IdCard, BookOpen, Car, Cpu, Crosshair, Flame, Radio, Star, Users, Wifi } from 'lucide-react'
-import { noAutofill } from '../../components/noAutofill'
+import { noAutofill, noAutofillField } from '../../components/noAutofill'
 import type { EntryKind } from '../../books/extract'
 import { AddFromBooks } from '../../components/CatalogPicker'
 import { addFromCatalog } from './addFromCatalog'
@@ -489,6 +489,7 @@ export function MagicSection({ character, update }: { character: Character; upda
         <label className="block">
           <span className="mb-1 block text-xs text-muted">Tradition</span>
           <select
+            {...noAutofillField}
             className="input w-full"
             value={character.tradition}
             onChange={(e) => {

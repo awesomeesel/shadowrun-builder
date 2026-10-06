@@ -3,7 +3,7 @@ import { BookOpen, Dices, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toCharacterItem } from '../books/toCharacter'
-import { noAutofill } from '../components/noAutofill'
+import { noAutofill, noAutofillField } from '../components/noAutofill'
 import { addCharacter } from '../db/characters'
 import { db } from '../db/db'
 import { finishBuild } from '../rules/sr6/build'
@@ -99,6 +99,7 @@ export function QuickMakeDialog({ onClose }: { onClose: () => void }) {
             <label className="block">
               <span className="mb-1 block text-xs text-muted">Metatype</span>
               <select
+                {...noAutofillField}
                 className="input w-full"
                 value={metatype}
                 onChange={(e) => setMetatype(e.target.value as MetatypeId)}

@@ -1,5 +1,5 @@
 import { BarChart3, Coins, ListOrdered, Target } from 'lucide-react'
-import { noAutofill } from '../../components/noAutofill'
+import { noAutofill, noAutofillField } from '../../components/noAutofill'
 import { useState } from 'react'
 import { Link, useNavigate, useOutletContext } from 'react-router'
 import { Section } from '../../components/ui'
@@ -229,6 +229,7 @@ export function PrioritiesSection({
         <label className="block">
           <span className="mb-1 block text-xs text-muted">Metatype</span>
           <select
+            {...noAutofillField}
             className="input w-full"
             value={character.metatype}
             onChange={(e) => {
@@ -249,6 +250,7 @@ export function PrioritiesSection({
         <label className="block">
           <span className="mb-1 block text-xs text-muted">Magic / Resonance</span>
           <select
+            {...noAutofillField}
             className="input w-full"
             value={build.magicType}
             onChange={(e) => {
@@ -470,6 +472,7 @@ export function SkillsSection({
       </ul>
       {available.length > 0 && (
         <select
+          {...noAutofillField}
           className="input w-full"
           value=""
           onChange={(e) => {

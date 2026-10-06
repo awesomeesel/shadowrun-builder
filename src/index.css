@@ -49,6 +49,17 @@
     -moz-appearance: textfield;
   }
 
+  /* Text fields are type="search" to keep password managers away (see noAutofill.ts); make them look like plain inputs. */
+  input[type='search'] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type='search']::-webkit-search-cancel-button,
+  input[type='search']::-webkit-search-decoration {
+    -webkit-appearance: none;
+    display: none;
+  }
+
   ::selection {
     background: rgb(62 232 181 / 0.3);
   }
