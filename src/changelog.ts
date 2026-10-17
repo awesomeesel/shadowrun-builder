@@ -11,6 +11,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 8,
+    date: '2026-10-18',
+    title: 'Share your runner with the GM',
+    items: [
+      'GMs make a campaign on the GM screen and show its QR code, or give out the code and an optional password.',
+      'Players scan it (or tap Share with GM on a character) and pick runners. The GM then sees their sheets live, read-only, while they play.',
+      'Sheets are encrypted on your device with the code and password; the server can’t read them. Leave any time to stop sharing.',
+      'In encounters, shared runners show the player’s own damage and Edge. No internet? Send a copy of the file instead.',
+      'With Google Drive connected, everything on the GM screen is backed up to your Drive (a GM folder next to your characters) and follows you to your other devices: campaigns with their codes and passwords, encounters, notes and run log.',
+      'Each campaign has a party overview (Perception, Surprise, Composure and the other numbers GMs roll in secret), a run log with karma and nuyen per runner, its encounters and notes.',
+    ],
+  },
+  {
     id: 7,
     date: '2026-10-17',
     title: 'GM screen and rules reference',

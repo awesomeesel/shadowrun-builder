@@ -30,6 +30,8 @@ jobs:
         env:
           # Public OAuth client ID for Google Drive sync (a repository variable, not a secret).
           VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          # Public Firebase web app config for sharing sheets with the GM (a repository variable). See FIREBASE_SETUP.md.
+          VITE_FIREBASE_CONFIG: ${{ vars.FIREBASE_CONFIG }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

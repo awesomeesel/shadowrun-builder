@@ -9,6 +9,7 @@ import { CharacterSchema, migrateCharacter } from '../model/character'
 import { ParticipantSchema, type Encounter } from '../model/encounter'
 import { SPIRIT_TYPES } from '../rules/sr6/companions'
 import { addNpcs } from '../rules/sr6/encounter'
+import { latestSheets } from '../share/campaigns'
 import type { NpcEntry } from '../rules/sr6/npc'
 import { Counter } from '../pages/character/play/RollStep'
 
@@ -16,9 +17,11 @@ type Tab = 'books' | 'spirit' | 'runner' | 'custom'
 
 /** Add enemies from the books, spirits, the runners, or a quick custom enemy. */
 export function AddCombatants({
+  campaignId,
   update,
   onClose,
 }: {
+  campaignId?: string
   update: (change: (e: Encounter) => Encounter) => void
   onClose: () => void
 }) {
@@ -67,7 +70,7 @@ export function AddCombatants({
         <div className="flex-1 overflow-y-auto p-4">
           {tab === 'books' && <FromBooks add={add} />}
           {tab === 'spirit' && <SpiritForm add={add} />}
-          {tab === 'runner' && <RunnerForm add={add} />}
+          {tab === 'runner' && <RunnerForm add={add} campaignId={campaignId} />}
           {tab === 'custom' && <CustomForm add={add} />}
         </div>
         <div className="flex justify-end border-t border-line p-3">
@@ -221,13 +224,19 @@ function SpiritForm({ add }: { add: Add }) {
   )
 }
 
-function RunnerForm({ add }: { add: Add }) {
+function RunnerForm({ add, campaignId }: { add: Add; campaignId?: string }) {
   const characters = useLiveQuery(async () =>
     (await db.characters.toArray()).flatMap((raw) => {
       const parsed = CharacterSchema.safeParse(migrateCharacter(raw))
       return parsed.success && parsed.data.mode === 'free' ? [parsed.data] : []
     }),
   )
+  // This campaign's runners first, then any others shared with this device.
+  const shared = useLiveQuery(async () => {
+    const all = await db.sharedSheets.toArray()
+    const own = all.filter((s) => s.roomId === campaignId)
+    return own.length ? latestSheets(own) : latestSheets(all)
+  }, [campaignId])
   const [name, setName] = useState('')
   const [done, setDone] = useState<string[]>([])
   const addRunner = (runnerName: string, characterId?: string) => {
@@ -240,9 +249,25 @@ function RunnerForm({ add }: { add: Add }) {
   return (
     <div className="grid gap-4 text-sm">
       <p className="text-muted">
-        Players roll their own initiative and tell you the total; type it on their card. Runners saved on this device
-        bring their Defense Rating, damage tracks and weapons along.
+        Players roll their own initiative and tell you the total; type it on their card. Shared runners and runners
+        saved on this device bring their Defense Rating, damage tracks and weapons along.
       </p>
+      {shared && shared.length > 0 && (
+        <div>
+          <div className="mb-1 text-xs text-muted">Shared by players (live damage and Edge)</div>
+          <div className="flex flex-wrap gap-1.5">
+            {shared.map((s) => (
+              <button
+                key={s.id}
+                className="chip cursor-pointer border-accent/40 hover:border-accent"
+                onClick={() => addRunner(s.character.name, `shared:${s.id}`)}
+              >
+                + {s.character.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {characters && characters.length > 0 && (
         <div>
           <div className="mb-1 text-xs text-muted">From this device</div>

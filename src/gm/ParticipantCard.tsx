@@ -21,6 +21,7 @@ export function ParticipantCard({
   active,
   groupEdge,
   character,
+  live = false,
   update,
   onRoll,
 }: {
@@ -29,6 +30,8 @@ export function ParticipantCard({
   active: boolean
   groupEdge?: number
   character?: Character
+  /** A runner shared by their player: damage and Edge come from the player's sheet and can't be changed here. */
+  live?: boolean
   update: (change: (e: Encounter) => Encounter) => Promise<void>
   onRoll: (label: string, pool: number, info?: string, initiativeScore?: number) => void
 }) {
@@ -37,16 +40,18 @@ export function ParticipantCard({
   const change = (fn: (x: Participant) => Participant) =>
     void update((e) => ({ ...e, participants: e.participants.map((x) => (x.id === p.id ? fn(x) : x)) }))
 
-  const wounds = woundModifier(p, stats)
+  const fromSheet = live && !!character
+  const damage = fromSheet ? character.damage : p.damage
+  const wounds = woundModifier({ ...p, damage }, stats)
   const shared = stats.isGrunt && !!p.group
-  const edge = shared ? (groupEdge ?? 0) : p.edge
+  const edge = fromSheet ? (character.play.edge ?? stats.edge) : shared ? (groupEdge ?? 0) : p.edge
   const initiative = effectiveInitiative(p)
   const statusShift = initiative !== null && p.initiative !== null ? initiative - p.initiative : 0
   // Grunts and spirits have one track; the Stun boxes go on it too.
   const single = stats.monitor.stun === null
-  const filled = p.damage.physical + p.damage.stun
-  const down = single ? filled >= stats.monitor.physical : p.damage.physical >= stats.monitor.physical
-  const unconscious = !single && stats.monitor.stun !== null && p.damage.stun >= stats.monitor.stun
+  const filled = damage.physical + damage.stun
+  const down = single ? filled >= stats.monitor.physical : damage.physical >= stats.monitor.physical
+  const unconscious = !single && stats.monitor.stun !== null && damage.stun >= stats.monitor.stun
 
   const setEdge = (value: number) =>
     shared
@@ -127,20 +132,29 @@ export function ParticipantCard({
             total={stats.minors}
             onChange={(minorLeft) => change((x) => ({ ...x, minorLeft }))}
           />
-          <div className="flex items-center gap-1" title={shared ? `Shared by ${p.group}` : undefined}>
+          <div
+            className="flex items-center gap-1"
+            title={fromSheet ? 'From the player’s sheet' : shared ? `Shared by ${p.group}` : undefined}
+          >
             <span className="text-muted">{shared ? 'Group Edge' : 'Edge'}</span>
-            <button
-              className="btn size-6 p-0"
-              onClick={() => setEdge(edge - 1)}
-              disabled={edge <= 0}
-              aria-label="Spend Edge"
-            >
-              −
-            </button>
-            <span className="w-4 text-center font-display text-base tabular-nums text-amber">{edge}</span>
-            <button className="btn size-6 p-0" onClick={() => setEdge(edge + 1)} aria-label="Gain Edge">
-              +
-            </button>
+            {fromSheet ? (
+              <span className="w-4 text-center font-display text-base tabular-nums text-amber">{edge}</span>
+            ) : (
+              <>
+                <button
+                  className="btn size-6 p-0"
+                  onClick={() => setEdge(edge - 1)}
+                  disabled={edge <= 0}
+                  aria-label="Spend Edge"
+                >
+                  −
+                </button>
+                <span className="w-4 text-center font-display text-base tabular-nums text-amber">{edge}</span>
+                <button className="btn size-6 p-0" onClick={() => setEdge(edge + 1)} aria-label="Gain Edge">
+                  +
+                </button>
+              </>
+            )}
           </div>
           <button
             className="btn px-2 py-1 text-xs"
@@ -154,10 +168,14 @@ export function ParticipantCard({
       </div>
 
       <div className="grid gap-3 border-t border-line/60 px-3 py-2.5 sm:grid-cols-2">
+        {fromSheet && (
+          <p className="text-xs text-accent sm:col-span-2">Live from the player’s sheet; they mark their own damage.</p>
+        )}
         <Track
           label={single ? 'Condition' : 'Physical'}
           boxes={stats.monitor.physical}
-          filled={single ? filled : p.damage.physical}
+          filled={single ? filled : damage.physical}
+          readOnly={fromSheet}
           step={stats.woundStep}
           onChange={(n) =>
             change((x) => ({ ...x, damage: single ? { physical: n, stun: 0 } : { ...x.damage, physical: n } }))
@@ -167,7 +185,8 @@ export function ParticipantCard({
           <Track
             label="Stun"
             boxes={stats.monitor.stun}
-            filled={p.damage.stun}
+            filled={damage.stun}
+            readOnly={fromSheet}
             step={stats.woundStep}
             onChange={(n) => change((x) => ({ ...x, damage: { ...x.damage, stun: n } }))}
           />
@@ -252,10 +271,20 @@ export function ParticipantCard({
           {p.kind === 'runner' && character && (
             <p className="text-muted">
               Linked to{' '}
-              <Link to={`/character/${character.id}/play`} className="text-accent hover:underline">
+              <Link
+                to={
+                  live && p.characterId
+                    ? `/gm/sheet/${encodeURIComponent(p.characterId.slice('shared:'.length))}`
+                    : `/character/${character.id}/play`
+                }
+                className="text-accent hover:underline"
+              >
                 {character.name}
               </Link>
-              . Damage here is the GM’s copy; the player tracks their own sheet.
+              .{' '}
+              {live
+                ? 'Damage and Edge are live from the player.'
+                : 'Damage here is the GM’s copy; the player tracks their own sheet.'}
             </p>
           )}
           <textarea
@@ -322,12 +351,14 @@ function Track({
   boxes,
   filled,
   step,
+  readOnly = false,
   onChange,
 }: {
   label: string
   boxes: number
   filled: number
   step: number
+  readOnly?: boolean
   onChange: (filled: number) => void
 }) {
   const shown = Math.min(filled, boxes)
@@ -349,6 +380,7 @@ function Track({
             <button
               key={n}
               aria-label={`${label} box ${n}`}
+              disabled={readOnly}
               onClick={() => onChange(n === shown ? n - 1 : n)}
               className={`size-6 rounded border text-[9px] font-semibold transition-colors ${
                 isFilled ? 'border-danger bg-danger/80 text-bg' : 'border-line bg-bg hover:border-accent/60'
@@ -358,14 +390,16 @@ function Track({
             </button>
           )
         })}
-        <button
-          className="ml-1 size-6 rounded border border-line text-xs text-muted hover:text-fg"
-          onClick={() => onChange(filled + 1)}
-          title="Add a box past the end (overflow)"
-          aria-label={`${label}: one more box`}
-        >
-          +
-        </button>
+        {!readOnly && (
+          <button
+            className="ml-1 size-6 rounded border border-line text-xs text-muted hover:text-fg"
+            onClick={() => onChange(filled + 1)}
+            title="Add a box past the end (overflow)"
+            aria-label={`${label}: one more box`}
+          >
+            +
+          </button>
+        )}
       </div>
     </div>
   )

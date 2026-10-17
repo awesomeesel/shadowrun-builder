@@ -7,6 +7,7 @@ import { db, type Book } from '../db/db'
 import { downloadBook, listRemoteBooks, uploadBook, type RemoteBook } from './books'
 import { DriveError, GoogleDrive, type DriveUser } from './drive'
 import { forgetGoogle, isDriveConfigured, loadGoogleScript, requestToken, storedToken, wasConnected } from './google'
+import { syncGmData, type GmSyncReport } from './gmSync'
 import { describeReport, syncCharacters } from './sync'
 
 export type CloudStatus =
@@ -61,12 +62,16 @@ const drive = new GoogleDrive(async () => {
 })
 
 // Folder ids are looked up once per session.
-let folders: Promise<{ root: string; characters: string; books: string }> | undefined
+let folders: Promise<{ root: string; characters: string; books: string; gm: string }> | undefined
 function getFolders() {
   folders ??= (async () => {
     const root = await drive.folder('Shadowrun Builder')
-    const [characters, books] = await Promise.all([drive.folder('Characters', root), drive.folder('Books', root)])
-    return { root, characters, books }
+    const [characters, books, gm] = await Promise.all([
+      drive.folder('Characters', root),
+      drive.folder('Books', root),
+      drive.folder('GM', root),
+    ])
+    return { root, characters, books, gm }
   })()
   folders.catch(() => (folders = undefined))
   return folders
@@ -121,11 +126,17 @@ export async function syncNow({ interactive = false } = {}): Promise<void> {
   setState({ status: 'syncing', error: undefined })
   try {
     if (!state.user) setState({ user: await drive.about() })
-    const report = await syncCharacters(drive, (await getFolders()).characters)
+    const { characters, gm } = await getFolders()
+    const report = await syncCharacters(drive, characters)
+    const gmReport = await syncGmData(drive, gm)
     const conflicts = report.conflicts.length
       ? ` Edited on two devices: ${report.conflicts.join(', ')} (both versions kept).`
       : ''
-    setState({ status: 'idle', lastSync: new Date().toISOString(), message: describeReport(report) + conflicts })
+    setState({
+      status: 'idle',
+      lastSync: new Date().toISOString(),
+      message: describeReport(report) + conflicts + describeGmReport(gmReport),
+    })
   } catch (error) {
     handleError(error)
   } finally {
@@ -135,6 +146,17 @@ export async function syncNow({ interactive = false } = {}): Promise<void> {
       scheduleSync()
     }
   }
+}
+
+function describeGmReport(report: GmSyncReport): string {
+  const parts = [
+    report.uploaded && `${report.uploaded} saved`,
+    report.downloaded && `${report.downloaded} updated from Drive`,
+    report.deletedInDrive && `${report.deletedInDrive} moved to Drive trash`,
+    report.deletedHere && `${report.deletedHere} removed (deleted on another device)`,
+  ].filter(Boolean)
+  const conflicts = report.conflicts.length ? ` (edited on two devices: ${report.conflicts.join(', ')})` : ''
+  return parts.length ? `. GM data: ${parts.join(', ')}${conflicts}.` : ''
 }
 
 /** Sync a moment after local changes settle. */
@@ -236,6 +258,19 @@ export function initCloud() {
   db.characters.hook('updating', onChange)
   db.characters.hook('deleting', onChange)
   db.deletedCharacters.hook('creating', onChange)
+  // GM data: campaigns only when backed-up fields change (not sharing bookkeeping), runners only from files.
+  db.campaigns.hook('creating', (_key, obj) => {
+    if (obj.role === 'gm') onChange()
+  })
+  db.campaigns.hook('updating', (mods) => {
+    if ('updatedAt' in mods) onChange()
+  })
+  db.encounters.hook('creating', onChange)
+  db.encounters.hook('updating', onChange)
+  db.sharedSheets.hook('creating', (_key, obj) => {
+    if (obj.sheetId.startsWith('file-')) onChange()
+  })
+  db.deletedGmItems.hook('creating', onChange)
   window.addEventListener('focus', () => scheduleSync())
   window.addEventListener('online', () => scheduleSync())
   if (state.status === 'idle') void syncNow()

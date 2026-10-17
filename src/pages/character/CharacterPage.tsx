@@ -2,6 +2,7 @@ import { ArrowLeft, Dices, Download, ListChecks, Pencil, ScrollText, TrendingUp,
 import { useEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { Portrait } from '../../components/art'
+import { ShareButton } from '../../share/ShareDialog'
 import { CloudButton } from '../../components/CloudSync'
 import { METATYPE_COLORS } from '../../components/metatypeColors'
 import { METATYPES } from '../../rules/sr6/metatypes'
@@ -72,6 +73,7 @@ export function CharacterPage() {
           </div>
           <SaveIndicator state={saveState} />
           <CloudButton />
+          <ShareButton character={character} />
           <button
             className="btn"
             onClick={() => downloadText(characterFileName(character), serializeCharacter(character))}

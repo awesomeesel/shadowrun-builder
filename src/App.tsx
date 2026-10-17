@@ -1,6 +1,9 @@
 import { RouterProvider, createHashRouter } from 'react-router'
 import { Updates } from './components/Updates'
+import { JoinPage } from './share/JoinPage'
+import { ShareSync } from './share/ShareSync'
 import { EncounterPage } from './gm/EncounterPage'
+import { CampaignPage, SharedSheetPage } from './gm/Campaigns'
 import { GmHome } from './gm/GmHome'
 import { RulesPage } from './gm/RulesPage'
 import { BookViewer } from './pages/BookViewer'
@@ -21,6 +24,9 @@ const router = createHashRouter([
   { path: '/book/:bookId', element: <BookViewer /> },
   { path: '/gm', element: <GmHome /> },
   { path: '/gm/:id', element: <EncounterPage /> },
+  { path: '/gm/campaign/:id', element: <CampaignPage /> },
+  { path: '/gm/sheet/:key', element: <SharedSheetPage />, children: [{ index: true, element: <SheetTab /> }] },
+  { path: '/join', element: <JoinPage /> },
   { path: '/rules', element: <RulesPage /> },
   {
     path: '/character/:id',
@@ -40,6 +46,7 @@ export default function App() {
   return (
     <>
       <RouterProvider router={router} />
+      <ShareSync />
       <div className="print:hidden">
         <Updates />
       </div>

@@ -15,9 +15,11 @@ Ideas and plans for Shadowrun Builder. Add your own anywhere; tick them off with
 
 - [x] **GM screen** – encounters with turn order, actions, damage, statuses and rolls; enemies from the books'
       stat blocks, spirits, runners and quick enemies; a rules reference with book search.
-- [ ] **GM ↔ players** – the GM sends a join link with their email; players tap "Share with GM", which shares their
-      Drive character file read-only; the GM confirms once with the Google Picker (drive.file scope, needs a
-      browser API key). The GM screen then shows the runners' live sheets and damage.
+- [x] **GM ↔ players** – campaigns with a QR code, code and optional password (Firebase, encrypted on the device);
+      the GM sees shared sheets live and read-only. "Send a copy" as the no-internet fallback. Setup:
+      FIREBASE_SETUP.md.
+- [ ] **GM → players** – let the GM send damage or statuses from an encounter to a shared runner (the player
+      accepts it on their Play tab).
 - [ ] **GM screen extras** – sample encounters per Professional Rating, Composure test reminder when grunts
       take more boxes than their Professional Rating, and a Matrix/host participant (IC).
 - [x] **Karma shop** – spend karma between runs at the book's prices (attributes, skills, specializations,

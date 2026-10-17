@@ -59,6 +59,63 @@ export interface DeletedCharacter {
 /** A rules item recognised in one of the user's books. */
 export type CatalogEntry = ExtractedEntry & { id: string; bookId: string }
 
+/** A campaign this device runs (GM) or shares characters with (player). Code and password stay on the device. */
+export interface Campaign {
+  /** Room id derived from the code and password. */
+  id: string
+  role: 'gm' | 'player'
+  code: string
+  password: string
+  name: string
+  /** Characters on this device shared with the GM. */
+  characterIds: string[]
+  /** updatedAt of each character as last sent, so unchanged sheets aren't sent again. */
+  pushed: Record<string, string>
+  joinedAt: string
+  /** Last change to what's backed up to Drive (name, code, notes, run log…); not set by sharing bookkeeping. */
+  updatedAt?: string
+  lastSyncAt?: string
+  /** Last problem talking to the server, shown in the share dialog. */
+  error?: string
+  /** The GM closed the campaign. */
+  closed?: boolean
+  /** GM's notes: plot threads, recurring NPCs, loose ends. Kept on this device only. */
+  notes?: string
+  /** The GM hid the join panel; it opens from "Join info" instead. */
+  joinHidden?: boolean
+  /** Game nights played, newest last. */
+  runs?: CampaignRun[]
+}
+
+/** One game night in the GM's run log. */
+export interface CampaignRun {
+  id: string
+  /** yyyy-mm-dd */
+  date: string
+  title: string
+  notes: string
+  /** Paid to each runner who was there. */
+  karma: number
+  nuyen: number
+  /** Character ids of the runners who played. */
+  runnerIds: string[]
+  /** Their names then, in case a runner is no longer shared. */
+  runnerNames: string[]
+}
+
+/** A player's character as the GM received it: live from a campaign, or from a file. */
+export interface SharedSheet {
+  /** `${roomId}/${sheetId}`; imported copies use sheet id `file-${characterId}`. */
+  id: string
+  /** Campaign room id. */
+  roomId: string
+  sheetId: string
+  character: Character
+  /** When the player last changed it. */
+  updatedAt: string
+  receivedAt: string
+}
+
 export const db = new Dexie('shadowrun-builder') as Dexie & {
   characters: EntityTable<Character, 'id'>
   books: EntityTable<Book, 'id'>
@@ -69,6 +126,16 @@ export const db = new Dexie('shadowrun-builder') as Dexie & {
   syncState: EntityTable<SyncState, 'id'>
   deletedCharacters: EntityTable<DeletedCharacter, 'id'>
   encounters: EntityTable<Encounter, 'id'>
+  campaigns: EntityTable<Campaign, 'id'>
+  sharedSheets: EntityTable<SharedSheet, 'id'>
+  deletedGmItems: EntityTable<DeletedGmItem, 'id'>
+}
+
+/** GM data deleted on this device, so the next Drive sync trashes it there too. */
+export interface DeletedGmItem {
+  /** `${kind}:${itemId}`, e.g. "encounter:…". */
+  id: string
+  deletedAt: string
 }
 
 db.version(1).stores({
@@ -108,4 +175,15 @@ db.version(4).stores({
 // Version 5 adds the GM's encounters.
 db.version(5).stores({
   encounters: 'id, updatedAt',
+})
+
+// Version 6 adds sharing sheets with the GM.
+db.version(6).stores({
+  campaigns: 'id, role',
+  sharedSheets: 'id, roomId',
+})
+
+// Version 7 backs GM data up to Drive.
+db.version(7).stores({
+  deletedGmItems: 'id',
 })

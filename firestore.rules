@@ -1,0 +1,44 @@
+rules_version = '2';
+
+// Security rules for sharing sheets with the GM. Paste into Firebase console →
+// Firestore Database → Rules. Everything stored is encrypted on the device; these
+// rules make sure only the GM can close a campaign and only a player can change
+// their own sheet.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /rooms/{room} {
+      // Rooms can be fetched by id (which only the code and password give you), never listed.
+      allow get: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['gm', 'meta', 'createdAt'])
+        && request.resource.data.gm == request.auth.uid
+        && request.resource.data.meta is string
+        && request.resource.data.meta.size() < 10000;
+      allow update: if false;
+      allow delete: if request.auth != null && resource.data.gm == request.auth.uid;
+
+      match /sheets/{sheet} {
+        function roomExists() {
+          return exists(/databases/$(database)/documents/rooms/$(room));
+        }
+        function isGm() {
+          return get(/databases/$(database)/documents/rooms/$(room)).data.gm == request.auth.uid;
+        }
+        function validSheet() {
+          return request.resource.data.keys().hasOnly(['owner', 'data', 'updatedAt'])
+            && request.resource.data.owner == request.auth.uid
+            && request.resource.data.data is string
+            && request.resource.data.data.size() < 900000
+            && request.resource.data.updatedAt is string;
+        }
+        allow read: if request.auth != null && roomExists();
+        allow create: if request.auth != null && roomExists() && validSheet()
+          && sheet.matches(request.auth.uid + '_.+');
+        allow update: if request.auth != null && roomExists() && validSheet()
+          && resource.data.owner == request.auth.uid;
+        allow delete: if request.auth != null
+          && (resource.data.owner == request.auth.uid || isGm());
+      }
+    }
+  }
+}

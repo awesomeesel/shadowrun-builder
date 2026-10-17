@@ -59,7 +59,16 @@ export function EncounterPage() {
   const [messages, setMessages] = useState<string[]>([])
   const [roll, setRoll] = useState<GmRoll | null>(null)
 
-  const characterById = useMemo(() => new Map((characters ?? []).map((c) => [c.id, c])), [characters])
+  const shared = useLiveQuery(() => db.sharedSheets.toArray())
+  // Runners shared by players are linked as "shared:<sheet id>".
+  const characterById = useMemo(
+    () =>
+      new Map([
+        ...(characters ?? []).map((c) => [c.id, c] as const),
+        ...(shared ?? []).map((s) => [`shared:${s.id}`, s.character] as const),
+      ]),
+    [characters, shared],
+  )
   const stats = useMemo(() => {
     const map = new Map<string, CombatantStats>()
     for (const p of encounter?.participants ?? []) {
@@ -138,7 +147,11 @@ export function EncounterPage() {
     <div className="mx-auto max-w-5xl px-4 py-4 pb-64 sm:px-8 sm:pb-10">
       <header className="sticky top-0 z-10 -mx-4 mb-4 border-b border-line bg-bg/90 px-4 py-3 backdrop-blur-md sm:-mx-8 sm:px-8">
         <div className="flex flex-wrap items-center gap-3">
-          <Link to="/gm" className="text-muted hover:text-fg" aria-label="Back to the GM screen">
+          <Link
+            to={encounter.campaignId ? `/gm/campaign/${encounter.campaignId}` : '/gm'}
+            className="text-muted hover:text-fg"
+            aria-label="Back"
+          >
             <ArrowLeft className="size-5" />
           </Link>
           <input
@@ -274,6 +287,7 @@ export function EncounterPage() {
               active={p.id === encounter.activeId}
               groupEdge={p.group ? encounter.groupEdge[p.group] : undefined}
               character={p.characterId ? characterById.get(p.characterId) : undefined}
+              live={p.characterId?.startsWith('shared:')}
               update={update}
               onRoll={(label, pool, info, initiativeScore) => doRoll(p.id, label, pool, info, initiativeScore)}
             />
@@ -310,7 +324,13 @@ export function EncounterPage() {
           }}
         />
       )}
-      {adding && <AddCombatants update={(change) => void update(change)} onClose={() => setAdding(false)} />}
+      {adding && (
+        <AddCombatants
+          campaignId={encounter.campaignId}
+          update={(change) => void update(change)}
+          onClose={() => setAdding(false)}
+        />
+      )}
     </div>
   )
 }

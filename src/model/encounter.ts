@@ -56,6 +56,8 @@ export const ParticipantSchema = z.object({
 export const EncounterSchema = z.object({
   id: id(),
   name: z.string().default('New encounter'),
+  /** The GM's campaign this fight belongs to (its room id); none for loose encounters. */
+  campaignId: z.string().optional(),
   notes: text(),
   /** 0 before the fight starts. */
   round: int(0),
