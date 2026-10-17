@@ -3,6 +3,18 @@ import { SessionRecordSchema, WeaponSchema, createCharacter } from '../../model/
 import {
   addLedgerEntry,
   ammoCapacity,
+  applyDamage,
+  boostRoll,
+  drainType,
+  edgeFromRatings,
+  firingModes,
+  minorActions,
+  nextRound,
+  parseDamage,
+  shotWith,
+  spellDrain,
+  startCombat,
+  sustainPenalty,
   deleteSessionRecord,
   endSession,
   recordRoll,
@@ -150,5 +162,130 @@ describe('session records', () => {
 
   it('ignores rolls outside a session', () => {
     expect(recordRoll(runner(), 'Test', rollPool(2)).play.session).toBeNull()
+  })
+})
+
+/** Dice values in order, as a random source. */
+const dice = (...values: number[]) => {
+  let i = 0
+  return () => (values[i++ % values.length] - 1) / 6
+}
+
+describe('Edge boosts', () => {
+  it('explodes 6s without counting their 1s toward glitches', () => {
+    const roll = rollPool(2, dice(6, 1, 1), { explode: true, edge: 4 })
+    expect(roll).toMatchObject({ pool: 2, dice: [6, 1, 1], hits: 1, glitch: false, edge: 4 })
+  })
+
+  it('rerolls one die, adds 1 to a die, buys a hit and rerolls failures', () => {
+    const roll = rollPool(3, dice(1, 4, 5))
+    expect(boostRoll(roll, 'rerollOne', 0, dice(6))).toMatchObject({ dice: [6, 4, 5], hits: 2, edge: 1 })
+    expect(boostRoll(roll, 'plusOne', 1)).toMatchObject({ dice: [1, 5, 5], hits: 2, edge: 2 })
+    expect(boostRoll(roll, 'autoHit')).toMatchObject({ hits: 2, autoHits: 1, edge: 3 })
+    expect(boostRoll(roll, 'rerollFailures', -1, dice(5, 6))).toMatchObject({ dice: [5, 6, 5], hits: 3, edge: 4 })
+  })
+
+  it("can't reroll failures after a glitch", () => {
+    const glitched = rollPool(3, dice(1, 1, 5))
+    expect(boostRoll(glitched, 'rerollFailures')).toBe(glitched)
+  })
+})
+
+describe('damage', () => {
+  const victim = () => createCharacter({ attributes: { ...createCharacter().attributes, body: 4, willpower: 2 } })
+
+  it('spills Stun into Physical and Physical into Overflow', () => {
+    // Body 4: 10 Physical boxes, Willpower 2: 9 Stun boxes, Overflow Body × 2 = 8.
+    const stunned = applyDamage(victim(), 11, 'S')
+    expect(stunned.damage).toMatchObject({ stun: 9, physical: 2, overflow: 0 })
+    const dying = applyDamage(stunned, 10, 'P')
+    expect(dying.damage).toMatchObject({ physical: 10, overflow: 2 })
+  })
+
+  it('makes drain above Magic Physical', () => {
+    expect(drainType(3, 4)).toBe('S')
+    expect(drainType(5, 4)).toBe('P')
+  })
+
+  it('reads damage codes', () => {
+    expect(parseDamage('4P')).toEqual({ value: 4, type: 'P' })
+    expect(parseDamage('3S(e)')).toEqual({ value: 3, type: 'S' })
+    expect(parseDamage('special')).toBeNull()
+  })
+})
+
+describe('firing modes', () => {
+  const rifle = WeaponSchema.parse({ modes: 'SA/BF/FA', ammo: '30(c)' })
+
+  it('lists the modes, with single shot for semi-automatics', () => {
+    expect(firingModes(rifle).map((m) => [m.id, m.rounds, m.attackRating, m.damage])).toEqual([
+      ['SS', 1, 0, 0],
+      ['SA', 2, -2, 1],
+      ['BF', 4, -4, 2],
+      ['FA', 10, -6, 0],
+    ])
+    expect(firingModes(WeaponSchema.parse({ modes: 'SS' })).map((m) => m.id)).toEqual(['SS'])
+  })
+
+  it('weakens a burst that runs out of rounds', () => {
+    const burst = firingModes(rifle)[2]
+    expect(shotWith(burst, 3)).toMatchObject({ rounds: 3, attackRating: -3, damage: 1 })
+    expect(shotWith(burst, 1)).toMatchObject({ rounds: 1, attackRating: -1, damage: 0 })
+    expect(shotWith(burst, 30)).toBe(burst)
+  })
+
+  it('gives Edge for an Attack Rating 4 or more away from the Defense Rating', () => {
+    expect(edgeFromRatings(9, 5)).toBe('attacker')
+    expect(edgeFromRatings(5, 9)).toBe('defender')
+    expect(edgeFromRatings(8, 5)).toBeNull()
+  })
+})
+
+describe('combat rounds', () => {
+  it('counts actions from initiative dice and resets them each round', () => {
+    expect(minorActions(1)).toBe(2)
+    expect(minorActions(5)).toBe(5)
+    const fighting = startCombat(runner(), 14)
+    expect(fighting.play.combat).toMatchObject({ round: 1, initiative: 14, majorLeft: 1, minorLeft: 2 })
+    const used = {
+      ...fighting,
+      play: { ...fighting.play, combat: { ...fighting.play.combat!, majorLeft: 0, minorLeft: 0, edgeGained: 2 } },
+    }
+    expect(nextRound(used).play.combat).toMatchObject({ round: 2, majorLeft: 1, minorLeft: 2, edgeGained: 0 })
+  })
+
+  it('records Heat and Reputation when a session ends', () => {
+    const ended = endSession(startSession(runner(), 'Loud run'), {
+      clearStun: true,
+      clearPhysical: false,
+      heat: 2,
+      reputation: 1,
+    })
+    expect(ended).toMatchObject({ heat: 2, reputation: 1, play: { session: null, combat: null } })
+    expect(ended.sessions[0]).toMatchObject({ heat: 2, reputation: 1 })
+    expect(sessionSummary(ended.sessions[0])).toContain('Heat +2, Reputation +1.')
+  })
+})
+
+describe('spellcasting', () => {
+  it('adds Amp Up and area to the Drain Value (p. 131)', () => {
+    expect(spellDrain('5', 0, 0)).toBe(5)
+    expect(spellDrain('3', 2, 1)).toBe(8)
+    expect(spellDrain('', 1, 0)).toBe(2)
+  })
+
+  it('gives −2 dice per sustained spell (p. 132)', () => {
+    const c = runner()
+    const sustaining = {
+      ...c,
+      play: {
+        ...c.play,
+        sustained: [
+          { id: 'a', name: 'Armor', hits: 3 },
+          { id: 'b', name: 'Levitate', hits: 2 },
+        ],
+      },
+    }
+    expect(sustainPenalty(sustaining)).toBe(-4)
   })
 })

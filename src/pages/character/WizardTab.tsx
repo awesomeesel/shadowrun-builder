@@ -391,7 +391,7 @@ export function WizardTab() {
         'Armor adds to your Defense Rating. Tick "Worn" on the armor you actually wear.',
         'Everyone needs a commlink. Deckers need a cyberdeck, riggers a control rig and RCC.',
         `Augmentations cost Essence${magicType.attribute ? ` and lower your ${magicType.attribute === 'magic' ? 'Magic' : 'Resonance'}` : ''}. Better grades (alpha, beta) cost less Essence but more money.`,
-        `Short on money? Convert up to ${CREATION_RULES.maxKarmaForNuyen} karma into ${CREATION_RULES.nuyenPerKarma.toLocaleString()}¥ each on the Review step.`,
+        `Short on money? Convert karma into ${CREATION_RULES.nuyenPerKarma.toLocaleString()}¥ each on the Review step. You can keep at most ${CREATION_RULES.maxStartingNuyen.toLocaleString()}¥ after creation.`,
         booksTip,
       ],
       roleAdvice: role?.advice.gear,

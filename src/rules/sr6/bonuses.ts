@@ -79,7 +79,7 @@ export function formatBonuses(bonuses: Bonuses): string {
 /**
  * Bonuses of well-known implants and powers that rulebook tables don't list.
  * Each entry also names the attribute it raises, so an importer can work out
- * the rating from how much that attribute went up. VERIFY against the Core Rulebook.
+ * the rating from how much that attribute went up. Checked against the Core Rulebook (pp. 157, 287–293).
  */
 const KNOWN_BONUSES: { pattern: RegExp; attribute: AttributeId; dicePerRating: boolean }[] = [
   { pattern: /^wired reflexes/i, attribute: 'reaction', dicePerRating: true },

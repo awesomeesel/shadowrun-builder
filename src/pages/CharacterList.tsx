@@ -242,7 +242,7 @@ function CharacterCard({
       ? 'In creation'
       : character.play.session
         ? 'In session'
-        : `${character.sessions.length} sessions`
+        : `${character.sessions.length} ${character.sessions.length === 1 ? 'session' : 'sessions'}`
   const target = character.mode === 'build' ? 'wizard' : character.play.session ? 'play' : ''
   return (
     <li className="card group relative flex flex-col overflow-hidden transition-colors hover:border-accent/40">
@@ -263,7 +263,7 @@ function CharacterCard({
                   Init {derived.initiative.score}+{derived.initiative.dice}D6
                 </span>
                 <span className="chip" title="Karma available">
-                  {character.karma.available} K
+                  {character.karma.available} karma
                 </span>
               </>
             )}

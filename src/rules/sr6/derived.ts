@@ -1,5 +1,14 @@
-import type { Bonuses, Character, CharacterSkill, MatrixDevice, Program, Weapon } from '../../model/character'
+import {
+  BonusesSchema,
+  type Bonuses,
+  type Character,
+  type CharacterSkill,
+  type MatrixDevice,
+  type Program,
+  type Weapon,
+} from '../../model/character'
 import { ATTRIBUTE_IDS, type AttributeId } from './attributes'
+import { METATYPES } from './metatypes'
 import { SKILLS, SKILLS_BY_ID, type SkillDef } from './skills'
 import {
   TOOLBOX_DATA_PROCESSING,
@@ -99,11 +108,13 @@ export interface DerivedStats {
   /** Present for awakened characters. */
   magic: {
     spellcasting: number | null
+    /** Conjuring + Magic, for summoning and banishing spirits. */
+    summoning: number | null
     drainResistance: number | null
     powerPoints: { available: number; used: number }
   } | null
   /** Present for technomancers. */
-  resonance: { tasking: number | null; fadingResistance: number } | null
+  resonance: { tasking: number | null; fadingResistance: number; compileFadingResistance: number } | null
   /** Present when the character has an active device or a living persona. */
   matrix: MatrixStats | null
 }
@@ -117,8 +128,41 @@ function essenceHundredths(character: Character): number {
   return 600 - character.essenceLoss - augmentationLoss
 }
 
+/** Qualities the character has: bought ones plus the metatype's free racial qualities. */
+function allQualities(character: Character): { name: string; rating: number; racial: boolean }[] {
+  const racial = METATYPES[character.metatype].qualities.map((q) => ({
+    name: q.name,
+    rating: q.rating ?? 1,
+    racial: true,
+  }))
+  const bought = character.qualities.map((q) => ({ name: q.name, rating: q.rating, racial: false }))
+  // A bought copy of a racial quality (Commlink lists them) replaces the free one.
+  const key = (name: string) => name.trim().toLowerCase()
+  return [...racial.filter((r) => !bought.some((b) => key(b.name) === key(r.name))), ...bought]
+}
+
+const hasQuality = (character: Character, pattern: RegExp) => allQualities(character).some((q) => pattern.test(q.name))
+
 function allBonuses(character: Character): Bonuses[] {
-  return [...character.augmentations.map((a) => a.bonuses), ...character.adeptPowers.map((p) => p.bonuses)]
+  const fromQualities: Bonuses[] = hasQuality(character, /^dermal deposits/i)
+    ? // Dermal Deposits (p. 71): 1 point of natural armor and Physical unarmed damage of (STR/2) + 1.
+      [BonusesSchema.parse({ defenseRating: 1, unarmedDamage: 1, unarmedPhysical: true })]
+    : []
+  return [
+    ...character.augmentations.map((a) => a.bonuses),
+    ...character.adeptPowers.map((p) => p.bonuses),
+    ...fromQualities,
+  ]
+}
+
+/** Built Tough (p. 70) adds its rank in Physical boxes. */
+function builtToughBoxes(character: Character): number {
+  return Math.max(
+    0,
+    ...allQualities(character)
+      .filter((q) => /^built tough/i.test(q.name))
+      .map((q) => q.rating),
+  )
 }
 
 /** Attributes with augmentation/adept bonuses (capped) and Magic/Resonance reduced by Essence loss. */
@@ -148,7 +192,10 @@ function magicLoss(character: Character): number {
 
 export function computeDerived(character: Character): DerivedStats {
   const a = effectiveAttributes(character)
-  const physicalMonitor = { boxes: 8 + Math.ceil(a.body / 2), filled: character.damage.physical }
+  const physicalMonitor = {
+    boxes: 8 + Math.ceil(a.body / 2) + builtToughBoxes(character),
+    filled: character.damage.physical,
+  }
   const stunMonitor = { boxes: 8 + Math.ceil(a.willpower / 2), filled: character.damage.stun }
   const armor = character.gear.filter((item) => item.equipped).reduce((sum, item) => sum + item.armor, 0)
   const bonuses = allBonuses(character)
@@ -165,11 +212,10 @@ export function computeDerived(character: Character): DerivedStats {
       score: a.reaction + a.intuition,
       dice: Math.min(SPECIAL_RULES.maxInitiativeDice, 1 + extraDice),
     },
-    // Logic + Intuition, matching Commlink's calculation. VERIFY against the Core Rulebook.
+    // Astral Combat table (p. 161): Logic + Intuition + 2D6.
     astralInitiative: { score: a.logic + a.intuition, dice: 2 },
     physicalMonitor,
     stunMonitor,
-    // TODO: verify overflow box count against the SR6 Core Rulebook.
     overflow: { boxes: a.body * 2, filled: character.damage.overflow },
     woundModifier: woundModifier(physicalMonitor.filled) + woundModifier(stunMonitor.filled),
     armor,
@@ -195,6 +241,8 @@ export function computeDerived(character: Character): DerivedStats {
         ? {
             tasking: ownedPool(character, a, 'tasking'),
             fadingResistance: a.willpower + a[SPECIAL_RULES.fadingAttribute],
+            // Fading from compiling or registering a sprite is resisted with Willpower + Charisma (p. 191).
+            compileFadingResistance: a.willpower + a.charisma,
           }
         : null,
     matrix: matrixStats(character, a),
@@ -206,6 +254,7 @@ function magicStats(character: Character, a: Attributes): NonNullable<DerivedSta
   const isMysticAdept = character.build ? character.build.magicType === 'mysticAdept' : character.powerPointsBought > 0
   return {
     spellcasting: ownedPool(character, a, 'sorcery'),
+    summoning: ownedPool(character, a, 'conjuring'),
     drainResistance: drainAttribute ? a.willpower + a[drainAttribute] : null,
     powerPoints: {
       available: isMysticAdept ? character.powerPointsBought : a.magic,
@@ -243,7 +292,9 @@ function matrixStats(character: Character, a: Attributes): MatrixStats | null {
   const warnings: string[] = []
 
   let persona: Pick<MatrixStats, 'device' | 'parts' | 'deviceRating' | (typeof MATRIX_KEYS)[number]>
-  if (main || jacks.length > 0) {
+  // A technomancer's commlink is just a phone; they hack with their living persona.
+  const living = a.resonance > 0 && jacks.length === 0 && (!main || main.kind === 'commlink')
+  if (!living && (main || jacks.length > 0)) {
     const pieces = [...devices, ...jacks]
     const best = (key: (typeof MATRIX_KEYS)[number]) => Math.max(0, ...pieces.map((p) => p[key]))
     persona = {
@@ -266,7 +317,7 @@ function matrixStats(character: Character, a: Attributes): MatrixStats | null {
       )
     }
     if (!main) warnings.push('A cyberjack needs a cyberdeck or commlink to get online. Make one active.')
-  } else if (a.resonance > 0) {
+  } else if (living) {
     // Living persona.
     persona = {
       device: undefined,
@@ -281,8 +332,8 @@ function matrixStats(character: Character, a: Attributes): MatrixStats | null {
     return null
   }
   if (has('toolbox')) persona.dataProcessing += TOOLBOX_DATA_PROCESSING
-  const programSlots = (main?.programSlots ?? 0) + (has('virtual machine') ? VIRTUAL_MACHINE_SLOTS : 0)
-  if (main && running.length > programSlots) {
+  const programSlots = (persona.device?.programSlots ?? 0) + (has('virtual machine') ? VIRTUAL_MACHINE_SLOTS : 0)
+  if (persona.device && running.length > programSlots) {
     warnings.push(`${running.length} programs are running but only ${programSlots} fit. Stop some of them.`)
   }
   const vrScore = persona.dataProcessing + a.intuition

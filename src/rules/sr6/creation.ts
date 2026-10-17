@@ -1,8 +1,6 @@
 /**
- * SR6 priority-system character creation data.
- *
- * VERIFY: entered from memory, not yet checked against the Core Rulebook.
- * Everything a reviewer needs to check is in this file.
+ * SR6 priority-system character creation data, checked against the Core
+ * Rulebook (Priority Table p. 64, creation steps pp. 64–68).
  */
 import type { MetatypeId } from './metatypes'
 
@@ -25,7 +23,7 @@ interface PriorityRow {
   adjustmentPoints: number
   attributePoints: number
   skillPoints: number
-  /** Starting Magic or Resonance for awakened/emerged characters; 0 = mundane only. */
+  /** Starting Magic or Resonance for awakened/emerged characters (aspected get +1); 0 = mundane only. */
   magicRating: number
   nuyen: number
 }
@@ -103,5 +101,11 @@ export const CREATION_RULES = {
   /** Free contact karma = Charisma × this; a contact costs Connection + Loyalty. */
   contactKarmaPerCharisma: 6,
   nuyenPerKarma: 2_000,
-  maxKarmaForNuyen: 10,
+  /** At most six qualities, and negative qualities give at most 20 karma. */
+  maxQualities: 6,
+  maxNegativeQualityKarma: 20,
+  /** Nuyen above this left after creation is lost, so it should be spent. */
+  maxStartingNuyen: 5_000,
+  /** Aspected magicians start with this much more Magic than the priority row says. */
+  aspectedMagicBonus: 1,
 } as const

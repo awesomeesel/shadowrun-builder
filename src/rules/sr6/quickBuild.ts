@@ -8,6 +8,8 @@ import {
   createCharacter,
   KnowledgeSkillSchema,
   LanguageSchema,
+  LifestyleSchema,
+  ProgramSchema,
   type Build,
   type Character,
 } from '../../model/character'
@@ -18,7 +20,7 @@ import { MENTAL_ATTRIBUTES, PHYSICAL_ATTRIBUTES, type AttributeId } from './attr
 import { applyBuild, buildAttributeValue, canUseAdjustment, evaluateBuild, finishBuild, startBuild } from './build'
 import { CREATION_RULES, MAGIC_TYPES, PRIORITY_TABLE } from './creation'
 import { computeDerived } from './derived'
-import { addDevice } from './matrix'
+import { addDevice, findProgram, PROGRAM_COST } from './matrix'
 import { attributeMaximum, type MetatypeId } from './metatypes'
 import type { RoleDef } from './roles'
 import { AUGMENTATION_GRADES, SPECIAL_CREATION_RULES } from './special'
@@ -143,6 +145,7 @@ export function quickBuild(options: QuickBuildOptions): QuickBuildResult {
 
   // Never hand back an illegal character: drop catalog picks until the checks pass.
   c = repair(c)
+  c = spendKarma(c, role)
   return { character: c, notes }
 }
 
@@ -165,8 +168,9 @@ function allocateAttributes(c: Character, role: RoleDef, edit: Edit) {
     let adjustment = PRIORITY_TABLE[b.priorities.metatype].adjustmentPoints
     const adjustOrder: AttributeId[] = [
       ...(awakened ? [awakened as AttributeId] : []),
-      ...keys.filter((a) => canUseAdjustment(ch, b, a)),
-      ...POINT_ATTRIBUTES.filter((a) => !keys.includes(a) && canUseAdjustment(ch, b, a)),
+      // Only attributes the metatype is good at; a lowered one (a troll's Charisma) isn't worth the points.
+      ...keys.filter((a) => canUseAdjustment(ch, b, a) && max(a) > 6),
+      ...POINT_ATTRIBUTES.filter((a) => !keys.includes(a) && canUseAdjustment(ch, b, a) && max(a) > 6),
       'edge',
     ]
     for (const a of adjustOrder) {
@@ -277,7 +281,8 @@ function addKnowledge(c: Character, role: RoleDef, edit: Edit) {
 }
 
 function addContacts(c: Character, role: RoleDef, edit: Edit) {
-  const free = buildAttributeValue(c.build!, 'charisma') * CREATION_RULES.contactKarmaPerCharisma
+  const charisma = buildAttributeValue(c.build!, 'charisma')
+  const free = charisma * CREATION_RULES.contactKarmaPerCharisma
   const count = Math.max(1, Math.min(role.contacts.length, Math.floor(free / 2)))
   const contacts = role.contacts.slice(0, count).map((r) => ContactSchema.parse({ role: r, connection: 1, loyalty: 1 }))
   // Share the free karma: alternate Connection and Loyalty, most important contact first.
@@ -285,7 +290,8 @@ function addContacts(c: Character, role: RoleDef, edit: Edit) {
   for (let i = 0; left > 0 && i < 40; i++) {
     const contact = contacts[i % count]
     const field = Math.floor(i / count) % 2 === 0 ? 'connection' : 'loyalty'
-    if (contact[field] < 6) {
+    // At creation no contact rating may be above Charisma (p. 67).
+    if (contact[field] < Math.min(6, charisma)) {
       contact[field]++
       left--
     }
@@ -362,23 +368,70 @@ function pickFromCatalog(
 
   // Gear: each suggestion gets a fair share of what's left; the most expensive affordable item wins.
   const gear = role.gear
-  gear.forEach((s, index) => {
-    const remaining = nuyenLeft()
-    const share = Math.min(remaining, (remaining / (gear.length - index)) * 1.8)
+  const picked: ({ list: TargetList; id: string; cost: number } | null)[] = []
+  const bestFor = (index: number, budget: number) => {
     let best: { entry: CatalogEntry; rating: number; cost: number } | null = null
-    for (const entry of matches(catalog, s.query, s.kinds)) {
+    for (const entry of matches(catalog, gear[index].query, gear[index].kinds)) {
       if (entry.kind === 'augmentation' && awakened) continue // would cost Magic/Resonance
       const range = ratingRange(entry)
       for (let r = range?.max ?? 0; r >= (range?.min ?? 0); r--) {
         const cost = entryCost(entry, r, 'standard')
-        if (cost > share) continue
+        if (cost > budget) continue
         if (entry.kind === 'augmentation' && computeDerived(c).essence - atRating(entry.essence, r) < 2) continue
         if (!best || cost > best.cost) best = { entry, rating: r, cost }
         break
       }
     }
-    if (best) add(best.entry, best.rating)
+    return best
+  }
+  const take = (best: { entry: CatalogEntry; rating: number; cost: number }) => {
+    const { list, item } = toItem(best.entry, { rating: best.rating, grade: 'standard' })
+    c = { ...c, [list]: [...(c[list] as unknown[]), item] } as Character
+    return { list, id: (item as { id: string }).id, cost: best.cost }
+  }
+  gear.forEach((_, index) => {
+    const remaining = nuyenLeft()
+    const best = bestFor(index, Math.min(remaining, (remaining / (gear.length - index)) * 1.8))
+    picked.push(best ? take(best) : null)
   })
+  // Second pass: with money left over, swap each pick for the best one now affordable.
+  gear.forEach((_, index) => {
+    const current = picked[index]
+    const best = bestFor(index, nuyenLeft() + (current?.cost ?? 0))
+    if (!best || best.cost <= (current?.cost ?? 0)) return
+    if (current) {
+      c = {
+        ...c,
+        [current.list]: (c[current.list] as { id: string }[]).filter((i) => i.id !== current.id),
+      } as Character
+    }
+    picked[index] = take(best)
+  })
+
+  // Spare money buys better grades: alphaware costs ×1.2 but takes less Essence.
+  for (const aug of [...c.augmentations].sort((a, b) => b.cost - a.cost)) {
+    const extra = Math.round(aug.cost * (AUGMENTATION_GRADES.alpha.cost - AUGMENTATION_GRADES[aug.grade].cost))
+    if (aug.grade !== 'standard' || nuyenLeft() - extra < CREATION_RULES.maxStartingNuyen) continue
+    c = { ...c, augmentations: c.augmentations.map((a) => (a.id === aug.id ? { ...a, grade: 'alpha' } : a)) }
+  }
+
+  // A roof over their head, paid for up to 3 months, ending at or below the 5,000¥ that carries over.
+  const left = nuyenLeft()
+  const levels = [...LIFESTYLES].reverse().filter((l) => l.cost <= left && l.cost <= LIFESTYLE_BUDGET)
+  const monthsFor = (cost: number) =>
+    Math.min(3, Math.floor(left / cost), Math.max(1, Math.ceil((left - CREATION_RULES.maxStartingNuyen) / cost)))
+  const lifestyle =
+    levels.find((l) => left - monthsFor(l.cost) * l.cost <= CREATION_RULES.maxStartingNuyen) ?? levels[0]
+  if (lifestyle) {
+    const months = monthsFor(lifestyle.cost)
+    c = {
+      ...c,
+      lifestyles: [
+        ...c.lifestyles,
+        LifestyleSchema.parse({ name: 'Home', level: lifestyle.name, cost: lifestyle.cost, monthsPaid: months }),
+      ],
+    }
+  }
 
   // Wear the first armor, use the first device of each type, and specialise in the first weapon.
   c = {
@@ -386,6 +439,7 @@ function pickFromCatalog(
     gear: c.gear.map((g, i) => ({ ...g, equipped: g.armor > 0 && c.gear.findIndex((x) => x.armor > 0) === i })),
     matrixDevices: c.matrixDevices.reduce<typeof c.matrixDevices>((list, d) => addDevice(list, d), []),
   }
+  c = addPrograms(c)
   const weapon = c.weapons[0]
   if (weapon) {
     c = {
@@ -396,6 +450,99 @@ function pickFromCatalog(
     }
   }
   return applyBuild(c)
+}
+
+/** Lifestyles and their monthly cost (Core Rulebook p. 57). */
+const LIFESTYLES = [
+  { name: 'Squatter', cost: 500 },
+  { name: 'Low', cost: 2_000 },
+  { name: 'Middle', cost: 5_000 },
+  { name: 'High', cost: 10_000 },
+]
+/** Quick make doesn't put runners in luxury: what's left should go into gear. */
+const LIFESTYLE_BUDGET = 10_000
+
+/** The programs a new decker wants most, in order. */
+const STARTER_PROGRAMS = [
+  'Armor',
+  'Exploit',
+  'Stealth',
+  'Toolbox',
+  'Biofeedback Filter',
+  'Overclock',
+  'Decryption',
+  'Browse',
+  'Baby Monitor',
+  'Signal Scrubber',
+  'Edit',
+  'Encryption',
+]
+
+/** Fill a cyberdeck's program slots with useful programs while the money lasts. */
+function addPrograms(start: Character): Character {
+  let c = start
+  const slots = computeDerived(applyBuild(c)).matrix
+  if (!slots || slots.device?.kind !== 'cyberdeck') return c
+  for (const name of STARTER_PROGRAMS) {
+    const def = findProgram(name)
+    if (!def || c.programs.length >= slots.programSlots) break
+    if (evaluateBuild(c)!.nuyen.remaining < PROGRAM_COST[def.kind]) continue
+    const program = ProgramSchema.parse({
+      name: def.name,
+      kind: def.kind,
+      cost: PROGRAM_COST[def.kind],
+      running: true,
+      source: { book: 'CRB', page: def.page },
+    })
+    c = { ...c, programs: [...c.programs, program] }
+  }
+  return c
+}
+
+/** Edge worth having at the table before karma goes anywhere else. */
+const MIN_PLAY_EDGE = 3
+
+/**
+ * Spend the leftover customization karma one step at a time: Edge up to 3,
+ * then the key skills and attributes, keeping every step legal.
+ */
+function spendKarma(start: Character, role: RoleDef): Character {
+  let c = start
+  const errors = (ch: Character) => evaluateBuild(ch)!.issues.filter((i) => i.severity === 'error').length
+  /** Try one karma step; keep it only if it's affordable and breaks no rule. */
+  const attempt = (change: (b: Build) => void) => {
+    const next = { ...c, build: structuredClone(c.build!) }
+    change(next.build)
+    const applied = applyBuild(next)
+    if (evaluateBuild(applied)!.karma.remaining < 0 || errors(applied) > errors(c)) return false
+    c = applied
+    return true
+  }
+  const raiseAttribute = (a: AttributeId) => attempt((b) => void b.attributes[a].karma++)
+  const raiseSkill = (skillId: string) => {
+    const owned = c.skills.find((s) => s.skillId === skillId)
+    if (!owned) return false
+    return attempt((b) => {
+      b.skills[owned.id] ??= { adjustment: 0, points: 0, karma: 0 }
+      b.skills[owned.id].karma++
+    })
+  }
+
+  while (buildAttributeValue(c.build!, 'edge') < MIN_PLAY_EDGE && raiseAttribute('edge')) {
+    /* Edge first */
+  }
+  const keyAttributes = role.keyAttributes.filter((a) => POINT_ATTRIBUTES.includes(a))
+  for (let progress = true; progress;) {
+    progress = false
+    for (const skillId of role.keySkills) progress = raiseSkill(skillId) || progress
+    for (const a of keyAttributes) {
+      // Leave the one at-max slot alone; it's already used by the most important attribute.
+      if (buildAttributeValue(c.build!, a) < attributeMaximum(c.metatype, a) - 1) {
+        progress = raiseAttribute(a) || progress
+      }
+    }
+  }
+  return c
 }
 
 /** Remove catalog picks (newest first) until the build has no errors. */

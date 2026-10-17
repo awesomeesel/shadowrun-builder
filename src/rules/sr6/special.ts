@@ -1,12 +1,12 @@
 /**
- * SR6 rules for augmentations, magic, resonance and the Matrix.
- *
- * VERIFY: entered from memory, not yet checked against the Core Rulebook.
+ * SR6 rules for augmentations, magic, resonance and the Matrix. Grades
+ * (p. 282), the +4 augmented cap (p. 39), Matrix monitor (p. 174) and VR
+ * initiative (p. 179) are checked against the Core Rulebook.
  */
 import type { AttributeId } from './attributes'
 
 export const AUGMENTATION_GRADES = {
-  used: { name: 'Used', essence: 1.1, cost: 0.75 },
+  used: { name: 'Used', essence: 1.1, cost: 0.5 },
   standard: { name: 'Standard', essence: 1, cost: 1 },
   alpha: { name: 'Alphaware', essence: 0.8, cost: 1.2 },
   beta: { name: 'Betaware', essence: 0.7, cost: 1.5 },

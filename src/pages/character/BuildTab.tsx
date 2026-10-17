@@ -430,7 +430,7 @@ function AttributeHelp({
   const metatype = METATYPES[character.metatype].name
   const awakened = MAGIC_TYPES[build.magicType].attribute
   const boosted = Object.keys(METATYPES[character.metatype].maximums)
-    .filter((a) => a !== 'edge' && attributeMaximum(character.metatype, a as AttributeId) > 6)
+    .filter((a) => a !== 'edge' && attributeMaximum(character.metatype, a as AttributeId) !== 6)
     .map((a) => ATTRIBUTE_LABELS[a as AttributeId].name)
   const adjustmentTargets = ['Edge', ...(awakened ? [ATTRIBUTE_LABELS[awakened].name] : []), ...boosted]
   return (
@@ -622,15 +622,14 @@ export function KarmaSection({
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
         <span className="text-muted">
-          Convert karma to nuyen ({CREATION_RULES.nuyenPerKarma.toLocaleString()} ¥ each, max{' '}
-          {CREATION_RULES.maxKarmaForNuyen})
+          Convert karma to nuyen ({CREATION_RULES.nuyenPerKarma.toLocaleString()} ¥ each)
         </span>
         <Stepper
           label="karma converted to nuyen"
           value={build.karmaForNuyen}
           onStep={(d) =>
             updateBuild((draft) => {
-              draft.karmaForNuyen = Math.min(CREATION_RULES.maxKarmaForNuyen, Math.max(0, draft.karmaForNuyen + d))
+              draft.karmaForNuyen = Math.max(0, draft.karmaForNuyen + d)
             })
           }
         />

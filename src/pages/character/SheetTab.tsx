@@ -43,6 +43,10 @@ type DamageTrack = keyof Character['damage']
 export function SheetTab() {
   const { character, update } = useOutletContext<CharacterContext>()
   const derived = computeDerived(character)
+  // Free racial qualities, unless the character lists the same quality itself (e.g. from a Commlink import).
+  const racialQualities = METATYPES[character.metatype].qualities.filter(
+    (r) => !character.qualities.some((q) => q.name.trim().toLowerCase() === r.name.toLowerCase()),
+  )
   const wounds = derived.woundModifier
   const [showUntrained, setShowUntrained] = useState(false)
 
@@ -55,43 +59,45 @@ export function SheetTab() {
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <section className="card flex gap-4 p-4 lg:col-span-2">
-        <Portrait src={character.portrait} metatype={character.metatype} className="size-20 sm:size-24" />
-        <div className="min-w-0 flex-1">
-          <div className="text-sm text-muted">
-            {[METATYPES[character.metatype].name, character.concept].filter(Boolean).join(' · ')}
-          </div>
-          {(character.gender || character.age || character.height > 0 || character.weight > 0) && (
-            <div className="text-xs text-muted">
-              {[
-                character.gender,
-                character.age && `age ${character.age}`,
-                character.height > 0 && `${character.height} cm`,
-                character.weight > 0 && `${character.weight} kg`,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
+      <section className="card p-4 lg:col-span-2">
+        <div className="flex gap-4">
+          <Portrait src={character.portrait} metatype={character.metatype} className="size-16 sm:size-20" />
+          <div className="min-w-0 flex-1">
+            <div className="text-sm text-muted">
+              {[METATYPES[character.metatype].name, character.concept].filter(Boolean).join(' · ')}
             </div>
-          )}
-          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-12">
-            {visibleAttributes.map((a) => (
-              <Stat
-                key={a}
-                label={ATTRIBUTE_LABELS[a].name}
-                value={
-                  derived.attributes[a] === character.attributes[a]
-                    ? character.attributes[a]
-                    : `${character.attributes[a]} (${derived.attributes[a]})`
-                }
-                hint={
-                  derived.attributes[a] !== character.attributes[a]
-                    ? `Natural ${character.attributes[a]}, ${a === 'magic' || a === 'resonance' ? 'after Essence loss' : 'augmented'} ${derived.attributes[a]}`
-                    : undefined
-                }
-              />
-            ))}
-            <Stat label="Essence" value={derived.essence} />
+            {(character.gender || character.age || character.height > 0 || character.weight > 0) && (
+              <div className="text-xs text-muted">
+                {[
+                  character.gender,
+                  character.age && `age ${character.age}`,
+                  character.height > 0 && `${character.height} cm`,
+                  character.weight > 0 && `${character.weight} kg`,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </div>
+            )}
           </div>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12">
+          {visibleAttributes.map((a) => (
+            <Stat
+              key={a}
+              label={ATTRIBUTE_LABELS[a].name}
+              value={
+                derived.attributes[a] === character.attributes[a]
+                  ? character.attributes[a]
+                  : `${character.attributes[a]} (${derived.attributes[a]})`
+              }
+              hint={
+                derived.attributes[a] !== character.attributes[a]
+                  ? `Natural ${character.attributes[a]}, ${a === 'magic' || a === 'resonance' ? 'after Essence loss' : 'augmented'} ${derived.attributes[a]}`
+                  : undefined
+              }
+            />
+          ))}
+          <Stat label="Essence" value={derived.essence} />
         </div>
       </section>
 
@@ -107,7 +113,7 @@ export function SheetTab() {
             tone={wounds < 0 ? 'danger' : undefined}
           />
         </div>
-        <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+        <dl className="mt-4 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
           <PoolRow label="Defense (Reaction + Intuition)" pool={derived.pools.defense} wounds={wounds} />
           <PoolRow label="Damage resistance (Body)" pool={derived.pools.damageResistance} />
           {derived.pools.physicalDamageResistance !== derived.pools.damageResistance && (
@@ -171,9 +177,17 @@ export function SheetTab() {
         </Section>
       )}
 
-      {character.qualities.length > 0 && (
+      {(character.qualities.length > 0 || racialQualities.length > 0) && (
         <Section title="Qualities" icon={<Star className="size-4" />}>
           <ul className="grid gap-1 text-sm">
+            {racialQualities.map((q) => (
+              <li key={q.name}>
+                {q.name}
+                {q.rating && q.rating > 1 && <span className="text-muted"> {q.rating}</span>}
+                <span className="ml-2 text-xs text-muted">{METATYPES[character.metatype].name}, free</span>
+                <SourceLink source={{ book: 'CRB', page: q.page }} className="ml-2" />
+              </li>
+            ))}
             {character.qualities.map((q) => (
               <li key={q.id}>
                 <span className={q.kind === 'negative' ? 'text-danger' : ''}>{q.name || 'Unnamed quality'}</span>
@@ -548,51 +562,82 @@ const RANGE_LABELS = ['Close', 'Near', 'Med', 'Far', 'Ext']
 
 function WeaponTable({ character, wounds }: { character: Character; wounds: number }) {
   return (
-    <div className="-mx-4 overflow-x-auto px-4">
-      <table className="w-full min-w-[34rem] text-sm">
-        <thead>
-          <tr className="text-left text-xs text-muted">
-            <th className="pb-1 font-normal">Weapon</th>
-            <th className="pb-1 text-center font-normal">DV</th>
-            {RANGE_LABELS.map((r) => (
-              <th key={r} className="pb-1 text-center font-normal">
-                {r}
-              </th>
-            ))}
-            <th className="pb-1 text-center font-normal">Mode</th>
-            <th className="pb-1 text-center font-normal">Ammo</th>
-            <th className="pb-1 text-right font-normal">Pool</th>
-          </tr>
-        </thead>
-        <tbody>
-          {character.weapons.map((w) => {
-            const { pool, bonus } = weaponPool(character, w)
-            return (
-              <tr key={w.id} className="border-t border-line/60">
-                <td className="py-1.5">
-                  {w.name || 'Unnamed weapon'}
-                  {w.source && <SourceLink source={w.source} className="ml-2" />}
-                  {w.notes && <div className="text-xs text-muted">{w.notes}</div>}
-                </td>
-                <td className="py-1.5 text-center">{w.damage || '–'}</td>
-                {w.attackRatings.map((ar, i) => (
-                  <td key={i} className="py-1.5 text-center tabular-nums">
-                    {ar ?? <span className="text-muted">–</span>}
-                  </td>
-                ))}
-                <td className="py-1.5 text-center text-xs">{w.modes || '–'}</td>
-                <td className="py-1.5 text-center text-xs">{w.ammo || '–'}</td>
-                <td
-                  className="py-1.5 text-right font-semibold tabular-nums"
-                  title={bonus ? `includes +${bonus} specialization` : undefined}
-                >
+    <>
+      {/* Phones: one card per weapon instead of a wide table. */}
+      <ul className="grid gap-2 sm:hidden">
+        {character.weapons.map((w) => {
+          const { pool } = weaponPool(character, w)
+          return (
+            <li key={w.id} className="rounded-lg border border-line/70 bg-bg/40 p-2.5 text-sm">
+              <div className="flex items-baseline gap-2">
+                <span className="min-w-0 flex-1 font-semibold">{w.name || 'Unnamed weapon'}</span>
+                <span className="font-semibold tabular-nums">
                   {pool === null ? <span className="font-normal text-muted">n/a</span> : formatPool(pool, wounds)}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
+                </span>
+                <span className="text-xs text-muted">dice</span>
+              </div>
+              <div className="mt-1 text-xs text-muted">
+                {[
+                  w.damage && `DV ${w.damage}`,
+                  `AR ${w.attackRatings.map((ar) => ar ?? '–').join('/')}`,
+                  w.modes,
+                  w.ammo && `Ammo ${w.ammo}`,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+                {w.source && <SourceLink source={w.source} className="ml-2" />}
+              </div>
+              {w.notes && <div className="text-xs text-muted">{w.notes}</div>}
+            </li>
+          )
+        })}
+      </ul>
+      <div className="-mx-4 hidden overflow-x-auto px-4 sm:block">
+        <table className="w-full min-w-[34rem] text-sm">
+          <thead>
+            <tr className="text-left text-xs text-muted">
+              <th className="pb-1 font-normal">Weapon</th>
+              <th className="pb-1 text-center font-normal">DV</th>
+              {RANGE_LABELS.map((r) => (
+                <th key={r} className="pb-1 text-center font-normal">
+                  {r}
+                </th>
+              ))}
+              <th className="pb-1 text-center font-normal">Mode</th>
+              <th className="pb-1 text-center font-normal">Ammo</th>
+              <th className="pb-1 text-right font-normal">Pool</th>
+            </tr>
+          </thead>
+          <tbody>
+            {character.weapons.map((w) => {
+              const { pool, bonus } = weaponPool(character, w)
+              return (
+                <tr key={w.id} className="border-t border-line/60">
+                  <td className="py-1.5">
+                    {w.name || 'Unnamed weapon'}
+                    {w.source && <SourceLink source={w.source} className="ml-2" />}
+                    {w.notes && <div className="text-xs text-muted">{w.notes}</div>}
+                  </td>
+                  <td className="py-1.5 text-center">{w.damage || '–'}</td>
+                  {w.attackRatings.map((ar, i) => (
+                    <td key={i} className="py-1.5 text-center tabular-nums">
+                      {ar ?? <span className="text-muted">–</span>}
+                    </td>
+                  ))}
+                  <td className="py-1.5 text-center text-xs">{w.modes || '–'}</td>
+                  <td className="py-1.5 text-center text-xs">{w.ammo || '–'}</td>
+                  <td
+                    className="py-1.5 text-right font-semibold tabular-nums"
+                    title={bonus ? `includes +${bonus} specialization` : undefined}
+                  >
+                    {pool === null ? <span className="font-normal text-muted">n/a</span> : formatPool(pool, wounds)}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
   )
 }

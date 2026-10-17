@@ -9,7 +9,7 @@ import {
   type Build,
   type Character,
 } from '../../model/character'
-import { applyBuild, evaluateBuild, finishBuild, startBuild } from './build'
+import { applyBuild, buildAttributeValue, canUseAdjustment, evaluateBuild, finishBuild, startBuild } from './build'
 
 /** A fresh build with priorities metatype C, attributes A, skills B, magic E, resources D. */
 function fresh(overrides: Partial<Character> = {}): Character {
@@ -172,10 +172,52 @@ describe('magic and augmentations in builds', () => {
 })
 
 describe('finishBuild', () => {
-  it('turns leftover karma and nuyen into starting resources', () => {
+  it('turns leftover karma and nuyen into starting resources, keeping at most 5,000¥ (p. 68)', () => {
     const done = finishBuild(fresh())
     expect(done.mode).toBe('free')
     expect(done.karma.available).toBe(50)
-    expect(done.nuyen).toBe(50_000)
+    expect(done.nuyen).toBe(5_000)
+  })
+})
+
+describe('rules checked against the Core Rulebook', () => {
+  it('gives aspected magicians one more Magic than the priority row (p. 64)', () => {
+    const c = withBuild(fresh(), (b) => {
+      b.priorities.magic = 'B'
+      b.priorities.skills = 'E'
+      b.magicType = 'aspected'
+    })
+    expect(buildAttributeValue(c.build!, 'magic')).toBe(4)
+  })
+
+  it('charges half price for used implants (p. 282)', () => {
+    const c = fresh({ augmentations: [AugmentationSchema.parse({ name: 'Old eyes', cost: 10_000, grade: 'used' })] })
+    expect(evaluateBuild(c)!.nuyen.spent).toBe(5_000)
+  })
+
+  it('lets adjustment points raise any special racial attribute, not only boosted ones (p. 63)', () => {
+    const dwarf = fresh({ metatype: 'dwarf' })
+    expect(canUseAdjustment(dwarf, dwarf.build!, 'reaction')).toBe(true)
+    expect(canUseAdjustment(dwarf, dwarf.build!, 'agility')).toBe(false)
+  })
+
+  it('limits qualities and negative quality karma (p. 66)', () => {
+    const flaw = (karma: number) => QualitySchema.parse({ name: 'Flaw', kind: 'negative', karma })
+    const c = fresh({ qualities: [flaw(8), flaw(8), flaw(8), flaw(1), flaw(1), flaw(1), flaw(1)] })
+    expect(messages(c)).toEqual(
+      expect.arrayContaining([
+        '7 qualities; at most 6 can be taken at creation.',
+        'Negative qualities give 28 karma; at most 20 counts at creation.',
+      ]),
+    )
+  })
+
+  it("keeps contacts' ratings at or below Charisma (p. 67)", () => {
+    const c = fresh({ contacts: [ContactSchema.parse({ name: 'Fixer', connection: 4, loyalty: 1 })] })
+    expect(messages(c).some((m) => m.startsWith('Fixer has a rating above your Charisma'))).toBe(true)
+  })
+
+  it('warns about more than 5,000¥ left over (p. 68)', () => {
+    expect(messages(fresh()).some((m) => m.includes('keeps at most 5,000¥'))).toBe(true)
   })
 })

@@ -220,6 +220,8 @@ export const VehicleSchema = z.object({
   pilot: int(0),
   sensor: int(0),
   seats: text(),
+  /** Autosofts the drone runs, e.g. "Targeting 3, Evasion 2". */
+  autosofts: text(),
   cost: int(0),
   notes: text(),
   source: SourceRefSchema.optional(),
@@ -310,6 +312,8 @@ export const RollRecordSchema = z.object({
   criticalGlitch: z.boolean().default(false),
   /** Total for initiative rolls (score + dice); null for normal tests. */
   total: z.number().int().nullable().default(null),
+  /** Edge spent on boosts for this roll. */
+  edge: int(0),
 })
 
 /** A finished play session, kept as a log on the character. */
@@ -325,10 +329,48 @@ export const SessionRecordSchema = z.object({
   entries: z.array(z.object({ note: text(), nuyen: int(0), karma: int(0) })).default([]),
   /** Damage on the monitors when the session ended, before any healing. */
   damage: z.object({ physical: int(0), stun: int(0) }).prefault({}),
+  /** Heat and Reputation changes made when the session ended. */
+  heat: int(0),
+  reputation: int(0),
   /** Edge at the start and end; null for sessions logged before this was tracked. */
   edgeStart: z.number().int().nullable().default(null),
   edgeEnd: z.number().int().nullable().default(null),
   rolls: z.array(RollRecordSchema).default([]),
+})
+
+/** A spell the character keeps running; each one is −2 dice on action tests. */
+export const SustainedSpellSchema = z.object({
+  id: id(),
+  name: text(),
+  /** Hits on the casting, which set the spell's strength. */
+  hits: int(0),
+})
+
+/** A summoned spirit or compiled sprite working for the character. */
+export const CompanionSchema = z.object({
+  id: id(),
+  kind: z.enum(['spirit', 'sprite']).default('spirit'),
+  /** A spirit or sprite type id, e.g. 'fire' or 'fault'. */
+  type: z.string().default(''),
+  /** Force for spirits, Level for sprites. */
+  force: int(1),
+  /** Services (spirits) or tasks (sprites) left. */
+  services: int(0),
+  /** Bound spirits and registered sprites stay; others leave after a day. */
+  bound: z.boolean().default(false),
+  damage: int(0),
+  notes: text(),
+})
+
+/** A fight in progress: initiative and the actions left this combat round. */
+export const CombatSchema = z.object({
+  round: int(1),
+  /** Initiative total rolled at the start (score + dice), changed by Edge or damage. */
+  initiative: int(0),
+  majorLeft: int(1),
+  minorLeft: int(1),
+  /** Edge gained this round; at most 2 per round. */
+  edgeGained: int(0),
 })
 
 /** State that only matters at the table: current Edge, loaded ammo and the running session. */
@@ -338,6 +380,15 @@ export const PlaySchema = z
     edge: z.number().int().nullable().default(null),
     /** Rounds loaded per weapon id. */
     ammo: z.record(z.string(), z.number().int()).default({}),
+    combat: CombatSchema.nullable().default(null),
+    /** Boxes filled on the Matrix condition monitor. */
+    matrixDamage: int(0),
+    /** Overwatch Score for deckers; Convergence at 40. */
+    overwatch: int(0),
+    sustained: z.array(SustainedSpellSchema).default([]),
+    companions: z.array(CompanionSchema).default([]),
+    /** Damage boxes per vehicle id. */
+    vehicleDamage: z.record(z.string(), z.number().int()).default({}),
     session: z
       .object({
         title: text(),
@@ -445,6 +496,9 @@ export type Build = z.infer<typeof BuildSchema>
 export type LedgerEntry = z.infer<typeof LedgerEntrySchema>
 export type SessionRecord = z.infer<typeof SessionRecordSchema>
 export type RollRecord = z.infer<typeof RollRecordSchema>
+export type Combat = z.infer<typeof CombatSchema>
+export type Companion = z.infer<typeof CompanionSchema>
+export type SustainedSpell = z.infer<typeof SustainedSpellSchema>
 export type Bonuses = z.infer<typeof BonusesSchema>
 export type Augmentation = z.infer<typeof AugmentationSchema>
 export type Spell = z.infer<typeof SpellSchema>

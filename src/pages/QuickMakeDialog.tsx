@@ -6,8 +6,8 @@ import { toCharacterItem } from '../books/toCharacter'
 import { noAutofill, noAutofillField } from '../components/noAutofill'
 import { addCharacter } from '../db/characters'
 import { db } from '../db/db'
-import { finishBuild } from '../rules/sr6/build'
-import { PRIORITY_TABLE } from '../rules/sr6/creation'
+import { evaluateBuild, finishBuild } from '../rules/sr6/build'
+import { CREATION_RULES, PRIORITY_TABLE } from '../rules/sr6/creation'
 import { METATYPE_IDS, METATYPES, type MetatypeId } from '../rules/sr6/metatypes'
 import { quickBuild, randomStreetName } from '../rules/sr6/quickBuild'
 import { ROLES, ROLES_BY_ID } from '../rules/sr6/roles'
@@ -46,8 +46,15 @@ export function QuickMakeDialog({ onClose }: { onClose: () => void }) {
       catalog,
       toItem: (entry, options) => toCharacterItem(entry, bookById.get(entry.bookId), options),
     })
-    const saved = await addCharacter(review ? character : finishBuild(character))
-    navigate(`/character/${saved.id}/${review ? 'wizard?step=review' : ''}`)
+    // Only 5,000¥ carries over from creation; with more left, let the player spend it first.
+    const unspent = (evaluateBuild(character)?.nuyen.remaining ?? 0) > CREATION_RULES.maxStartingNuyen
+    if (review || unspent) {
+      const saved = await addCharacter(character)
+      navigate(`/character/${saved.id}/wizard?step=${unspent && !review ? 'gear' : 'review'}`)
+      return
+    }
+    const saved = await addCharacter(finishBuild(character))
+    navigate(`/character/${saved.id}/`)
   }
 
   return (

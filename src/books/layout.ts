@@ -106,14 +106,6 @@ export function bodyHeight(items: PdfItem[]): number {
   return best
 }
 
-/** Footer text like "CHARACTER CREATION // QUALITIES", used to know which chapter a page is in. */
-export function pageFooter(page: PageLayout): string {
-  return groupLines(page.items.filter((i) => i[1] <= FOOTER_Y))
-    .map((l) => l.text)
-    .filter((t) => t.includes('//'))
-    .join(' ')
-}
-
 /** Plain text of a page in reading order, for search. */
 export function pageText(page: PageLayout): string {
   return readingOrder(page)

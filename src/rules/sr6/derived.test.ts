@@ -5,6 +5,7 @@ import {
   GearSchema,
   MatrixDeviceSchema,
   ProgramSchema,
+  QualitySchema,
   WeaponSchema,
   createCharacter,
   type Character,
@@ -174,6 +175,7 @@ describe('augmentations and special attributes', () => {
     })
     expect(computeDerived(c).magic).toEqual({
       spellcasting: 7,
+      summoning: null, // no Conjuring skill
       drainResistance: 5, // WIL 3 + CHA 2
       powerPoints: { available: 4, used: 1.5 },
     })
@@ -286,6 +288,36 @@ describe('augmentations and special attributes', () => {
     expect(plain.unarmedDamage).toEqual({ value: 2, type: 'S' })
     expect(laced.unarmedDamage).toEqual({ value: 3, type: 'P' })
     expect(laced.physicalMonitor.boxes).toBe(plain.physicalMonitor.boxes)
+  })
+
+  it('gives orks and trolls their racial qualities (p. 64)', () => {
+    const human = computeDerived(runner())
+    const troll = computeDerived(runner({ metatype: 'troll' }))
+    expect(troll.physicalMonitor.boxes).toBe(human.physicalMonitor.boxes + 2)
+    expect(troll.defenseRating).toBe(human.defenseRating + 1)
+    expect(troll.unarmedDamage).toEqual({ value: human.unarmedDamage.value + 1, type: 'P' })
+    expect(computeDerived(runner({ metatype: 'ork' })).physicalMonitor.boxes).toBe(human.physicalMonitor.boxes + 1)
+  })
+
+  it("doesn't count a racial quality twice when the character lists it too", () => {
+    const listed = QualitySchema.parse({ name: 'Built Tough', rating: 2 })
+    const troll = computeDerived(runner({ metatype: 'troll', qualities: [listed] }))
+    expect(troll.physicalMonitor.boxes).toBe(computeDerived(runner()).physicalMonitor.boxes + 2)
+  })
+
+  it('keeps the living persona when a technomancer carries a commlink', () => {
+    const phone = MatrixDeviceSchema.parse({
+      name: 'Phone',
+      deviceRating: 3,
+      dataProcessing: 2,
+      firewall: 1,
+      active: true,
+    })
+    const m = computeDerived(
+      runner({ attributes: { ...runner().attributes, resonance: 6 }, matrixDevices: [phone] }),
+    ).matrix!
+    expect(m.device).toBeUndefined()
+    expect(m.deviceRating).toBe(6)
   })
 
   it('gives technomancers a living persona', () => {

@@ -514,9 +514,9 @@ const vehicleFields: FieldDef<Vehicle>[] = [
     ],
   },
   { kind: 'text', key: 'handling', label: 'Handling', span: 2, placeholder: '4/3' },
-  { kind: 'text', key: 'acceleration', label: 'Accel', span: 1 },
-  { kind: 'text', key: 'speedInterval', label: 'Spd int.', span: 1 },
-  { kind: 'text', key: 'topSpeed', label: 'Top spd', span: 2 },
+  { kind: 'text', key: 'acceleration', label: 'Acceleration', span: 1 },
+  { kind: 'text', key: 'speedInterval', label: 'Speed interval', span: 1 },
+  { kind: 'text', key: 'topSpeed', label: 'Top speed', span: 2 },
   { kind: 'number', key: 'body', label: 'Body', span: 1, min: 0 },
   { kind: 'number', key: 'armor', label: 'Armor', span: 1, min: 0 },
   { kind: 'number', key: 'pilot', label: 'Pilot', span: 1, min: 0 },
@@ -524,6 +524,14 @@ const vehicleFields: FieldDef<Vehicle>[] = [
   { kind: 'text', key: 'seats', label: 'Seats', span: 1 },
   { kind: 'number', key: 'cost', label: 'Cost ¥', span: 2, min: 0 },
   { kind: 'text', key: 'notes', label: 'Notes / mods', span: 5, wide: true },
+  {
+    kind: 'text',
+    key: 'autosofts',
+    label: 'Autosofts (drones)',
+    span: 8,
+    wide: true,
+    placeholder: 'Targeting 3, Evasion 2, Maneuvering 2, Clearsight 2',
+  },
   sourceField<Vehicle>(),
 ]
 

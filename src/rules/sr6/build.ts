@@ -56,7 +56,9 @@ function attributeBase(build: Build, attribute: AttributeId): number {
   const a = build.attributes[attribute]
   if (attribute === 'magic' || attribute === 'resonance') {
     if (MAGIC_TYPES[build.magicType].attribute !== attribute) return 0
-    return PRIORITY_TABLE[build.priorities.magic].magicRating + a.adjustment
+    const rating = PRIORITY_TABLE[build.priorities.magic].magicRating
+    const aspected = build.magicType === 'aspected' && rating > 0 ? RULES.aspectedMagicBonus : 0
+    return rating + aspected + a.adjustment
   }
   if (attribute === 'edge') return 1 + a.adjustment
   return 1 + a.adjustment + a.points
@@ -195,6 +197,13 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
     (q) => q.karma,
   )
 
+  if (character.qualities.length > RULES.maxQualities) {
+    error(`${character.qualities.length} qualities; at most ${RULES.maxQualities} can be taken at creation.`)
+  }
+  if (negative > RULES.maxNegativeQualityKarma) {
+    error(`Negative qualities give ${negative} karma; at most ${RULES.maxNegativeQualityKarma} counts at creation.`)
+  }
+
   // Knowledge skills and languages
   const nativeLanguages = character.languages.filter((l) => l.level === 'native').length
   const knowledgeCount = character.knowledgeSkills.length + character.languages.length - Math.min(1, nativeLanguages)
@@ -209,6 +218,13 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
     sumBy(character.contacts, (c) => c.connection + c.loyalty),
   )
   const contactKarma = Math.max(0, -freeContactKarma.remaining)
+  for (const contact of character.contacts) {
+    if (contact.connection > charisma || contact.loyalty > charisma) {
+      error(
+        `${contact.name || 'A contact'} has a rating above your Charisma (${charisma}), which isn't allowed at creation.`,
+      )
+    }
+  }
 
   // Spells, adept powers, complex forms
   const casts = build.magicType === 'magician' || build.magicType === 'aspected' || build.magicType === 'mysticAdept'
@@ -236,9 +252,6 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
     character.powerPointsBought * SPECIAL_CREATION_RULES.powerPointKarma
 
   // Nuyen
-  if (build.karmaForNuyen > RULES.maxKarmaForNuyen) {
-    error(`At most ${RULES.maxKarmaForNuyen} karma can be converted to nuyen.`)
-  }
   const nuyen = budget(
     priority('resources').nuyen + build.karmaForNuyen * RULES.nuyenPerKarma,
     sumBy(character.gear, (g) => g.cost * g.quantity) +
@@ -246,6 +259,7 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
       sumBy(character.augmentations, (a) => Math.round(a.cost * AUGMENTATION_GRADES[a.grade].cost)) +
       sumBy(character.matrixDevices, (d) => d.cost) +
       sumBy(character.programs, (p) => p.cost) +
+      sumBy(character.lifestyles, (l) => l.cost * l.monthsPaid) +
       sumBy(character.vehicles, (v) => v.cost),
   )
 
@@ -290,18 +304,26 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
   for (const [label, b] of overspent.slice(0, 3)) {
     if (b.remaining > 0) warning(`${b.remaining} ${label} left to spend.`)
   }
+  if (result.nuyen.remaining > RULES.maxStartingNuyen) {
+    warning(
+      `${result.nuyen.remaining.toLocaleString()}¥ left; a new character keeps at most ${RULES.maxStartingNuyen.toLocaleString()}¥, so spend the rest (a lifestyle counts).`,
+    )
+  }
 
   return result
 }
 
-/** Adjustment points go to Edge, the awakened attribute, or attributes the metatype can raise above 6. */
+/**
+ * Adjustment points go to Edge, the awakened attribute, or the metatype's
+ * special attributes: those whose range isn't the usual 1–6 (p. 63).
+ */
 export function canUseAdjustment(character: Character, build: Build, attribute: AttributeId): boolean {
   if (attribute === 'edge') return true
   if (attribute === 'magic' || attribute === 'resonance') return MAGIC_TYPES[build.magicType].attribute === attribute
-  return attributeMaximum(character.metatype, attribute) > 6
+  return attributeMaximum(character.metatype, attribute) !== 6
 }
 
-/** End the build: leftover karma and nuyen become the character's starting resources. */
+/** End the build: leftover karma and nuyen (up to 5,000¥) become the character's starting resources. */
 export function finishBuild(character: Character): Character {
   const evaluation = evaluateBuild(character)
   if (!evaluation) return character
@@ -309,7 +331,8 @@ export function finishBuild(character: Character): Character {
     ...applyBuild(character),
     mode: 'free',
     karma: { ...character.karma, available: Math.max(0, evaluation.karma.remaining) },
-    nuyen: Math.max(0, evaluation.nuyen.remaining),
+    // A new character can't keep more than 5,000¥ (p. 68).
+    nuyen: Math.min(RULES.maxStartingNuyen, Math.max(0, evaluation.nuyen.remaining)),
   }
 }
 

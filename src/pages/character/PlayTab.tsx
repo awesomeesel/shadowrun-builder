@@ -1,62 +1,47 @@
-import {
-  ChevronRight,
-  Coins,
-  Trash2,
-  Crosshair,
-  Dices,
-  Flag,
-  HeartPulse,
-  Minus,
-  NotebookPen,
-  Play,
-  Plus,
-  RotateCcw,
-  Sparkles,
-  Undo2,
-  Wifi,
-} from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { Clock, Dices, Flag, HeartPulse, Minus, NotebookPen, Play, Plus, ShieldAlert, Sparkles } from 'lucide-react'
+import { useState } from 'react'
 import { useOutletContext } from 'react-router'
 import { keepDriveSignedIn } from '../../cloud/cloud'
 import { RollResult } from '../../components/Dice'
 import { noAutofill, noAutofillField } from '../../components/noAutofill'
 import { MonitorTrack, Stat } from '../../components/sheetParts'
-import { NumberInput, Section } from '../../components/ui'
-import type { Character, SessionRecord } from '../../model/character'
-import { computeDerived, ownedSkillPools, weaponPool } from '../../rules/sr6/derived'
+import { Section } from '../../components/ui'
+import { computeDerived, ownedSkillPools } from '../../rules/sr6/derived'
 import { formatInitiative, formatPool } from '../../rules/sr6/format'
 import {
-  addLedgerEntry,
-  ammoCapacity,
-  endSession,
-  removeLedgerEntry,
-  deleteSessionRecord,
-  formatDuration,
+  EDGE_BOOSTS,
+  EDGE_POOL_BOOST_COST,
+  MAX_EDGE_GAIN_PER_ROUND,
+  boostRoll,
   recordRoll,
   rollPool,
-  sessionEntries,
-  sessionSummary,
+  startCombat,
   startSession,
-  updateSessionRecord,
+  sustainPenalty,
+  type EdgeBoost,
   type Roll,
 } from '../../rules/sr6/play'
 import type { CharacterContext } from './CharacterPage'
-import { ProgramToggles } from './MatrixParts'
+import { AttackSection } from './play/AttackSection'
+import { CombatSection } from './play/CombatSection'
+import { CompanionsSection } from './play/CompanionsSection'
+import { DamageDialog } from './play/DamageDialog'
+import { EndSessionDialog } from './play/EndSessionDialog'
+import { MatrixPlay } from './play/MatrixPlay'
+import { LedgerList, MoneySection } from './play/Money'
+import { ReadyCheck } from './play/ReadyCheck'
+import { SessionLog } from './play/SessionLog'
+import { SpellsSection } from './play/SpellsSection'
+import type { QuickPool } from './play/types'
+import { VehiclesSection } from './play/VehiclesSection'
 
+/** Edge can never be above 7 (p. 45). */
 const MAX_EDGE = 7
 
-interface QuickPool {
-  label: string
-  pool: number
-  /** Initiative rolls add the score to the dice. */
-  initiativeScore?: number
-}
-
-/** The at-the-table view: damage, Edge, ammo, dice and money, wrapped in a session. */
+/** The at-the-table view: damage, Edge, combat, attacks, dice and money, wrapped in a session. */
 export function PlayTab() {
   const { character, update } = useOutletContext<CharacterContext>()
-  const session = character.play.session
-  return session ? (
+  return character.play.session ? (
     <ActiveSession character={character} update={update} />
   ) : (
     <NoSession character={character} update={update} />
@@ -70,11 +55,12 @@ function NoSession({ character, update }: CharacterContext) {
       <section className="card relative overflow-hidden p-6">
         <div className="pointer-events-none absolute -top-16 -right-16 size-56 rounded-full bg-neon/15 blur-3xl" />
         <h2 className="font-display text-2xl">Ready for a run?</h2>
-        <p className="mt-1 max-w-xl text-sm text-muted">
-          Start a session when you sit down to play. You get a play screen for damage, Edge, ammo, dice and money. When
-          you end the session, everything is saved and a summary goes into the log below.
+        <p className="mt-1 mb-4 max-w-xl text-sm text-muted">
+          Start a session when you sit down to play. You get a play screen for damage, Edge, combat, attacks, dice and
+          money. When you end the session, a summary goes into the log below.
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <ReadyCheck character={character} update={update} />
+        <div className="mt-5 flex flex-wrap gap-2">
           <input
             {...noAutofill}
             className="input min-w-0 flex-1 py-2 sm:max-w-xs"
@@ -103,45 +89,120 @@ function ActiveSession({ character, update }: CharacterContext) {
   const derived = computeDerived(character)
   const wounds = derived.woundModifier
   const session = character.play.session!
-  const [roll, setRoll] = useState<{ quick: QuickPool; result: Roll } | null>(null)
+  const [roll, setRoll] = useState<{ quick: QuickPool; result: Roll; bonus?: number } | null>(null)
   const [ending, setEnding] = useState(false)
+  const [hurt, setHurt] = useState(false)
+  /** Dice added to (or taken from) the next test, e.g. for cover or a smartlink. */
+  const [modifier, setModifier] = useState(0)
+  /** The 4-Edge boost: add Edge to the next test and make 6s explode. */
+  const [edgeDice, setEdgeDice] = useState(false)
   const edge = character.play.edge ?? derived.attributes.edge
-
-  /** Roll, show the result and remember it for the session summary. */
-  const doRoll = (quick: QuickPool) => {
-    const result = rollPool(quick.initiativeScore !== undefined ? quick.pool : formatPool(quick.pool, wounds))
-    const total =
-      quick.initiativeScore !== undefined ? quick.initiativeScore + result.dice.reduce((a, b) => a + b, 0) : null
-    setRoll({ quick, result })
-    update((c) => recordRoll(c, quick.label, result, total))
-  }
+  const combat = character.play.combat
 
   const setEdge = (value: number) =>
     update((c) => ({ ...c, play: { ...c.play, edge: Math.max(0, Math.min(MAX_EDGE, value)) } }))
 
+  /** Roll, show the result and remember it for the session summary. */
+  const doRoll = (quick: QuickPool) => {
+    if (quick.initiativeScore !== undefined) {
+      const result = rollPool(quick.pool)
+      const total = quick.initiativeScore + result.dice.reduce((a, b) => a + b, 0)
+      setRoll({ quick, result, bonus: quick.initiativeScore })
+      update((c) => {
+        const recorded = recordRoll(c, quick.label, result, total)
+        if (!quick.startsCombat) return recorded
+        return recorded.play.combat
+          ? { ...recorded, play: { ...recorded.play, combat: { ...recorded.play.combat, initiative: total } } }
+          : startCombat(recorded, total)
+      })
+      return
+    }
+    const boosted = edgeDice && edge >= EDGE_POOL_BOOST_COST
+    // Wounds and sustained spells lower action tests, not resistance rolls.
+    const base = quick.ignoreWounds ? quick.pool : formatPool(quick.pool, wounds + sustainPenalty(character))
+    const pool = Math.max(0, base + modifier + (boosted ? derived.attributes.edge : 0))
+    const result = rollPool(pool, undefined, { explode: boosted, edge: boosted ? EDGE_POOL_BOOST_COST : 0 })
+    const label = [quick.label, modifier ? `${modifier > 0 ? '+' : ''}${modifier}` : '', boosted ? 'Edge' : '']
+      .filter(Boolean)
+      .join(' · ')
+    setRoll({ quick: { ...quick, label }, result })
+    setModifier(0)
+    setEdgeDice(false)
+    update((c) => {
+      const recorded = recordRoll(c, label, result)
+      if (!boosted) return recorded
+      return { ...recorded, play: { ...recorded.play, edge: Math.max(0, edge - EDGE_POOL_BOOST_COST) } }
+    })
+  }
+
+  const boost = (kind: EdgeBoost, die: number) => {
+    if (!roll) return
+    const result = boostRoll(roll.result, kind, die)
+    if (result === roll.result) return
+    setRoll({ ...roll, result })
+    update((c) => {
+      const recorded = recordRoll(c, roll.quick.label, result, null, true)
+      return { ...recorded, play: { ...recorded.play, edge: Math.max(0, edge - EDGE_BOOSTS[kind].cost) } }
+    })
+  }
+
+  const boostInitiative = () => {
+    if (!roll || roll.bonus === undefined) return
+    const bonus = roll.bonus + 3
+    setRoll({ ...roll, bonus })
+    const total = bonus + roll.result.dice.reduce((a, b) => a + b, 0)
+    update((c) => {
+      const recorded = recordRoll(c, roll.quick.label, roll.result, total, true)
+      const fight = roll.quick.startsCombat && recorded.play.combat
+      return {
+        ...recorded,
+        play: {
+          ...recorded.play,
+          edge: Math.max(0, edge - 1),
+          combat: fight ? { ...fight, initiative: total } : recorded.play.combat,
+        },
+      }
+    })
+  }
+
+  const gainEdge = () =>
+    update((c) => ({
+      ...c,
+      play: {
+        ...c.play,
+        edge: Math.min(MAX_EDGE, (c.play.edge ?? edge) + 1),
+        combat: c.play.combat && { ...c.play.combat, edgeGained: c.play.combat.edgeGained + 1 },
+      },
+    }))
+  const edgeCapped = !!combat && combat.edgeGained >= MAX_EDGE_GAIN_PER_ROUND
+
   const pools: QuickPool[] = [
-    { label: 'Initiative', pool: derived.initiative.dice, initiativeScore: derived.initiative.score },
     { label: 'Defense', pool: derived.pools.defense },
-    { label: 'Damage resistance', pool: derived.pools.damageResistance },
+    { label: 'Damage resistance', pool: derived.pools.damageResistance, ignoreWounds: true },
     ...(derived.pools.physicalDamageResistance !== derived.pools.damageResistance
-      ? [{ label: 'Resist Physical', pool: derived.pools.physicalDamageResistance }]
+      ? [{ label: 'Resist Physical', pool: derived.pools.physicalDamageResistance, ignoreWounds: true }]
       : []),
-    ...character.weapons.flatMap((w) => {
-      const p = weaponPool(character, w).pool
-      return p === null ? [] : [{ label: w.name || 'Weapon', pool: p }]
-    }),
     ...ownedSkillPools(character).flatMap((s) => (s.pool === null ? [] : [{ label: s.skill.name, pool: s.pool }])),
     ...(derived.magic?.spellcasting ? [{ label: 'Spellcasting', pool: derived.magic.spellcasting }] : []),
-    ...(derived.magic?.drainResistance ? [{ label: 'Drain', pool: derived.magic.drainResistance }] : []),
     ...(derived.resonance?.tasking ? [{ label: 'Tasking', pool: derived.resonance.tasking }] : []),
-    ...(derived.resonance ? [{ label: 'Fading', pool: derived.resonance.fadingResistance }] : []),
     { label: 'Composure', pool: derived.pools.composure },
     { label: 'Judge Intentions', pool: derived.pools.judgeIntentions },
     { label: 'Memory', pool: derived.pools.memory },
+    { label: 'Lift / Carry', pool: derived.pools.liftCarry },
   ]
 
+  const addTimestamp = () => {
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    update((c) => {
+      const s = c.play.session
+      if (!s) return c
+      const notes = `${s.notes}${s.notes && !s.notes.endsWith('\n') ? '\n' : ''}[${time}] `
+      return { ...c, play: { ...c.play, session: { ...s, notes } } }
+    })
+  }
+
   return (
-    <div className="grid gap-4 pb-48 sm:pb-8 lg:grid-cols-2">
+    <div className="grid gap-4 pb-64 sm:pb-8 lg:grid-cols-2">
       <section className="card flex flex-wrap items-center gap-3 border-accent/30 p-3 lg:col-span-2">
         <span className="relative flex size-2.5">
           <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60" />
@@ -156,10 +217,10 @@ function ActiveSession({ character, update }: CharacterContext) {
         </button>
       </section>
 
-      <Section title="Status" icon={<HeartPulse className="size-4" />} className="lg:row-span-2">
+      <Section title="Status" icon={<HeartPulse className="size-4" />}>
         <div className="mb-4 grid grid-cols-3 gap-2">
           <Stat label="Initiative" value={formatInitiative(derived.initiative)} />
-          <Stat label="Defense" value={derived.defenseRating} />
+          <Stat label="Defense Rating" value={derived.defenseRating} />
           <Stat label="Wounds" value={wounds === 0 ? '—' : wounds} tone={wounds < 0 ? 'danger' : undefined} />
         </div>
         <div className="grid gap-4">
@@ -175,7 +236,7 @@ function ActiveSession({ character, update }: CharacterContext) {
             monitor={derived.stunMonitor}
             onChange={(n) => update((c) => ({ ...c, damage: { ...c.damage, stun: n } }))}
           />
-          {derived.physicalMonitor.filled >= derived.physicalMonitor.boxes && (
+          {(derived.physicalMonitor.filled >= derived.physicalMonitor.boxes || derived.overflow.filled > 0) && (
             <MonitorTrack
               size="large"
               label="Overflow"
@@ -185,6 +246,9 @@ function ActiveSession({ character, update }: CharacterContext) {
             />
           )}
         </div>
+        <button className="btn mt-3 w-full border-danger/40" onClick={() => setHurt(true)}>
+          <ShieldAlert className="size-4 text-danger" /> Take damage…
+        </button>
         <div className="mt-5">
           <div className="mb-1.5 flex justify-between text-xs">
             <span className="flex items-center gap-1 text-muted">
@@ -212,17 +276,59 @@ function ActiveSession({ character, update }: CharacterContext) {
                 />
               ))}
             </div>
-            <button className="btn size-10 p-0" onClick={() => setEdge(edge + 1)} aria-label="Gain Edge">
+            <button
+              className="btn size-10 p-0"
+              onClick={gainEdge}
+              disabled={edge >= MAX_EDGE || edgeCapped}
+              aria-label="Gain Edge"
+              title={edgeCapped ? `At most ${MAX_EDGE_GAIN_PER_ROUND} Edge can be gained per combat round` : undefined}
+            >
               <Plus className="size-4" />
             </button>
           </div>
+          {edgeCapped && (
+            <p className="mt-1 text-center text-xs text-muted">
+              {MAX_EDGE_GAIN_PER_ROUND} Edge gained this round, the most allowed.
+            </p>
+          )}
         </div>
       </Section>
 
+      <CombatSection character={character} update={update} onRoll={doRoll} />
+
+      <AttackSection character={character} update={update} wounds={wounds} onRoll={doRoll} />
+
       <Section title="Roll dice" icon={<Dices className="size-4" />}>
         <p className="mb-3 text-xs text-muted">
-          Tap a pool to roll it.{wounds < 0 && ` Your wound modifier (${wounds}) is already included.`}
+          Tap a pool to roll it.{wounds < 0 && ` Your wound modifier (${wounds}) is included, except when soaking.`}
+          {character.play.sustained.length > 0 &&
+            ` Sustained spells: −${-sustainPenalty(character)} dice (included).`}{' '}
+          After the roll you can spend Edge to change it.
         </p>
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-bg/40 p-2 text-sm">
+          <span className="text-muted">Next roll</span>
+          <button className="btn size-8 p-0" onClick={() => setModifier(modifier - 1)} aria-label="One die fewer">
+            <Minus className="size-4" />
+          </button>
+          <span className="w-8 text-center tabular-nums">{modifier > 0 ? `+${modifier}` : modifier}</span>
+          <button className="btn size-8 p-0" onClick={() => setModifier(modifier + 1)} aria-label="One die more">
+            <Plus className="size-4" />
+          </button>
+          <span className="text-xs text-muted">dice</span>
+          <label
+            className={`ml-auto flex items-center gap-1.5 text-xs ${edge < EDGE_POOL_BOOST_COST ? 'opacity-50' : ''}`}
+            title="4-Edge boost: add your Edge rating as dice, and 6s explode"
+          >
+            <input
+              type="checkbox"
+              className="size-4 accent-amber"
+              checked={edgeDice}
+              disabled={edge < EDGE_POOL_BOOST_COST}
+              onChange={(e) => setEdgeDice(e.target.checked)}
+            />
+            +{derived.attributes.edge} Edge dice, 6s explode ({EDGE_POOL_BOOST_COST} Edge)
+          </label>
+        </div>
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
           {pools.map((p, i) => (
             <button
@@ -232,76 +338,35 @@ function ActiveSession({ character, update }: CharacterContext) {
             >
               <span className="truncate">{p.label}</span>
               <span className="shrink-0 font-display text-base font-semibold text-accent tabular-nums">
-                {p.initiativeScore !== undefined ? `${p.initiativeScore}+${p.pool}D6` : formatPool(p.pool, wounds)}
+                {p.ignoreWounds ? p.pool : formatPool(p.pool, wounds + sustainPenalty(character))}
               </span>
             </button>
           ))}
         </div>
-        <CustomRoll onRoll={(pool) => doRoll({ label: 'Custom roll', pool: pool - wounds })} />
+        <CustomRoll onRoll={(pool) => doRoll({ label: 'Custom roll', pool, ignoreWounds: true })} />
       </Section>
 
-      {character.weapons.some((w) => ammoCapacity(w) > 0) && (
-        <Section title="Ammo" icon={<Crosshair className="size-4" />}>
-          <ul className="grid gap-2">
-            {character.weapons
-              .filter((w) => ammoCapacity(w) > 0)
-              .map((w) => {
-                const capacity = ammoCapacity(w)
-                const loaded = character.play.ammo[w.id] ?? capacity
-                const setAmmo = (n: number) =>
-                  update((c) => ({
-                    ...c,
-                    play: { ...c.play, ammo: { ...c.play.ammo, [w.id]: Math.max(0, Math.min(capacity, n)) } },
-                  }))
-                return (
-                  <li key={w.id} className="flex items-center gap-2 text-sm">
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate">{w.name || 'Weapon'}</div>
-                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-bg">
-                        <div
-                          className={`h-full rounded-full ${loaded === 0 ? 'bg-danger' : 'bg-accent'}`}
-                          style={{ width: `${(loaded / capacity) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                    <span className="w-14 text-right font-display text-lg tabular-nums">
-                      {loaded}
-                      <span className="text-xs text-muted">/{capacity}</span>
-                    </span>
-                    <button
-                      className="btn px-2"
-                      onClick={() => setAmmo(loaded - 1)}
-                      aria-label={`Fire one round from ${w.name}`}
-                    >
-                      −1
-                    </button>
-                    <button className="btn px-2" onClick={() => setAmmo(capacity)} aria-label={`Reload ${w.name}`}>
-                      <RotateCcw className="size-4" />
-                    </button>
-                  </li>
-                )
-              })}
-          </ul>
-        </Section>
+      {(derived.magic?.spellcasting || character.spells.length > 0 || character.play.sustained.length > 0) && (
+        <SpellsSection character={character} update={update} />
       )}
-
-      {derived.matrix && (
-        <Section title="Matrix" icon={<Wifi className="size-4" />}>
-          <div className="mb-3 grid grid-cols-3 gap-2">
-            <Stat label="AR init." value={formatInitiative(derived.matrix.arInitiative)} />
-            <Stat label="Cold-sim init." value={formatInitiative(derived.matrix.coldSimInitiative)} />
-            <Stat label="Hot-sim init." value={formatInitiative(derived.matrix.hotSimInitiative)} />
-          </div>
-          <ProgramToggles character={character} update={update} matrix={derived.matrix} />
-        </Section>
+      {(derived.magic?.summoning || character.play.companions.some((c) => c.kind === 'spirit')) && (
+        <CompanionsSection character={character} update={update} kind="spirit" onRoll={doRoll} />
       )}
+      {(derived.resonance?.tasking || character.play.companions.some((c) => c.kind === 'sprite')) && (
+        <CompanionsSection character={character} update={update} kind="sprite" onRoll={doRoll} />
+      )}
+      {/* A plain commlink doesn't need the hacking tools; decks, consoles, programs and living personas do. */}
+      {derived.matrix && (derived.matrix.device?.kind !== 'commlink' || character.programs.length > 0) && (
+        <MatrixPlay character={character} update={update} matrix={derived.matrix} onRoll={doRoll} />
+      )}
+      {character.vehicles.length > 0 && <VehiclesSection character={character} update={update} onRoll={doRoll} />}
 
       <MoneySection character={character} update={update} />
 
       <Section title="Session notes" icon={<NotebookPen className="size-4" />}>
         <textarea
           {...noAutofillField}
-          className="input min-h-28 w-full"
+          className="input min-h-32 w-full"
           placeholder="Who you met, what you found, who owes you…"
           value={session.notes}
           onChange={(e) => {
@@ -309,22 +374,29 @@ function ActiveSession({ character, update }: CharacterContext) {
             update((c) => ({ ...c, play: { ...c.play, session: c.play.session && { ...c.play.session, notes } } }))
           }}
         />
+        <button className="btn mt-2 text-xs" onClick={addTimestamp}>
+          <Clock className="size-3.5" /> Add the time
+        </button>
       </Section>
 
       {roll && (
         <RollResult
           label={roll.quick.label}
           roll={roll.result}
-          bonus={roll.quick.initiativeScore}
+          bonus={roll.bonus}
+          info={roll.quick.info}
+          edge={{ available: edge, onBoost: boost, onInitiativeBoost: boostInitiative }}
           onClose={() => setRoll(null)}
           onReroll={() => doRoll(roll.quick)}
         />
       )}
+      {hurt && <DamageDialog character={character} update={update} onClose={() => setHurt(false)} />}
       {ending && <EndSessionDialog character={character} update={update} onClose={() => setEnding(false)} />}
     </div>
   )
 }
 
+/** Roll any number of dice, e.g. for a test the app doesn't know. Wound modifiers aren't added. */
 function CustomRoll({ onRoll }: { onRoll: (pool: number) => void }) {
   const [pool, setPool] = useState(6)
   return (
@@ -340,330 +412,6 @@ function CustomRoll({ onRoll }: { onRoll: (pool: number) => void }) {
       <button className="btn btn-primary" onClick={() => onRoll(pool)}>
         <Dices className="size-4" /> Roll
       </button>
-    </div>
-  )
-}
-
-function MoneySection({ character, update }: CharacterContext) {
-  const [nuyen, setNuyen] = useState(0)
-  const [karma, setKarma] = useState(0)
-  const [note, setNote] = useState('')
-  const record = () => {
-    if (!nuyen && !karma) return
-    update((c) => addLedgerEntry(c, { nuyen, karma, note: note.trim() }))
-    setNuyen(0)
-    setKarma(0)
-    setNote('')
-  }
-  return (
-    <Section title="Nuyen & karma" icon={<Coins className="size-4" />}>
-      <div className="mb-3 grid grid-cols-2 gap-2">
-        <Stat label="Nuyen" value={`${character.nuyen.toLocaleString()}¥`} tone="accent" />
-        <Stat
-          label="Karma"
-          value={character.karma.available}
-          tone="accent"
-          hint={`Career karma ${character.karma.career}`}
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_2fr]">
-        <label className="block">
-          <span className="mb-1 block text-[11px] text-muted">Nuyen (− to spend)</span>
-          <NumberInput value={nuyen} onChange={setNuyen} />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-[11px] text-muted">Karma (− to spend)</span>
-          <NumberInput value={karma} onChange={setKarma} />
-        </label>
-        <label className="col-span-2 block sm:col-span-1">
-          <span className="mb-1 block text-[11px] text-muted">What for?</span>
-          <input
-            {...noAutofill}
-            className="input w-full"
-            placeholder="Paid by Mr. Johnson"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && record()}
-          />
-        </label>
-      </div>
-      <button className="btn btn-primary mt-2 w-full" onClick={record} disabled={!nuyen && !karma}>
-        Record
-      </button>
-      <div className="mt-4">
-        <LedgerList update={update} entries={sessionEntries(character)} title="This session" />
-      </div>
-    </Section>
-  )
-}
-
-function LedgerList({
-  update,
-  entries,
-  title,
-}: {
-  update: CharacterContext['update']
-  entries: Character['ledger']
-  title: string
-}) {
-  if (entries.length === 0) return null
-  const sign = (n: number) => (n > 0 ? `+${n.toLocaleString()}` : n.toLocaleString())
-  return (
-    <div>
-      <h3 className="mb-1.5 text-xs tracking-wider text-muted uppercase">{title}</h3>
-      <ul className="grid gap-1 text-sm">
-        {[...entries].reverse().map((e) => (
-          <li key={e.id} className="flex items-center gap-2 rounded-md bg-bg/50 px-2 py-1">
-            <span className="min-w-0 flex-1 truncate">{e.note || <span className="text-muted">No note</span>}</span>
-            {e.nuyen !== 0 && (
-              <span className={`tabular-nums ${e.nuyen > 0 ? 'text-accent' : 'text-danger'}`}>{sign(e.nuyen)}¥</span>
-            )}
-            {e.karma !== 0 && (
-              <span className={`tabular-nums ${e.karma > 0 ? 'text-amber' : 'text-danger'}`}>{sign(e.karma)} K</span>
-            )}
-            <button
-              className="text-muted hover:text-danger"
-              aria-label="Undo this entry"
-              title="Undo"
-              onClick={() => update((c) => removeLedgerEntry(c, e.id))}
-            >
-              <Undo2 className="size-3.5" />
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-function SessionLog({ character, update }: CharacterContext) {
-  const [open, setOpen] = useState<string | null>(null)
-  if (character.sessions.length === 0) return null
-  return (
-    <Section title="Session log" icon={<NotebookPen className="size-4" />}>
-      <p className="-mt-1 mb-3 text-xs text-muted">Click a session to see its summary and notes.</p>
-      <ol className="grid gap-3">
-        {[...character.sessions].reverse().map((s) => (
-          <SessionEntry
-            key={s.id}
-            record={s}
-            open={open === s.id}
-            onToggle={() => setOpen(open === s.id ? null : s.id)}
-            update={update}
-          />
-        ))}
-      </ol>
-    </Section>
-  )
-}
-
-const signed = (n: number, unit = '') => `${n > 0 ? '+' : ''}${n.toLocaleString()}${unit}`
-
-function SessionEntry({
-  record: s,
-  open,
-  onToggle,
-  update,
-}: {
-  record: SessionRecord
-  open: boolean
-  onToggle: () => void
-  update: CharacterContext['update']
-}) {
-  const notable = [...s.rolls]
-    .filter((r) => r.total === null)
-    .sort((a, b) => b.hits - a.hits)
-    .slice(0, 3)
-  const glitches = s.rolls.filter((r) => r.glitch && r.total === null)
-  // Sessions logged before damage and Edge were tracked have no edgeStart.
-  const detailed = s.edgeStart !== null
-  return (
-    <li className={`rounded-lg border bg-bg/40 text-sm transition-colors ${open ? 'border-accent/50' : 'border-line'}`}>
-      <button
-        className="flex w-full flex-wrap items-baseline gap-x-3 p-3 text-left"
-        onClick={onToggle}
-        aria-expanded={open}
-      >
-        <ChevronRight className={`size-4 self-center text-muted transition-transform ${open ? 'rotate-90' : ''}`} />
-        <span className="font-semibold">{s.title || 'Session'}</span>
-        <span className="text-xs text-muted">{new Date(s.startedAt).toLocaleDateString()}</span>
-        <span className="ml-auto text-xs tabular-nums">
-          <span className={s.nuyen >= 0 ? 'text-accent' : 'text-danger'}>{signed(s.nuyen, '¥')}</span>
-          <span className="ml-2 text-amber">{signed(s.karma)} karma</span>
-        </span>
-        {!open && s.notes && <p className="mt-1 line-clamp-1 basis-full pl-7 text-muted">{s.notes}</p>}
-      </button>
-
-      {open && (
-        <div className="grid gap-4 border-t border-line p-3 sm:p-4">
-          <div>
-            <h4 className="mb-1 text-xs font-semibold tracking-wider text-muted uppercase">Summary</h4>
-            <p className="leading-relaxed">{sessionSummary(s).join(' ')}</p>
-          </div>
-
-          <div className={`grid grid-cols-3 gap-2 ${detailed ? 'sm:grid-cols-6' : ''}`}>
-            <Stat label="Played" value={formatDuration(s.startedAt, s.endedAt)} />
-            <Stat label="Nuyen" value={signed(s.nuyen, '¥')} tone={s.nuyen > 0 ? 'accent' : undefined} />
-            <Stat label="Karma" value={signed(s.karma)} tone={s.karma > 0 ? 'accent' : undefined} />
-            {detailed && (
-              <>
-                <Stat label="Physical" value={s.damage.physical} tone={s.damage.physical ? 'danger' : undefined} />
-                <Stat label="Stun" value={s.damage.stun} tone={s.damage.stun ? 'danger' : undefined} />
-                <Stat
-                  label="Edge used"
-                  value={s.edgeStart !== null && s.edgeEnd !== null ? Math.max(0, s.edgeStart - s.edgeEnd) : '–'}
-                />
-              </>
-            )}
-          </div>
-
-          {s.entries.length > 0 && (
-            <div>
-              <h4 className="mb-1 text-xs font-semibold tracking-wider text-muted uppercase">Money & karma</h4>
-              <ul className="grid gap-1">
-                {s.entries.map((e, i) => (
-                  <li key={i} className="flex gap-2 rounded-md bg-bg/50 px-2 py-1">
-                    <span className="min-w-0 flex-1 truncate">
-                      {e.note || <span className="text-muted">No note</span>}
-                    </span>
-                    {e.nuyen !== 0 && (
-                      <span className={e.nuyen > 0 ? 'text-accent' : 'text-danger'}>{signed(e.nuyen, '¥')}</span>
-                    )}
-                    {e.karma !== 0 && (
-                      <span className={e.karma > 0 ? 'text-amber' : 'text-danger'}>{signed(e.karma)} K</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {s.rolls.length > 0 && (
-            <div>
-              <h4 className="mb-1 text-xs font-semibold tracking-wider text-muted uppercase">
-                Rolls · {s.rolls.length}
-              </h4>
-              <ul className="grid gap-1">
-                {notable.map((r, i) => (
-                  <li key={`best-${i}`} className="flex gap-2 rounded-md bg-bg/50 px-2 py-1">
-                    <span className="flex-1">{r.label}</span>
-                    <span className="text-muted">{r.pool} dice</span>
-                    <span className="font-semibold text-accent">{r.hits} hits</span>
-                  </li>
-                ))}
-                {glitches.map((r, i) => (
-                  <li key={`glitch-${i}`} className="flex gap-2 rounded-md bg-danger/10 px-2 py-1">
-                    <span className="flex-1">{r.label}</span>
-                    <span className="font-semibold text-danger">{r.criticalGlitch ? 'Critical glitch' : 'Glitch'}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <label className="block">
-            <span className="mb-1 block text-xs font-semibold tracking-wider text-muted uppercase">Notes</span>
-            <textarea
-              {...noAutofillField}
-              className="input min-h-28 w-full"
-              placeholder="What happened? Add notes here any time."
-              value={s.notes}
-              onChange={(e) => {
-                const notes = e.target.value
-                update((c) => updateSessionRecord(c, s.id, { notes }))
-              }}
-            />
-          </label>
-
-          <div className="flex justify-between gap-2 text-xs text-muted">
-            <span>
-              {new Date(s.startedAt).toLocaleString()} – {new Date(s.endedAt).toLocaleTimeString()}
-            </span>
-            <button
-              className="flex items-center gap-1 hover:text-danger"
-              onClick={() => {
-                if (confirm(`Remove "${s.title || 'this session'}" from the log? Money and karma are not changed.`)) {
-                  update((c) => deleteSessionRecord(c, s.id))
-                }
-              }}
-            >
-              <Trash2 className="size-3.5" /> Remove from log
-            </button>
-          </div>
-        </div>
-      )}
-    </li>
-  )
-}
-
-const boxes = (n: number) => `${n} ${n === 1 ? 'box' : 'boxes'}`
-
-function EndSessionDialog({ character, update, onClose }: CharacterContext & { onClose: () => void }) {
-  const [clearStun, setClearStun] = useState(true)
-  const [clearPhysical, setClearPhysical] = useState(false)
-  const entries = sessionEntries(character)
-  const nuyen = entries.reduce((s, e) => s + e.nuyen, 0)
-  const karma = entries.reduce((s, e) => s + e.karma, 0)
-  const line = (label: string, value: ReactNode) => (
-    <div className="flex justify-between">
-      <span className="text-muted">{label}</span>
-      <span className="tabular-nums">{value}</span>
-    </div>
-  )
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={onClose}>
-      <div
-        className="card w-full max-w-md p-5"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-label="End session"
-      >
-        <h2 className="font-display text-xl">End {character.play.session?.title || 'session'}?</h2>
-        <div className="mt-3 grid gap-1 text-sm">
-          {line('Nuyen this session', `${nuyen >= 0 ? '+' : ''}${nuyen.toLocaleString()}¥`)}
-          {line('Karma this session', `${karma >= 0 ? '+' : ''}${karma}`)}
-          {line('Physical damage', boxes(character.damage.physical))}
-          {line('Stun damage', boxes(character.damage.stun))}
-        </div>
-        <div className="mt-4 grid gap-2 text-sm">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="size-4 accent-accent"
-              checked={clearStun}
-              onChange={(e) => setClearStun(e.target.checked)}
-            />
-            Recover all Stun damage
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="size-4 accent-accent"
-              checked={clearPhysical}
-              onChange={(e) => setClearPhysical(e.target.checked)}
-            />
-            Heal all Physical damage (downtime between runs)
-          </label>
-        </div>
-        <p className="mt-3 text-xs text-muted">
-          Everything else (Edge, ammo, money and karma) is kept as it is now. The session goes into the log.
-        </p>
-        <div className="mt-4 flex justify-end gap-2">
-          <button className="btn" onClick={onClose}>
-            Keep playing
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              keepDriveSignedIn()
-              update((c) => endSession(c, { clearStun, clearPhysical }))
-              onClose()
-            }}
-          >
-            <Flag className="size-4" /> End session
-          </button>
-        </div>
-      </div>
     </div>
   )
 }
