@@ -1,6 +1,9 @@
-import { CircleCheck, FileInput, TriangleAlert } from 'lucide-react'
-import { useEffect } from 'react'
+import { CircleCheck, Coins, FileInput, TriangleAlert } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
+import { Field, NumberInput } from '../components/ui'
+import { saveCharacter } from '../db/characters'
+import { db } from '../db/db'
 import type { ImportReport } from '../model/importers/commlink'
 
 const same = (a: string, b: string) => a.replace(/\s+/g, '') === b.replace(/\s+/g, '')
@@ -43,6 +46,8 @@ export function ImportReportDialog({
         </div>
 
         <div className="grid gap-5 overflow-y-auto p-4">
+          <ResourcesCheck characterId={characterId} source={report.source} resources={report.resources} />
+
           {report.notes.length > 0 && (
             <section>
               <h3 className="mb-2 text-xs font-semibold tracking-wider text-muted uppercase">Notes</h3>
@@ -112,5 +117,65 @@ export function ImportReportDialog({
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * Commlink exports a single karma number without saying whether karma already
+ * spent is taken off, so let the user confirm karma and nuyen before playing.
+ */
+function ResourcesCheck({
+  characterId,
+  source,
+  resources,
+}: {
+  characterId: string
+  source: string
+  resources: ImportReport['resources']
+}) {
+  const [values, setValues] = useState({ available: resources.karma, career: 0, nuyen: resources.nuyen })
+  // Saves run one after another so fast typing can't store an older value last.
+  const queue = useRef(Promise.resolve())
+  const change = (patch: Partial<typeof values>) => {
+    const next = { ...values, ...patch }
+    setValues(next)
+    queue.current = queue.current.then(async () => {
+      const character = await db.characters.get(characterId)
+      if (!character) return
+      await saveCharacter({
+        ...character,
+        nuyen: next.nuyen,
+        karma: { ...character.karma, available: next.available, career: next.career },
+      })
+    })
+  }
+  return (
+    <section>
+      <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold tracking-wider text-muted uppercase">
+        <Coins className="size-3.5" /> Karma and nuyen
+      </h3>
+      <p className="mb-3 text-sm">
+        The {source} file says <strong>{resources.karma} karma</strong> and{' '}
+        <strong>{resources.nuyen.toLocaleString()}¥</strong>. It doesn't say whether karma already spent is taken off.
+        If {resources.karma} is everything the character has earned, enter it as career karma and type in what’s
+        actually left to spend.
+      </p>
+      <div className="grid grid-cols-3 gap-3">
+        <Field label="Karma left">
+          <NumberInput value={values.available} min={0} onChange={(available) => change({ available })} />
+        </Field>
+        <Field label="Career karma">
+          <NumberInput value={values.career} min={0} onChange={(career) => change({ career })} />
+        </Field>
+        <Field label="Nuyen">
+          <NumberInput value={values.nuyen} min={0} onChange={(nuyen) => change({ nuyen })} />
+        </Field>
+      </div>
+      {resources.karma > 0 && values.career === 0 && (
+        <button className="btn mt-2 text-sm" onClick={() => change({ career: resources.karma, available: 0 })}>
+          {resources.karma} is the total earned
+        </button>
+      )}
+    </section>
   )
 }

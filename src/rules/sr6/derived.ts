@@ -87,12 +87,15 @@ export interface DerivedStats {
   pools: {
     defense: number
     damageResistance: number
+    /** Damage resistance against Physical damage, with bonuses like bone lacing. */
+    physicalDamageResistance: number
     composure: number
     judgeIntentions: number
     memory: number
     liftCarry: number
   }
   unarmedAttackRating: number
+  unarmedDamage: { value: number; type: 'P' | 'S' }
   /** Present for awakened characters. */
   magic: {
     spellcasting: number | null
@@ -148,7 +151,11 @@ export function computeDerived(character: Character): DerivedStats {
   const physicalMonitor = { boxes: 8 + Math.ceil(a.body / 2), filled: character.damage.physical }
   const stunMonitor = { boxes: 8 + Math.ceil(a.willpower / 2), filled: character.damage.stun }
   const armor = character.gear.filter((item) => item.equipped).reduce((sum, item) => sum + item.armor, 0)
-  const extraDice = allBonuses(character).reduce((sum, b) => sum + b.initiativeDice, 0)
+  const bonuses = allBonuses(character)
+  const total = (
+    key: 'initiativeDice' | 'defenseRating' | 'physicalResistance' | 'unarmedAttackRating' | 'unarmedDamage',
+  ) => bonuses.reduce((sum, b) => sum + b[key], 0)
+  const extraDice = total('initiativeDice')
 
   return {
     attributes: a,
@@ -166,16 +173,22 @@ export function computeDerived(character: Character): DerivedStats {
     overflow: { boxes: a.body * 2, filled: character.damage.overflow },
     woundModifier: woundModifier(physicalMonitor.filled) + woundModifier(stunMonitor.filled),
     armor,
-    defenseRating: a.body + armor,
+    defenseRating: a.body + armor + total('defenseRating'),
     pools: {
       defense: a.reaction + a.intuition,
       damageResistance: a.body,
+      physicalDamageResistance: a.body + total('physicalResistance'),
       composure: a.willpower + a.charisma,
       judgeIntentions: a.willpower + a.intuition,
       memory: a.logic + a.intuition,
       liftCarry: a.body + a.willpower,
     },
-    unarmedAttackRating: a.reaction + a.strength,
+    unarmedAttackRating: a.reaction + a.strength + total('unarmedAttackRating'),
+    // Strength / 2 rounded up, Stun unless something (like bone lacing) makes it Physical.
+    unarmedDamage: {
+      value: Math.ceil(a.strength / 2) + total('unarmedDamage'),
+      type: bonuses.some((b) => b.unarmedPhysical) ? 'P' : 'S',
+    },
     magic: character.attributes.magic > 0 ? magicStats(character, a) : null,
     resonance:
       character.attributes.resonance > 0

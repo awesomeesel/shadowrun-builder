@@ -184,6 +184,10 @@ describe('Commlink import', () => {
     expect(c.lifestyles).toMatchObject([{ name: 'Coffin motel', level: 'Squatter', monthsPaid: 2 }])
   })
 
+  it('reports karma and nuyen from the file for the user to confirm', () => {
+    expect(report.resources).toEqual({ karma: 3, nuyen: 1200 })
+  })
+
   it('reports what it guessed and compares with Commlink', () => {
     expect(report.notes.some((n) => n.includes('1,000×'))).toBe(true)
     expect(report.notes.some((n) => n.startsWith('Wired reflexes: rating 2'))).toBe(true)

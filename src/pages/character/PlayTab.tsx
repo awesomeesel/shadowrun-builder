@@ -123,6 +123,9 @@ function ActiveSession({ character, update }: CharacterContext) {
     { label: 'Initiative', pool: derived.initiative.dice, initiativeScore: derived.initiative.score },
     { label: 'Defense', pool: derived.pools.defense },
     { label: 'Damage resistance', pool: derived.pools.damageResistance },
+    ...(derived.pools.physicalDamageResistance !== derived.pools.damageResistance
+      ? [{ label: 'Resist Physical', pool: derived.pools.physicalDamageResistance }]
+      : []),
     ...character.weapons.flatMap((w) => {
       const p = weaponPool(character, w).pool
       return p === null ? [] : [{ label: w.name || 'Weapon', pool: p }]

@@ -110,6 +110,13 @@ export function SheetTab() {
         <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
           <PoolRow label="Defense (Reaction + Intuition)" pool={derived.pools.defense} wounds={wounds} />
           <PoolRow label="Damage resistance (Body)" pool={derived.pools.damageResistance} />
+          {derived.pools.physicalDamageResistance !== derived.pools.damageResistance && (
+            <PoolRow
+              label={`Damage resistance vs. Physical (Body + ${derived.pools.physicalDamageResistance - derived.pools.damageResistance})`}
+              pool={derived.pools.physicalDamageResistance}
+            />
+          )}
+          <Row label="Unarmed damage" value={`${derived.unarmedDamage.value}${derived.unarmedDamage.type}`} />
         </dl>
       </Section>
 

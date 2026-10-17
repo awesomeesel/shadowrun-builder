@@ -117,6 +117,13 @@ export const BonusesSchema = z
   .object({
     attributes: z.partialRecord(z.enum(ATTRIBUTE_IDS), z.number().int()).default({}),
     initiativeDice: int(0),
+    defenseRating: int(0),
+    /** Extra dice for resisting physical damage only (e.g. bone lacing). */
+    physicalResistance: int(0),
+    unarmedAttackRating: int(0),
+    unarmedDamage: int(0),
+    /** Unarmed attacks deal Physical instead of Stun damage. */
+    unarmedPhysical: z.boolean().default(false),
   })
   .prefault({})
 

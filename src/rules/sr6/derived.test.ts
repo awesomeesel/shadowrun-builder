@@ -41,6 +41,7 @@ describe('computeDerived', () => {
     expect(d.pools).toEqual({
       defense: 9,
       damageResistance: 5,
+      physicalDamageResistance: 5,
       composure: 5,
       judgeIntentions: 8,
       memory: 7,
@@ -263,6 +264,28 @@ describe('augmentations and special attributes', () => {
         /2 programs are running but only 1 fit/,
       )
     })
+  })
+
+  it('applies bone lacing to Defense Rating, physical damage resistance and unarmed attacks', () => {
+    const lacing = AugmentationSchema.parse({
+      name: 'Bone lacing (Aluminium)',
+      bonuses: {
+        defenseRating: 1,
+        physicalResistance: 2,
+        unarmedAttackRating: 2,
+        unarmedDamage: 1,
+        unarmedPhysical: true,
+      },
+    })
+    const plain = computeDerived(runner())
+    const laced = computeDerived(runner({ augmentations: [lacing] }))
+    expect(laced.defenseRating).toBe(plain.defenseRating + 1)
+    expect(laced.pools.damageResistance).toBe(5)
+    expect(laced.pools.physicalDamageResistance).toBe(7)
+    expect(laced.unarmedAttackRating).toBe(plain.unarmedAttackRating + 2)
+    expect(plain.unarmedDamage).toEqual({ value: 2, type: 'S' })
+    expect(laced.unarmedDamage).toEqual({ value: 3, type: 'P' })
+    expect(laced.physicalMonitor.boxes).toBe(plain.physicalMonitor.boxes)
   })
 
   it('gives technomancers a living persona', () => {

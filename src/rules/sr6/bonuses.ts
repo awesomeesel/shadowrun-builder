@@ -1,4 +1,4 @@
-import type { Bonuses } from '../../model/character'
+import { BonusesSchema, type Bonuses } from '../../model/character'
 import { ATTRIBUTE_IDS, ATTRIBUTE_LABELS, type AttributeId } from './attributes'
 
 /** Attributes by full name or three-letter abbreviation, upper case. */
@@ -9,12 +9,31 @@ const BY_NAME = new Map(
   ]),
 )
 
+export const noBonuses = (): Bonuses => BonusesSchema.parse({})
+
+/** Bonuses that aren't attributes, with the words that can name them in bonus text. */
+const OTHER_BONUSES = [
+  { key: 'defenseRating', label: 'Defense Rating', names: ['DEFENSE RATING', 'DEFENSE', 'DR'] },
+  {
+    key: 'physicalResistance',
+    label: 'Physical damage resistance',
+    names: ['PHYSICAL DAMAGE RESISTANCE', 'PHYSICAL RESISTANCE', 'DAMAGE RESISTANCE', 'SOAK'],
+  },
+  {
+    key: 'unarmedAttackRating',
+    label: 'Unarmed attack rating',
+    names: ['UNARMED ATTACK RATING', 'UNARMED AR'],
+  },
+  { key: 'unarmedDamage', label: 'Unarmed damage', names: ['UNARMED DAMAGE', 'UNARMED DV'] },
+] as const
+
 /**
- * Parse bonus text like "Reaction +2, Agility +1, +2D6" (abbreviations like "REA +2" work too). Returns undefined if any part
- * can't be understood, so the input can flag it.
+ * Parse bonus text like "Reaction +2, Agility +1, +2D6, Defense Rating +1,
+ * Unarmed physical" (abbreviations like "REA +2" work too). Returns undefined
+ * if any part can't be understood, so the input can flag it.
  */
 export function parseBonuses(text: string): Bonuses | undefined {
-  const result: Bonuses = { attributes: {}, initiativeDice: 0 }
+  const result = noBonuses()
   for (const raw of text.split(/[,;]/)) {
     const part = raw.trim().toUpperCase()
     if (!part) continue
@@ -23,6 +42,16 @@ export function parseBonuses(text: string): Bonuses | undefined {
       part.match(/^(?:ID|INIT(?:IATIVE)?(?: DICE)?)\s*\+?\s*(\d+)$/)
     if (dice) {
       result.initiativeDice += parseInt(dice[1], 10)
+      continue
+    }
+    if (/^UNARMED (PHYSICAL|DAMAGE IS PHYSICAL|P)$/.test(part)) {
+      result.unarmedPhysical = true
+      continue
+    }
+    const other = part.match(/^([A-Z][A-Z ]*?)\s*([+-])\s*(\d+)$/)
+    const otherBonus = other && OTHER_BONUSES.find((b) => (b.names as readonly string[]).includes(other[1]))
+    if (other && otherBonus) {
+      result[otherBonus.key] += parseInt(other[3], 10) * (other[2] === '-' ? -1 : 1)
       continue
     }
     const attr = part.match(/^([A-Z]+)\s*([+-])\s*(\d+)$/)
@@ -40,6 +69,10 @@ export function formatBonuses(bonuses: Bonuses): string {
     return value ? [`${ATTRIBUTE_LABELS[a].name} ${value > 0 ? '+' : ''}${value}`] : []
   })
   if (bonuses.initiativeDice) parts.push(`+${bonuses.initiativeDice}D6`)
+  for (const { key, label } of OTHER_BONUSES) {
+    if (bonuses[key]) parts.push(`${label} ${bonuses[key] > 0 ? '+' : ''}${bonuses[key]}`)
+  }
+  if (bonuses.unarmedPhysical) parts.push('Unarmed physical')
   return parts.join(', ')
 }
 
@@ -58,6 +91,25 @@ const KNOWN_BONUSES: { pattern: RegExp; attribute: AttributeId; dicePerRating: b
   { pattern: /^improved reflexes/i, attribute: 'reaction', dicePerRating: true },
 ]
 
+/** Implants whose bonuses are fixed or simply scale with rating (Core Rulebook, bodyware). */
+const FIXED_BONUSES: { pattern: RegExp; bonuses: (rating: number) => Partial<Bonuses> }[] = [
+  // Bone Lacing table: physical resistance, Defense Rating, unarmed DV, unarmed AR.
+  {
+    pattern: /^bone lacing\s*\(?plastic/i,
+    bonuses: () => ({ physicalResistance: 1, defenseRating: 1, unarmedDamage: 1, unarmedAttackRating: 1 }),
+  },
+  {
+    pattern: /^bone lacing\s*\(?alumin/i,
+    bonuses: () => ({ physicalResistance: 2, defenseRating: 1, unarmedDamage: 1, unarmedAttackRating: 2 }),
+  },
+  {
+    pattern: /^bone lacing\s*\(?titanium/i,
+    bonuses: () => ({ physicalResistance: 2, defenseRating: 2, unarmedDamage: 2, unarmedAttackRating: 3 }),
+  },
+  // Dermal plating: Defense Rating equal to its rating.
+  { pattern: /^dermal plating/i, bonuses: (r) => ({ defenseRating: r }) },
+]
+
 /** The attribute a well-known implant or power raises, if we know it. */
 export function knownBonusAttribute(name: string): AttributeId | undefined {
   return KNOWN_BONUSES.find((k) => k.pattern.test(name.trim()))?.attribute
@@ -66,7 +118,16 @@ export function knownBonusAttribute(name: string): AttributeId | undefined {
 /** Bonuses for a well-known implant or power at a rating (or the number at the end of its name). */
 export function knownBonuses(name: string, rating: number): Bonuses {
   const r = Math.max(1, rating || parseInt(name.match(/(\d+)\s*$/)?.[1] ?? '1', 10))
+  const fixed = FIXED_BONUSES.find((k) => k.pattern.test(name.trim()))
+  if (fixed) {
+    const bonuses = fixed.bonuses(r)
+    // Bone lacing makes unarmed attacks deal Physical damage.
+    return BonusesSchema.parse({ ...bonuses, unarmedPhysical: /^bone lacing/i.test(name.trim()) })
+  }
   const known = KNOWN_BONUSES.find((k) => k.pattern.test(name.trim()))
-  if (!known) return { attributes: {}, initiativeDice: 0 }
-  return { attributes: { [known.attribute]: r }, initiativeDice: known.dicePerRating ? r : 0 }
+  if (!known) return noBonuses()
+  return BonusesSchema.parse({
+    attributes: { [known.attribute]: r },
+    initiativeDice: known.dicePerRating ? r : 0,
+  })
 }

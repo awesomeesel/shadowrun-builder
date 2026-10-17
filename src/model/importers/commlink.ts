@@ -50,6 +50,8 @@ export interface ImportReport {
   /** Things that were guessed, converted or left out. */
   notes: string[]
   checks: ImportCheck[]
+  /** Karma and nuyen exactly as the file gives them, for the user to confirm. */
+  resources: { karma: number; nuyen: number }
 }
 
 export function isCommlinkExport(data: unknown): data is Json {
@@ -284,7 +286,7 @@ export function fromCommlink(data: Json): { character: Character; report: Import
       rating = remaining[attribute]!
       notes.push(`${name}: rating ${rating} worked out from ${capitalize(attribute)} going up by ${rating}.`)
     }
-    const bonuses = attribute ? knownBonuses(name, rating) : { attributes: {}, initiativeDice: 0 }
+    const bonuses = knownBonuses(name, rating)
     if (attribute)
       remaining[attribute] = Math.max(0, (remaining[attribute] ?? 0) - (bonuses.attributes[attribute] ?? 0))
     diceLeft -= bonuses.initiativeDice
@@ -478,7 +480,15 @@ export function fromCommlink(data: Json): { character: Character; report: Import
   })
   notes.push('Commlink exports no prices or quality karma costs; these are 0 unless your books filled them in.')
 
-  return { character, report: { source: 'Commlink 6', notes, checks: compare(data, character, weapons) } }
+  return {
+    character,
+    report: {
+      source: 'Commlink 6',
+      notes,
+      checks: compare(data, character, weapons),
+      resources: { karma: num(data.karma), nuyen: num(data.nuyen) },
+    },
+  }
 }
 
 /** Compare Commlink's own calculated values with ours. */
