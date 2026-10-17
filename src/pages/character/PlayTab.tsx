@@ -27,6 +27,7 @@ import { CombatSection } from './play/CombatSection'
 import { CompanionsSection } from './play/CompanionsSection'
 import { DamageDialog } from './play/DamageDialog'
 import { EndSessionDialog } from './play/EndSessionDialog'
+import { HealDialog } from './play/HealDialog'
 import { MatrixPlay } from './play/MatrixPlay'
 import { LedgerList, MoneySection } from './play/Money'
 import { ReadyCheck } from './play/ReadyCheck'
@@ -50,6 +51,7 @@ export function PlayTab() {
 
 function NoSession({ character, update }: CharacterContext) {
   const [title, setTitle] = useState(`Session ${character.sessions.length + 1}`)
+  const [healing, setHealing] = useState(false)
   return (
     <div className="grid gap-4">
       <section className="card relative overflow-hidden p-6">
@@ -59,7 +61,7 @@ function NoSession({ character, update }: CharacterContext) {
           Start a session when you sit down to play. You get a play screen for damage, Edge, combat, attacks, dice and
           money. When you end the session, a summary goes into the log below.
         </p>
-        <ReadyCheck character={character} update={update} />
+        <ReadyCheck character={character} update={update} onHeal={() => setHealing(true)} />
         <div className="mt-5 flex flex-wrap gap-2">
           <input
             {...noAutofill}
@@ -81,6 +83,7 @@ function NoSession({ character, update }: CharacterContext) {
       </section>
       <SessionLog character={character} update={update} />
       <LedgerList update={update} entries={character.ledger} title="All money & karma changes" />
+      {healing && <HealDialog character={character} update={update} initial="rest" onClose={() => setHealing(false)} />}
     </div>
   )
 }
@@ -92,6 +95,7 @@ function ActiveSession({ character, update }: CharacterContext) {
   const [roll, setRoll] = useState<{ quick: QuickPool; result: Roll; bonus?: number } | null>(null)
   const [ending, setEnding] = useState(false)
   const [hurt, setHurt] = useState(false)
+  const [healing, setHealing] = useState(false)
   /** Dice added to (or taken from) the next test, e.g. for cover or a smartlink. */
   const [modifier, setModifier] = useState(0)
   /** The 4-Edge boost: add Edge to the next test and make 6s explode. */
@@ -246,9 +250,14 @@ function ActiveSession({ character, update }: CharacterContext) {
             />
           )}
         </div>
-        <button className="btn mt-3 w-full border-danger/40" onClick={() => setHurt(true)}>
-          <ShieldAlert className="size-4 text-danger" /> Take damage…
-        </button>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button className="btn w-full border-danger/40" onClick={() => setHurt(true)}>
+            <ShieldAlert className="size-4 text-danger" /> Take damage…
+          </button>
+          <button className="btn w-full" onClick={() => setHealing(true)}>
+            <HeartPulse className="size-4 text-accent" /> Heal…
+          </button>
+        </div>
         <div className="mt-5">
           <div className="mb-1.5 flex justify-between text-xs">
             <span className="flex items-center gap-1 text-muted">
@@ -391,6 +400,7 @@ function ActiveSession({ character, update }: CharacterContext) {
         />
       )}
       {hurt && <DamageDialog character={character} update={update} onClose={() => setHurt(false)} />}
+      {healing && <HealDialog character={character} update={update} onClose={() => setHealing(false)} />}
       {ending && <EndSessionDialog character={character} update={update} onClose={() => setEnding(false)} />}
     </div>
   )

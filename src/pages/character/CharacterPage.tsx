@@ -1,4 +1,4 @@
-import { ArrowLeft, Dices, Download, ListChecks, Pencil, ScrollText, Wand2 } from 'lucide-react'
+import { ArrowLeft, Dices, Download, ListChecks, Pencil, ScrollText, TrendingUp, Wand2 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { Portrait } from '../../components/art'
@@ -100,6 +100,16 @@ export function CharacterPage() {
               <Dices className="size-4" /> Play
               {inSession && (
                 <span className="size-2 animate-pulse rounded-full bg-accent" aria-label="Session running" />
+              )}
+            </NavLink>
+          )}
+          {character.mode !== 'build' && (
+            <NavLink to="karma" className={tab} title="Spend karma between runs">
+              <TrendingUp className="size-4" /> Karma
+              {character.karma.available > 0 && (
+                <span className="rounded-full bg-amber/20 px-1.5 text-[10px] text-amber tabular-nums">
+                  {character.karma.available}
+                </span>
               )}
             </NavLink>
           )}

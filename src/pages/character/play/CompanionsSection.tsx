@@ -6,11 +6,14 @@ import { CompanionSchema, type Character, type Companion } from '../../../model/
 import {
   SPIRIT_TYPES,
   SPRITE_TYPES,
+  banish,
   callForth,
+  decompile,
   spiritForceLimit,
   spiritStats,
   spriteStats,
   type CallResult,
+  type OpposeResult,
   type SpiritTypeId,
   type SpriteTypeId,
 } from '../../../rules/sr6/companions'
@@ -36,6 +39,7 @@ export function CompanionsSection({
   onRoll: (quick: QuickPool) => void
 }) {
   const [calling, setCalling] = useState(false)
+  const [opposing, setOpposing] = useState(false)
   const list = character.play.companions.filter((c) => c.kind === kind)
   const spirit = kind === 'spirit'
   const change = (id: string, patch: Partial<Companion>) =>
@@ -66,10 +70,18 @@ export function CompanionsSection({
           />
         ))}
       </ul>
-      <button className="btn btn-primary w-full" onClick={() => setCalling(true)}>
-        {spirit ? 'Summon a spirit…' : 'Compile a sprite…'}
-      </button>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <button className="btn btn-primary w-full" onClick={() => setCalling(true)}>
+          {spirit ? 'Summon a spirit…' : 'Compile a sprite…'}
+        </button>
+        <button className="btn w-full" onClick={() => setOpposing(true)}>
+          {spirit ? 'Banish a spirit…' : 'Decompile a sprite…'}
+        </button>
+      </div>
       {calling && <CallDialog character={character} update={update} kind={kind} onClose={() => setCalling(false)} />}
+      {opposing && (
+        <OpposeDialog character={character} update={update} kind={kind} onClose={() => setOpposing(false)} />
+      )}
     </Section>
   )
 }
@@ -342,6 +354,151 @@ function CallDialog({
             <>
               Take <strong className="text-danger">{boxes}</strong> {boxes === 1 ? 'box' : 'boxes'} of{' '}
               {damageType === 'P' ? 'Physical' : 'Stun'} {spirit ? 'drain' : 'fading'}.
+            </>
+          )}
+        </p>
+      )}
+    </PlayDialog>
+  )
+}
+
+/**
+ * Banish a spirit (Conjuring + Magic vs. Force × 2, drain twice its hits) or
+ * decompile a sprite (Tasking + Resonance vs. Level, + its compiler's Resonance
+ * if registered). Net hits take away services or tasks; tell the GM how many.
+ */
+function OpposeDialog({
+  character,
+  update,
+  kind,
+  onClose,
+}: {
+  character: Character
+  update: Update
+  kind: Kind
+  onClose: () => void
+}) {
+  const derived = computeDerived(character)
+  const spirit = kind === 'spirit'
+  const [force, setForce] = useState(4)
+  const [registered, setRegistered] = useState(false)
+  const [compilerResonance, setCompilerResonance] = useState(4)
+  const [result, setResult] = useState<OpposeResult | null>(null)
+  const [resist, setResist] = useState<Roll | null>(null)
+
+  const penalty = derived.woundModifier + sustainPenalty(character)
+  const basePool = (spirit ? derived.magic?.summoning : derived.resonance?.tasking) ?? 0
+  const pool = Math.max(0, basePool + penalty)
+  const resistPool = Math.max(0, (derived.magic?.drainResistance ?? 0) + derived.woundModifier)
+  const boxes = result && resist ? Math.max(0, result.drainValue - resist.hits) : 0
+  const damageType = drainType(boxes, derived.attributes.magic)
+  const theirDice = spirit ? force * 2 : force + (registered ? compilerResonance : 0)
+  const done = !!result && (!spirit || result.drainValue === 0 || !!resist)
+
+  return (
+    <PlayDialog
+      title={spirit ? 'Banish a spirit' : 'Decompile a sprite'}
+      icon={<Ghost className="size-5 text-danger" />}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="btn btn-primary"
+            disabled={!done}
+            onClick={() => {
+              if (boxes) update((c) => applyDamage(c, boxes, damageType))
+              onClose()
+            }}
+          >
+            {boxes ? `Take ${boxes} ${damageType === 'P' ? 'Physical' : 'Stun'} and finish` : 'Done'}
+          </button>
+        </>
+      }
+    >
+      {!basePool && <p className="text-amber">You need the {spirit ? 'Conjuring' : 'Tasking'} skill for this.</p>}
+      {!result && (
+        <div className="flex flex-wrap items-end gap-5">
+          <Counter
+            label={spirit ? "Spirit's Force" : "Sprite's Level"}
+            value={force}
+            min={1}
+            max={12}
+            onChange={setForce}
+          />
+          {!spirit && (
+            <label className="flex items-center gap-2 pb-2">
+              <input
+                type="checkbox"
+                className="size-4 accent-accent"
+                checked={registered}
+                onChange={(e) => setRegistered(e.target.checked)}
+              />
+              Registered
+            </label>
+          )}
+          {!spirit && registered && (
+            <Counter
+              label="Its compiler's Resonance"
+              value={compilerResonance}
+              min={1}
+              max={12}
+              onChange={setCompilerResonance}
+            />
+          )}
+        </div>
+      )}
+      <RollStep
+        label={spirit ? 'Banishing' : 'Decompiling'}
+        pool={pool}
+        roll={result?.roll ?? null}
+        disabled={!basePool}
+        onRoll={() => {
+          const r = spirit ? banish(pool, force) : decompile(pool, force, registered ? compilerResonance : 0)
+          setResult(r)
+          update((c) => recordRoll(c, spirit ? `Banish Force ${force}` : `Decompile Level ${force}`, r.roll))
+        }}
+      >
+        {spirit ? 'Conjuring + Magic' : 'Tasking + Resonance'} against its {theirDice} dice.
+        {result && (
+          <>
+            {' '}
+            It rolled <strong className="text-fg">{result.resist.hits}</strong> hits.{' '}
+            {result.removed > 0 ? (
+              <strong className="text-accent">
+                {result.removed} {spirit ? 'services' : 'tasks'} taken away. Tell your GM.
+              </strong>
+            ) : (
+              <strong className="text-danger">No effect.</strong>
+            )}
+          </>
+        )}
+      </RollStep>
+      {spirit && result && result.drainValue > 0 && (
+        <RollStep
+          label="Drain resistance"
+          pool={resistPool}
+          roll={resist}
+          onRoll={() => {
+            const r = rollPool(resistPool)
+            setResist(r)
+            update((c) => recordRoll(c, 'Drain resistance', r))
+          }}
+        >
+          Against {result.drainValue} (twice the spirit's hits). Above your Magic ({derived.attributes.magic}) it's
+          Physical.
+        </RollStep>
+      )}
+      {resist && (
+        <p className="text-base">
+          {boxes === 0 ? (
+            <span className="text-accent">No drain. Fully resisted.</span>
+          ) : (
+            <>
+              Take <strong className="text-danger">{boxes}</strong> {boxes === 1 ? 'box' : 'boxes'} of{' '}
+              {damageType === 'P' ? 'Physical' : 'Stun'} drain.
             </>
           )}
         </p>

@@ -42,7 +42,7 @@ export function startSession(character: Character, title: string, now = new Date
 /** Record a nuyen/karma change. Positive karma also counts toward career karma. */
 export function addLedgerEntry(
   character: Character,
-  change: { nuyen?: number; karma?: number; note?: string },
+  change: { nuyen?: number; karma?: number; note?: string; purchase?: boolean },
   now = new Date(),
 ): Character {
   const entry = LedgerEntrySchema.parse({ ...change, date: now.toISOString() })

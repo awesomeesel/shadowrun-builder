@@ -11,6 +11,8 @@ interface Check {
   text: ReactNode
   /** A one-tap fix, e.g. "Heal" or "Reload all". */
   fix?: { label: string; apply: (c: Character) => Character }
+  /** Offer the healing dialog for this line. */
+  heal?: boolean
 }
 
 /** What to sort out before a run: injuries, ammo, armor, programs, lifestyle and karma to spend. */
@@ -28,6 +30,7 @@ function readyChecks(character: Character): Check[] {
     checks.push({
       status: 'warn',
       text: `Still hurt: ${parts.join(', ')} damage. Heal it if there was downtime since the last run.`,
+      heal: true,
       fix: { label: 'Heal all', apply: (c) => ({ ...c, damage: { ...c.damage, physical: 0, stun: 0, overflow: 0 } }) },
     })
   } else {
@@ -135,7 +138,16 @@ function readyChecks(character: Character): Check[] {
   return checks
 }
 
-export function ReadyCheck({ character, update }: { character: Character; update: Update }) {
+export function ReadyCheck({
+  character,
+  update,
+  onHeal,
+}: {
+  character: Character
+  update: Update
+  /** Opens the step-by-step healing dialog. */
+  onHeal?: () => void
+}) {
   const checks = readyChecks(character)
   const icon = {
     ok: <CircleCheck className="mt-0.5 size-4 shrink-0 text-accent" />,
@@ -148,6 +160,11 @@ export function ReadyCheck({ character, update }: { character: Character; update
         <li key={i} className="flex items-start gap-2">
           {icon[check.status]}
           <span className="min-w-0 flex-1">{check.text}</span>
+          {check.heal && onHeal && (
+            <button className="btn shrink-0 px-2 py-0.5 text-xs" onClick={onHeal}>
+              Heal…
+            </button>
+          )}
           {check.fix && (
             <button className="btn shrink-0 px-2 py-0.5 text-xs" onClick={() => update(check.fix!.apply)}>
               {check.fix.label}

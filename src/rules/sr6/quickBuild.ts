@@ -394,6 +394,11 @@ function pickFromCatalog(
     const best = bestFor(index, Math.min(remaining, (remaining / (gear.length - index)) * 1.8))
     picked.push(best ? take(best) : null)
   })
+  // Software before upgrades: a deck without programs or a drone without autosofts can't do its job.
+  c = { ...c, matrixDevices: c.matrixDevices.reduce<typeof c.matrixDevices>((list, d) => addDevice(list, d), []) }
+  c = addPrograms(c)
+  c = addAutosofts(c)
+
   // Second pass: with money left over, swap each pick for the best one now affordable.
   gear.forEach((_, index) => {
     const current = picked[index]
@@ -407,6 +412,10 @@ function pickFromCatalog(
     }
     picked[index] = take(best)
   })
+
+  // An upgraded deck may have more program slots to fill.
+  c = { ...c, matrixDevices: c.matrixDevices.reduce<typeof c.matrixDevices>((list, d) => addDevice(list, d), []) }
+  c = addPrograms(c)
 
   // Spare money buys better grades: alphaware costs ×1.2 but takes less Essence.
   for (const aug of [...c.augmentations].sort((a, b) => b.cost - a.cost)) {
@@ -439,7 +448,6 @@ function pickFromCatalog(
     gear: c.gear.map((g, i) => ({ ...g, equipped: g.armor > 0 && c.gear.findIndex((x) => x.armor > 0) === i })),
     matrixDevices: c.matrixDevices.reduce<typeof c.matrixDevices>((list, d) => addDevice(list, d), []),
   }
-  c = addPrograms(c)
   const weapon = c.weapons[0]
   if (weapon) {
     c = {
@@ -486,6 +494,7 @@ function addPrograms(start: Character): Character {
   for (const name of STARTER_PROGRAMS) {
     const def = findProgram(name)
     if (!def || c.programs.length >= slots.programSlots) break
+    if (c.programs.some((p) => p.name === def.name)) continue
     if (evaluateBuild(c)!.nuyen.remaining < PROGRAM_COST[def.kind]) continue
     const program = ProgramSchema.parse({
       name: def.name,
@@ -495,6 +504,42 @@ function addPrograms(start: Character): Character {
       source: { book: 'CRB', page: def.page },
     })
     c = { ...c, programs: [...c.programs, program] }
+  }
+  return c
+}
+
+/** Autosofts every drone needs, most important first. */
+const STARTER_AUTOSOFTS = ['Targeting', 'Maneuvering', 'Evasion', 'Clearsight']
+/** Autosofts cost Rating × 500¥ and have Availability equal to Rating (p. 272). */
+const AUTOSOFT_COST = 500
+/** Availability above 6 can't be bought at creation. */
+const MAX_AUTOSOFT_RATING = 6
+
+/**
+ * Give each drone the autosofts it needs to act on its own, at the best rating
+ * the money allows. Their price is added to the drone's cost.
+ */
+function addAutosofts(start: Character): Character {
+  let c = start
+  const drones = c.vehicles.filter((v) => v.kind === 'drone' && !v.autosofts)
+  if (drones.length === 0) return c
+  const perDrone = STARTER_AUTOSOFTS.length * AUTOSOFT_COST
+  // Up to half of what's left, so the second gear pass can still upgrade the drones themselves.
+  const budget = evaluateBuild(c)!.nuyen.remaining / 2
+  const rating = Math.min(MAX_AUTOSOFT_RATING, Math.floor(budget / (perDrone * drones.length)))
+  if (rating < 1) return c
+  const ids = new Set(drones.map((d) => d.id))
+  c = {
+    ...c,
+    vehicles: c.vehicles.map((v) =>
+      ids.has(v.id)
+        ? {
+            ...v,
+            autosofts: STARTER_AUTOSOFTS.map((name) => `${name} ${rating}`).join(', '),
+            cost: v.cost + perDrone * rating,
+          }
+        : v,
+    ),
   }
   return c
 }

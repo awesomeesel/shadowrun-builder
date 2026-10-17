@@ -86,14 +86,20 @@ export function LedgerList({
                 {sign(e.karma)} karma
               </span>
             )}
-            <button
-              className="text-muted hover:text-danger"
-              aria-label="Undo this entry"
-              title="Undo"
-              onClick={() => update((c) => removeLedgerEntry(c, e.id))}
-            >
-              <Undo2 className="size-3.5" />
-            </button>
+            {e.purchase ? (
+              <span className="text-xs text-muted" title="Bought in the Karma tab">
+                spent
+              </span>
+            ) : (
+              <button
+                className="text-muted hover:text-danger"
+                aria-label="Undo this entry"
+                title="Undo"
+                onClick={() => update((c) => removeLedgerEntry(c, e.id))}
+              >
+                <Undo2 className="size-3.5" />
+              </button>
+            )}
           </li>
         ))}
       </ul>

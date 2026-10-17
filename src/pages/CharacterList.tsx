@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { BookOpen, Copy, Download, FileInput, Library, Trash2, UserPlus, Wand2, Zap } from 'lucide-react'
 import { Logo, Portrait, Skyline } from '../components/art'
 import { CloudButton } from '../components/CloudSync'
+import { showWhatsNew } from '../changelog'
 import { METATYPE_COLORS } from '../components/metatypeColors'
 import { useRef, useState, type DragEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
@@ -211,6 +212,11 @@ export function CharacterList() {
             </ul>
           </>
         )}
+        <p className="mt-10 text-center text-xs text-muted">
+          <button className="hover:text-accent hover:underline" onClick={showWhatsNew}>
+            What's new
+          </button>
+        </p>
       </main>
 
       {quickMake && <QuickMakeDialog onClose={() => setQuickMake(false)} />}

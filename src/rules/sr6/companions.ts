@@ -320,3 +320,32 @@ export function callForth(pool: number, force: number, random?: () => number): C
   const resist = rollPool(force * 2, random)
   return { roll, resist, services: Math.max(0, roll.hits - resist.hits), drainValue: resist.hits }
 }
+
+export interface OpposeResult {
+  roll: Roll
+  resist: Roll
+  /** Services or tasks taken away. */
+  removed: number
+  /** Drain to resist; 0 for decompiling, which causes no Fading. */
+  drainValue: number
+}
+
+/**
+ * Banish a spirit: Conjuring + Magic vs. Force × 2. Net hits remove services;
+ * drain is twice the spirit's hits (p. 147).
+ */
+export function banish(pool: number, force: number, random?: () => number): OpposeResult {
+  const roll = rollPool(pool, random)
+  const resist = rollPool(force * 2, random)
+  return { roll, resist, removed: Math.max(0, roll.hits - resist.hits), drainValue: resist.hits * 2 }
+}
+
+/**
+ * Decompile a sprite: Tasking + Resonance vs. its Level, plus its compiler's
+ * Resonance if it's registered. Net hits remove tasks (p. 192).
+ */
+export function decompile(pool: number, level: number, compilerResonance = 0, random?: () => number): OpposeResult {
+  const roll = rollPool(pool, random)
+  const resist = rollPool(level + compilerResonance, random)
+  return { roll, resist, removed: Math.max(0, roll.hits - resist.hits), drainValue: 0 }
+}

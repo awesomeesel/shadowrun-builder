@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { callForth, spiritForceLimit, spiritStats, spriteStats } from './companions'
+import { banish, callForth, decompile, spiritForceLimit, spiritStats, spriteStats } from './companions'
 
 /** Dice values in order, as a random source. */
 const dice = (...values: number[]) => {
@@ -46,5 +46,19 @@ describe('summoning and compiling', () => {
 
   it('fails without net hits', () => {
     expect(callForth(2, 1, dice(5, 1, 6, 5)).services).toBe(0)
+  })
+})
+
+describe('banishing and decompiling', () => {
+  it('removes services for net hits and makes drain twice the spirit hits', () => {
+    // Banisher rolls 5, 6, 5; the Force 1 spirit rolls 2 dice: 5, 2.
+    expect(banish(3, 1, dice(5, 6, 5, 5, 2))).toMatchObject({ removed: 2, drainValue: 2 })
+  })
+
+  it("decompiles against the sprite's Level plus its compiler's Resonance", () => {
+    // 4 dice for the technomancer, then Level 2 + Resonance 3 = 5 dice for the sprite.
+    const result = decompile(4, 2, 3, dice(5, 5, 6, 1, 5, 1, 1, 1, 1))
+    expect(result.resist.pool).toBe(5)
+    expect(result).toMatchObject({ removed: 2, drainValue: 0 })
   })
 })

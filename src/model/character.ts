@@ -301,6 +301,8 @@ export const LedgerEntrySchema = z.object({
   nuyen: int(0),
   karma: int(0),
   note: text(),
+  /** Karma spent in the karma shop; undone there, since the change has to be reversed too. */
+  purchase: z.boolean().default(false),
 })
 
 /** A dice roll made during a session, kept for the session summary. */
