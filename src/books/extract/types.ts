@@ -20,6 +20,12 @@ interface EntryBase {
   category: string
 }
 
+/** An attribute in a stat block: "5(7)" is 5, augmented to 7. */
+export interface NpcAttribute {
+  base: number
+  augmented: number
+}
+
 export type ExtractedEntry =
   | (EntryBase & {
       kind: 'weapon'
@@ -107,6 +113,30 @@ export type ExtractedEntry =
       kind: 'complexForm'
       fading: string
       duration: string
+    })
+  | (EntryBase & {
+      kind: 'npc'
+      /** Professional Rating for grunts; null for others. */
+      professionalRating: number | null
+      metatype: string
+      /** body…charisma, magic, resonance, edge, essence. */
+      attributes: Record<string, NpcAttribute>
+      defenseRating: number | null
+      initiative: { score: number; dice: number } | null
+      /** Actions per round as printed, e.g. "A1, I2". */
+      actions: string
+      /** One track for grunts (physical only), or Physical/Stun. */
+      monitor: { physical: number | null; stun: number | null }
+      move: string
+      skills: string
+      knowledge: string
+      gear: string
+      augmentations: string
+      weapons: string
+      spells: string
+      powers: string
+      weaknesses: string
+      notes: string
     })
 
 export type EntryKind = ExtractedEntry['kind']

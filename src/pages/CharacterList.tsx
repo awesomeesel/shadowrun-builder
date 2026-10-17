@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { BookOpen, Copy, Download, FileInput, Library, Trash2, UserPlus, Wand2, Zap } from 'lucide-react'
+import { BookOpen, Copy, Download, FileInput, Library, Scale, Swords, Trash2, UserPlus, Wand2, Zap } from 'lucide-react'
 import { Logo, Portrait, Skyline } from '../components/art'
 import { CloudButton } from '../components/CloudSync'
 import { showWhatsNew } from '../changelog'
@@ -139,6 +139,12 @@ export function CharacterList() {
               <p className="text-xs text-muted">Sixth World character builder &amp; runner's companion</p>
             </div>
             <CloudButton />
+            <Link to="/gm" className="btn" title="GM screen: encounters and initiative">
+              <Swords className="size-4" /> <span className="hidden sm:inline">GM</span>
+            </Link>
+            <Link to="/rules" className="btn" title="Rules reference">
+              <Scale className="size-4" /> <span className="hidden sm:inline">Rules</span>
+            </Link>
             <Link to="/library" className="btn">
               <Library className="size-4" /> <span className="hidden sm:inline">Library</span>
             </Link>

@@ -1,5 +1,8 @@
 import { RouterProvider, createHashRouter } from 'react-router'
 import { Updates } from './components/Updates'
+import { EncounterPage } from './gm/EncounterPage'
+import { GmHome } from './gm/GmHome'
+import { RulesPage } from './gm/RulesPage'
 import { BookViewer } from './pages/BookViewer'
 import { CharacterList } from './pages/CharacterList'
 import { Library } from './pages/Library'
@@ -16,6 +19,9 @@ const router = createHashRouter([
   { path: '/', element: <CharacterList /> },
   { path: '/library', element: <Library /> },
   { path: '/book/:bookId', element: <BookViewer /> },
+  { path: '/gm', element: <GmHome /> },
+  { path: '/gm/:id', element: <EncounterPage /> },
+  { path: '/rules', element: <RulesPage /> },
   {
     path: '/character/:id',
     element: <CharacterPage />,

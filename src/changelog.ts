@@ -11,6 +11,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 7,
+    date: '2026-10-17',
+    title: 'GM screen and rules reference',
+    items: [
+      'GM screen (from the start page): set up encounters and run them round by round, with turn order, Major and Minor actions, damage tracks, Edge and statuses for everyone.',
+      'Add grunts, critters and contacts straight from the stat blocks in your rulebooks (several at once make a grunt group with shared Edge), or spirits, your runners, or a quick enemy.',
+      'Tap a dice pool to roll it, with Edge boosts. Statuses like Burning and Poisoned remind you at the end of each round and count down by themselves.',
+      'Rules: short summaries of combat, actions, Edge, damage, magic and statuses with page numbers, and a search through your books.',
+    ],
+  },
+  {
     id: 6,
     date: '2026-10-17',
     title: 'Initiation and submersion',

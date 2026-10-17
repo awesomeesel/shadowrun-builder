@@ -21,6 +21,7 @@ const KIND_LABELS: Record<EntryKind, string> = {
   complexForm: 'Complex forms',
   matrixDevice: 'Matrix devices',
   vehicle: 'Vehicles & drones',
+  npc: 'NPCs & critters',
 }
 
 const MAX_RESULTS = 150

@@ -1,3 +1,4 @@
+import type { Encounter } from '../model/encounter'
 import Dexie, { type EntityTable } from 'dexie'
 import type { ExtractedEntry } from '../books/extract'
 import type { PageLayout } from '../books/layout'
@@ -67,6 +68,7 @@ export const db = new Dexie('shadowrun-builder') as Dexie & {
   catalog: EntityTable<CatalogEntry, 'id'>
   syncState: EntityTable<SyncState, 'id'>
   deletedCharacters: EntityTable<DeletedCharacter, 'id'>
+  encounters: EntityTable<Encounter, 'id'>
 }
 
 db.version(1).stores({
@@ -101,4 +103,9 @@ db.version(3)
 db.version(4).stores({
   syncState: 'id',
   deletedCharacters: 'id',
+})
+
+// Version 5 adds the GM's encounters.
+db.version(5).stores({
+  encounters: 'id, updatedAt',
 })

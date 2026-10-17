@@ -38,7 +38,10 @@ export type TargetList =
   | 'matrixDevices'
   | 'vehicles'
 
-export const TARGET_LIST: Record<ExtractedEntry['kind'], TargetList> = {
+/** Catalog entries that can go on a character (NPC stat blocks are for the GM screen). */
+export type CharacterEntryKind = Exclude<ExtractedEntry['kind'], 'npc'>
+
+export const TARGET_LIST: Record<CharacterEntryKind, TargetList> = {
   quality: 'qualities',
   weapon: 'weapons',
   armor: 'gear',
@@ -81,6 +84,7 @@ export function toCharacterItem(
   const source = sourceRef(entry, book)
   const r = options.rating
   const cost = 'cost' in entry ? Math.round(atRating(entry.cost, r)) : 0
+  if (entry.kind === 'npc') throw new Error('NPC stat blocks are not character items')
   const list = TARGET_LIST[entry.kind]
 
   switch (entry.kind) {
@@ -260,5 +264,14 @@ export function entrySummary(entry: ExtractedEntry): string {
         .join(' · ')
     case 'complexForm':
       return [entry.duration, entry.fading && `Fade ${entry.fading}`].filter(Boolean).join(' · ')
+    case 'npc':
+      return [
+        entry.professionalRating !== null && `Professional Rating ${entry.professionalRating}`,
+        entry.initiative && `Initiative ${entry.initiative.score} + ${entry.initiative.dice}D6`,
+        entry.defenseRating !== null && `Defense Rating ${entry.defenseRating}`,
+        entry.monitor.physical !== null && `${entry.monitor.physical} boxes`,
+      ]
+        .filter(Boolean)
+        .join(' · ')
   }
 }

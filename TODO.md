@@ -13,8 +13,13 @@ Ideas and plans for Shadowrun Builder. Add your own anywhere; tick them off with
 
 ## Later
 
-- [ ] **GM view** – the GM opens a session and sees the players' sheets read-only. Needs a small shared backend;
-      Google Drive sync could be the base.
+- [x] **GM screen** – encounters with turn order, actions, damage, statuses and rolls; enemies from the books'
+      stat blocks, spirits, runners and quick enemies; a rules reference with book search.
+- [ ] **GM ↔ players** – the GM sends a join link with their email; players tap "Share with GM", which shares their
+      Drive character file read-only; the GM confirms once with the Google Picker (drive.file scope, needs a
+      browser API key). The GM screen then shows the runners' live sheets and damage.
+- [ ] **GM screen extras** – sample encounters per Professional Rating, Composure test reminder when grunts
+      take more boxes than their Professional Rating, and a Matrix/host participant (IC).
 - [x] **Karma shop** – spend karma between runs at the book's prices (attributes, skills, specializations,
       qualities, spells), logged in the karma history.
 - [x] **Initiation and submersion** – 10 + grade karma; raises the Magic/Resonance limit above 6 and gives
