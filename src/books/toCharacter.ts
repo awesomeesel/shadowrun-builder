@@ -13,6 +13,7 @@ import {
   type SourceRef,
 } from '../model/character'
 import { knownBonuses } from '../rules/sr6/bonuses'
+import { ratingFromName } from '../rules/sr6/matrix'
 import type { GradeId } from '../rules/sr6/special'
 import type { ExtractedEntry, RatingRange } from './extract/types'
 import { atRating } from './extract/values'
@@ -135,7 +136,8 @@ export function toCharacterItem(
           name: entry.name,
           kind: /bio|cultured/i.test(entry.category) ? 'bioware' : 'cyberware',
           grade: options.grade,
-          rating: r,
+          // Tables with one row per rating ("Cyberjacks rating 6") carry the rating in the name.
+          rating: entry.rating ? r : ratingFromName(entry.name, r),
           essence: Math.round(atRating(entry.essence, r) * 100) / 100,
           cost,
           bonuses: knownBonuses(entry.name, r),
@@ -188,6 +190,8 @@ export function toCharacterItem(
                 ? 'commlink'
                 : 'other',
           deviceRating: entry.deviceRating,
+          // Catalogs built before program slots were read don't have them.
+          programSlots: entry.programSlots ?? 0,
           attack: offensive ? first : 0,
           sleaze: offensive ? second : 0,
           dataProcessing: offensive ? 0 : first,

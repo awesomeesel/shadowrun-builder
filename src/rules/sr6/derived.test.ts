@@ -4,6 +4,7 @@ import {
   AugmentationSchema,
   GearSchema,
   MatrixDeviceSchema,
+  ProgramSchema,
   WeaponSchema,
   createCharacter,
   type Character,
@@ -192,6 +193,76 @@ describe('augmentations and special attributes', () => {
     expect(m.coldSimInitiative).toEqual({ score: 10, dice: 2 })
     expect(m.hotSimInitiative.dice).toBe(3)
     expect(computeDerived(runner()).matrix).toBeNull()
+  })
+
+  describe('decker hardware', () => {
+    const deck = MatrixDeviceSchema.parse({
+      name: 'Deck',
+      kind: 'cyberdeck',
+      deviceRating: 4,
+      attack: 7,
+      sleaze: 6,
+      programSlots: 8,
+      active: true,
+    })
+    const jack = MatrixDeviceSchema.parse({
+      name: 'Jack',
+      kind: 'cyberjack',
+      dataProcessing: 9,
+      firewall: 8,
+      active: true,
+    })
+    const commlink = MatrixDeviceSchema.parse({
+      name: 'Link',
+      deviceRating: 6,
+      dataProcessing: 3,
+      firewall: 1,
+      active: true,
+    })
+
+    it('combines a cyberdeck and a cyberjack into one persona', () => {
+      const m = computeDerived(runner({ matrixDevices: [deck, jack] })).matrix!
+      expect([m.deviceRating, m.attack, m.sleaze, m.dataProcessing, m.firewall]).toEqual([4, 7, 6, 9, 8])
+      expect(m.device?.name).toBe('Deck')
+      expect(m.parts.map((p) => p.name)).toEqual(['Deck', 'Jack'])
+      expect(m.programSlots).toBe(8)
+      expect(m.cyberjackInitiativeBonus).toBe(3)
+      expect(m.warnings).toEqual([])
+    })
+
+    it('uses a cyberjack bought as an augmentation', () => {
+      const implant = AugmentationSchema.parse({ name: 'Cyberjacks rating 4' })
+      const m = computeDerived(runner({ matrixDevices: [deck], augmentations: [implant] })).matrix!
+      expect([m.dataProcessing, m.firewall]).toEqual([7, 6])
+    })
+
+    it('takes Data Processing and Firewall from a commlink without a jack, and keeps the deck as main device', () => {
+      const m = computeDerived(runner({ matrixDevices: [commlink, deck] })).matrix!
+      expect([m.deviceRating, m.attack, m.dataProcessing, m.firewall]).toEqual([4, 7, 3, 1])
+    })
+
+    it('warns about a deck with nothing giving Data Processing or Firewall', () => {
+      expect(computeDerived(runner({ matrixDevices: [deck] })).matrix!.warnings[0]).toMatch(/cyberjack/)
+    })
+
+    it('counts running programs against the slots, with Toolbox and Virtual Machine bonuses', () => {
+      const programs = ['Toolbox', 'Virtual Machine', 'Armor'].map((name) =>
+        ProgramSchema.parse({ name, running: true }),
+      )
+      const stored = ProgramSchema.parse({ name: 'Exploit' })
+      const m = computeDerived(runner({ matrixDevices: [deck, jack], programs: [...programs, stored] })).matrix!
+      expect(m.dataProcessing).toBe(10)
+      expect(m.programSlots).toBe(10)
+      expect(m.runningPrograms.map((p) => p.name)).toEqual(['Toolbox', 'Virtual Machine', 'Armor'])
+    })
+
+    it('warns when more programs run than fit', () => {
+      const small = { ...deck, programSlots: 1 }
+      const programs = ['Armor', 'Exploit'].map((name) => ProgramSchema.parse({ name, running: true }))
+      expect(computeDerived(runner({ matrixDevices: [small, jack], programs })).matrix!.warnings[0]).toMatch(
+        /2 programs are running but only 1 fit/,
+      )
+    })
   })
 
   it('gives technomancers a living persona', () => {

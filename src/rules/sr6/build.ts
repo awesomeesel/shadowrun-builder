@@ -126,7 +126,7 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
   let adjustmentSpent = 0
   let attributePointsSpent = 0
   let attributeKarma = 0
-  let atMax = 0
+  const atMax: string[] = []
   for (const attribute of ATTRIBUTE_IDS) {
     const alloc = build.attributes[attribute]
     const label = ATTRIBUTE_LABELS[attribute].name
@@ -146,10 +146,13 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
     }
     const max = attributeMaximum(character.metatype, attribute)
     if (value > max) error(`${label} ${value} is above the ${METATYPES[character.metatype].name} maximum of ${max}.`)
-    if (value === max && attribute !== 'magic' && attribute !== 'resonance') atMax++
+    if (value === max && attribute !== 'magic' && attribute !== 'resonance') atMax.push(label)
   }
-  if (atMax > RULES.maxAttributesAtMax) {
-    error(`${atMax} attributes are at their maximum; only ${RULES.maxAttributesAtMax} may be at creation.`)
+  if (atMax.length > RULES.maxAttributesAtMax) {
+    const allowed = RULES.maxAttributesAtMax
+    error(
+      `${listNames(atMax)} are ${atMax.length === 2 ? 'both' : 'all'} at their maximum. A new character may have only ${allowed} attribute at its maximum, so lower ${atMax.length - allowed === 1 ? 'one of them' : `${atMax.length - allowed} of them`} by 1.`,
+    )
   }
 
   // Skills
@@ -242,6 +245,7 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
       sumBy(character.weapons, (w) => w.cost) +
       sumBy(character.augmentations, (a) => Math.round(a.cost * AUGMENTATION_GRADES[a.grade].cost)) +
       sumBy(character.matrixDevices, (d) => d.cost) +
+      sumBy(character.programs, (p) => p.cost) +
       sumBy(character.vehicles, (v) => v.cost),
   )
 
@@ -307,6 +311,11 @@ export function finishBuild(character: Character): Character {
     karma: { ...character.karma, available: Math.max(0, evaluation.karma.remaining) },
     nuyen: Math.max(0, evaluation.nuyen.remaining),
   }
+}
+
+/** "A, B and C" */
+function listNames(names: string[]): string {
+  return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 }
 
 function sumBy<T>(items: T[], value: (item: T) => number): number {

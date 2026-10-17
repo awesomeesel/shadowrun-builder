@@ -19,6 +19,7 @@ import {
   ComplexFormsSection,
   MagicSection,
   MatrixDevicesSection,
+  ProgramsSection,
   VehiclesSection,
   ContactsSection,
   EssenceInput,
@@ -62,6 +63,7 @@ export function EditTab() {
         <ComplexFormsSection character={character} update={update} />
       )}
       <MatrixDevicesSection character={character} update={update} />
+      <ProgramsSection character={character} update={update} />
       <VehiclesSection character={character} update={update} />
       {character.mode !== 'build' && <ResourcesSection character={character} update={update} />}
       <Section title="Notes" icon={<NotebookPen className="size-4" />} className="lg:col-span-2">
@@ -214,7 +216,7 @@ function SkillsSection({ character, update }: { character: Character; update: Up
             <li key={skill.id} className="flex flex-wrap items-center gap-2">
               <span className="min-w-0 flex-1 truncate text-sm sm:w-36 sm:flex-none">
                 {def?.name ?? skill.skillId}
-                {def && <span className="ml-1 text-xs text-muted">{ATTRIBUTE_LABELS[def.attribute].short}</span>}
+                {def && <span className="ml-1 text-xs text-muted">· {ATTRIBUTE_LABELS[def.attribute].name}</span>}
               </span>
               <NumberInput
                 value={skill.rating}

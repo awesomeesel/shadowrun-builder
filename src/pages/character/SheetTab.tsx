@@ -36,6 +36,7 @@ import { formatBonuses } from '../../rules/sr6/bonuses'
 import { METATYPES } from '../../rules/sr6/metatypes'
 import { AUGMENTATION_GRADES, TRADITIONS } from '../../rules/sr6/special'
 import type { CharacterContext } from './CharacterPage'
+import { ProgramToggles } from './MatrixParts'
 
 type DamageTrack = keyof Character['damage']
 
@@ -72,11 +73,11 @@ export function SheetTab() {
                 .join(' · ')}
             </div>
           )}
-          <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-12">
+          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-12">
             {visibleAttributes.map((a) => (
               <Stat
                 key={a}
-                label={ATTRIBUTE_LABELS[a].short}
+                label={ATTRIBUTE_LABELS[a].name}
                 value={
                   derived.attributes[a] === character.attributes[a]
                     ? character.attributes[a]
@@ -89,7 +90,7 @@ export function SheetTab() {
                 }
               />
             ))}
-            <Stat label="ESS" value={derived.essence} />
+            <Stat label="Essence" value={derived.essence} />
           </div>
         </div>
       </section>
@@ -98,12 +99,17 @@ export function SheetTab() {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Stat label="Initiative" value={formatInitiative(derived.initiative)} large />
           <Stat label="Defense Rating" value={derived.defenseRating} large hint={armorHint(derived.armor)} />
-          <Stat label="Unarmed AR" value={derived.unarmedAttackRating} large />
-          <Stat label="Wound mod." value={wounds === 0 ? '—' : wounds} large tone={wounds < 0 ? 'danger' : undefined} />
+          <Stat label="Unarmed attack rating" value={derived.unarmedAttackRating} large />
+          <Stat
+            label="Wound modifier"
+            value={wounds === 0 ? '—' : wounds}
+            large
+            tone={wounds < 0 ? 'danger' : undefined}
+          />
         </div>
         <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-          <PoolRow label="Defense (REA + INT)" pool={derived.pools.defense} wounds={wounds} />
-          <PoolRow label="Damage resistance (BOD)" pool={derived.pools.damageResistance} />
+          <PoolRow label="Defense (Reaction + Intuition)" pool={derived.pools.defense} wounds={wounds} />
+          <PoolRow label="Damage resistance (Body)" pool={derived.pools.damageResistance} />
         </dl>
       </Section>
 
@@ -141,10 +147,14 @@ export function SheetTab() {
 
       <Section title="Attribute tests" icon={<Brain className="size-4" />}>
         <dl className="grid gap-y-1 text-sm">
-          <PoolRow label="Composure (WIL + CHA)" pool={derived.pools.composure} wounds={wounds} />
-          <PoolRow label="Judge Intentions (WIL + INT)" pool={derived.pools.judgeIntentions} wounds={wounds} />
-          <PoolRow label="Memory (LOG + INT)" pool={derived.pools.memory} wounds={wounds} />
-          <PoolRow label="Lift / Carry (BOD + WIL)" pool={derived.pools.liftCarry} wounds={wounds} />
+          <PoolRow label="Composure (Willpower + Charisma)" pool={derived.pools.composure} wounds={wounds} />
+          <PoolRow
+            label="Judge Intentions (Willpower + Intuition)"
+            pool={derived.pools.judgeIntentions}
+            wounds={wounds}
+          />
+          <PoolRow label="Memory (Logic + Intuition)" pool={derived.pools.memory} wounds={wounds} />
+          <PoolRow label="Lift / Carry (Body + Willpower)" pool={derived.pools.liftCarry} wounds={wounds} />
         </dl>
       </Section>
 
@@ -183,7 +193,7 @@ export function SheetTab() {
                 </span>
                 {g.armor > 0 && (
                   <span className={`shrink-0 text-xs ${g.equipped ? 'text-accent' : 'text-muted'}`}>
-                    +{g.armor} DR{g.equipped ? '' : ' (not worn)'}
+                    +{g.armor} Defense Rating{g.equipped ? '' : ' (not worn)'}
                   </span>
                 )}
               </li>
@@ -352,21 +362,35 @@ export function SheetTab() {
       {derived.matrix && (
         <Section title="Matrix" icon={<Wifi className="size-4" />}>
           <div className="mb-2 text-sm">
-            {derived.matrix.device ? derived.matrix.device.name || 'Unnamed device' : 'Living persona'}
+            {derived.matrix.parts.length > 0 ? derived.matrix.parts.map((p) => p.name).join(' + ') : 'Living persona'}
           </div>
-          <div className="grid grid-cols-5 gap-2">
-            <Stat label="DR" value={derived.matrix.deviceRating} />
-            <Stat label="A" value={derived.matrix.attack} />
-            <Stat label="S" value={derived.matrix.sleaze} />
-            <Stat label="D" value={derived.matrix.dataProcessing} />
-            <Stat label="F" value={derived.matrix.firewall} />
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            <Stat label="Device rating" value={derived.matrix.deviceRating} />
+            <Stat label="Attack" value={derived.matrix.attack} />
+            <Stat label="Sleaze" value={derived.matrix.sleaze} />
+            <Stat label="Data Processing" value={derived.matrix.dataProcessing} />
+            <Stat label="Firewall" value={derived.matrix.firewall} />
           </div>
+          {derived.matrix.warnings.map((w) => (
+            <p key={w} className="mt-2 text-sm text-amber">
+              {w}
+            </p>
+          ))}
           <dl className="mt-3 grid gap-y-1 text-sm">
             <Row label="Initiative (AR)" value={formatInitiative(derived.matrix.arInitiative)} />
-            <Row label="Initiative (VR cold)" value={formatInitiative(derived.matrix.coldSimInitiative)} />
-            <Row label="Initiative (VR hot)" value={formatInitiative(derived.matrix.hotSimInitiative)} />
+            <Row label="Initiative (VR cold-sim)" value={formatInitiative(derived.matrix.coldSimInitiative)} />
+            <Row label="Initiative (VR hot-sim)" value={formatInitiative(derived.matrix.hotSimInitiative)} />
+            {derived.matrix.cyberjackInitiativeBonus > 0 && (
+              <Row label="Cyberjack Matrix initiative bonus" value={`+${derived.matrix.cyberjackInitiativeBonus}`} />
+            )}
             <Row label="Matrix condition monitor" value={derived.matrix.monitor} />
           </dl>
+          {(character.programs.length > 0 || derived.matrix.device) && (
+            <div className="mt-4">
+              <div className="mb-1 text-xs tracking-wider text-muted uppercase">Programs</div>
+              <ProgramToggles character={character} update={update} matrix={derived.matrix} />
+            </div>
+          )}
         </Section>
       )}
 
@@ -492,7 +516,7 @@ function SkillTable({ pools, wounds }: { pools: SkillPool[]; wounds: number }) {
         {pools.map((p) => (
           <tr key={p.skill.id} className={`border-t border-line/60 ${p.owned ? '' : 'text-muted'}`}>
             <td className="py-1.5">
-              {p.skill.name} <span className="text-xs text-muted">{ATTRIBUTE_LABELS[p.skill.attribute].short}</span>
+              {p.skill.name} <span className="text-xs text-muted">· {ATTRIBUTE_LABELS[p.skill.attribute].name}</span>
               {p.owned?.specialization && <div className="text-xs text-muted">{p.owned.specialization} (+2)</div>}
               {p.owned?.expertise && <div className="text-xs text-muted">{p.owned.expertise} (+3)</div>}
             </td>

@@ -67,6 +67,8 @@ export type ExtractedEntry =
       /** Attribute pair as printed, e.g. "3/1", and which attributes it covers. */
       attributes: string
       attributeNames: string
+      /** How many programs can run at once (0 when the table doesn't say). */
+      programSlots: number
       availability: string
       cost: Scaled | null
     })

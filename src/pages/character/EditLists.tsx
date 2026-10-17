@@ -1,4 +1,18 @@
-import { Backpack, IdCard, BookOpen, Car, Cpu, Crosshair, Flame, Radio, Star, Users, Wifi } from 'lucide-react'
+import {
+  AppWindow,
+  Backpack,
+  IdCard,
+  BookOpen,
+  Car,
+  Cpu,
+  Crosshair,
+  Flame,
+  Radio,
+  Star,
+  TriangleAlert,
+  Users,
+  Wifi,
+} from 'lucide-react'
 import { noAutofill, noAutofillField } from '../../components/noAutofill'
 import type { EntryKind } from '../../books/extract'
 import { AddFromBooks } from '../../components/CatalogPicker'
@@ -17,6 +31,7 @@ import {
   AugmentationSchema,
   ComplexFormSchema,
   MatrixDeviceSchema,
+  ProgramSchema,
   SpellSchema,
   VehicleSchema,
   type AdeptPower,
@@ -24,6 +39,7 @@ import {
   type Bonuses,
   type ComplexForm,
   type MatrixDevice,
+  type Program,
   type Spell,
   type Vehicle,
   ContactSchema,
@@ -44,6 +60,15 @@ import {
 import { SourceInput } from '../../components/SourceLink'
 import { formatBonuses, parseBonuses } from '../../rules/sr6/bonuses'
 import { computeDerived } from '../../rules/sr6/derived'
+import {
+  PROGRAM_COST,
+  PROGRAM_KIND_LABELS,
+  PROGRAMS,
+  findProgram,
+  setDeviceActive,
+  type ProgramDef,
+} from '../../rules/sr6/matrix'
+import { PersonaSummary } from './MatrixParts'
 import { SKILLS } from '../../rules/sr6/skills'
 import {
   AUGMENTATION_GRADES,
@@ -80,6 +105,7 @@ type ListKey =
   | 'spells'
   | 'adeptPowers'
   | 'complexForms'
+  | 'programs'
   | 'vehicles'
 
 function setList<K extends ListKey>(update: Update, key: K) {
@@ -306,7 +332,7 @@ export function EssenceInput({ character, update }: { character: Character; upda
   )
 }
 
-/** Text field for bonuses like "REA +2, +2D6"; turns red while the text can't be parsed. */
+/** Text field for bonuses like "Reaction +2, +2D6"; turns red while the text can't be parsed. */
 function BonusInput({ value, onChange }: { value: Bonuses; onChange: (value: Bonuses) => void }) {
   const [draft, setDraft] = useState<string | null>(null)
   const invalid = draft !== null && parseBonuses(draft) === undefined
@@ -314,8 +340,8 @@ function BonusInput({ value, onChange }: { value: Bonuses; onChange: (value: Bon
     <input
       {...noAutofill}
       className={`input w-full ${invalid ? 'border-danger' : ''}`}
-      placeholder="REA +2, +2D6"
-      title="Attribute bonuses (e.g. REA +2, AGI +1) and extra initiative dice (e.g. +2D6)"
+      placeholder="Reaction +2, +2D6"
+      title="Attribute bonuses (e.g. Reaction +2, Agility +1) and extra initiative dice (e.g. +2D6)"
       value={draft ?? formatBonuses(value)}
       onChange={(e) => {
         setDraft(e.target.value)
@@ -418,19 +444,54 @@ const matrixDeviceFields: FieldDef<MatrixDevice>[] = [
     options: [
       { value: 'commlink', label: 'Commlink' },
       { value: 'cyberdeck', label: 'Cyberdeck' },
-      { value: 'rcc', label: 'RCC' },
+      { value: 'cyberjack', label: 'Cyberjack' },
+      { value: 'rcc', label: 'Rigger console (RCC)' },
       { value: 'other', label: 'Other' },
     ],
   },
-  { kind: 'number', key: 'deviceRating', label: 'DR', span: 1, min: 0 },
-  { kind: 'number', key: 'attack', label: 'A', span: 1, min: 0 },
-  { kind: 'number', key: 'sleaze', label: 'S', span: 1, min: 0 },
-  { kind: 'number', key: 'dataProcessing', label: 'D', span: 1, min: 0 },
-  { kind: 'number', key: 'firewall', label: 'F', span: 1, min: 0 },
-  { kind: 'checkbox', key: 'active', label: 'Active', span: 1 },
-  { kind: 'number', key: 'cost', label: 'Cost ¥', span: 2, min: 0 },
-  { kind: 'text', key: 'notes', label: 'Notes / programs', span: 6, wide: true },
+  { kind: 'number', key: 'deviceRating', label: 'Device rating', span: 2, min: 0 },
+  { kind: 'number', key: 'programSlots', label: 'Program slots', span: 2, min: 0 },
+  { kind: 'checkbox', key: 'active', label: 'In use', span: 2 },
+  { kind: 'number', key: 'attack', label: 'Attack', span: 2, min: 0 },
+  { kind: 'number', key: 'sleaze', label: 'Sleaze', span: 2, min: 0 },
+  { kind: 'number', key: 'dataProcessing', label: 'Data Processing', span: 2, min: 0 },
+  { kind: 'number', key: 'firewall', label: 'Firewall', span: 2, min: 0 },
+  { kind: 'number', key: 'cost', label: 'Cost ¥', span: 4, min: 0 },
+  { kind: 'text', key: 'notes', label: 'Notes', span: 8, wide: true },
   sourceField<MatrixDevice>(),
+]
+
+const programFields: FieldDef<Program>[] = [
+  {
+    kind: 'custom',
+    label: 'Program',
+    span: 5,
+    wide: true,
+    render: (item, set) => {
+      const effect = findProgram(item.name)?.effect
+      return (
+        <>
+          <input
+            {...noAutofill}
+            className="input w-full"
+            value={item.name}
+            onChange={(e) => set({ name: e.target.value })}
+          />
+          {effect && <span className="mt-0.5 block text-[11px] text-muted">{effect}</span>}
+        </>
+      )
+    },
+  },
+  {
+    kind: 'select',
+    key: 'kind',
+    label: 'Type',
+    span: 2,
+    options: Object.entries(PROGRAM_KIND_LABELS).map(([value, label]) => ({ value, label })),
+  },
+  { kind: 'checkbox', key: 'running', label: 'Running', span: 1 },
+  { kind: 'number', key: 'cost', label: 'Cost ¥', span: 1, min: 0 },
+  sourceField<Program>(3),
 ]
 
 const vehicleFields: FieldDef<Vehicle>[] = [
@@ -563,26 +624,108 @@ export function ComplexFormsSection({ character, update }: { character: Characte
 }
 
 export function MatrixDevicesSection({ character, update }: { character: Character; update: Update }) {
-  // Only one device can be active; ticking one clears the others.
+  // Several devices can be in use (deck + cyberjack), but only one of each type.
   const onChange = (devices: MatrixDevice[]) => {
     const previous = new Map(character.matrixDevices.map((d) => [d.id, d.active]))
-    const activated = devices.find((d) => d.active && !previous.get(d.id))
-    update((c) => ({
-      ...c,
-      matrixDevices: activated ? devices.map((d) => ({ ...d, active: d.id === activated.id })) : devices,
-    }))
+    const switchedOn = devices.find((d) => d.active && !previous.get(d.id))
+    update((c) => ({ ...c, matrixDevices: switchedOn ? setDeviceActive(devices, switchedOn.id, true) : devices }))
   }
+  const matrix = computeDerived(character).matrix
   return (
     <Section title="Matrix devices" icon={<Wifi className="size-4" />} className="lg:col-span-2">
+      <p className="mb-3 text-sm text-muted">
+        Tick <span className="text-fg">In use</span> on everything your persona runs on. A decker uses a cyberdeck
+        (Attack and Sleaze) together with a cyberjack (Data Processing and Firewall); without a jack, a commlink can
+        provide those. A cyberjack bought under Augmentations counts automatically.
+      </p>
+      {matrix && (
+        <div className="mb-3">
+          <PersonaSummary matrix={matrix} />
+        </div>
+      )}
       <ListEditor
         items={character.matrixDevices}
         onChange={onChange}
         fields={matrixDeviceFields}
-        newItem={() => MatrixDeviceSchema.parse({ active: character.matrixDevices.length === 0 })}
+        newItem={() => MatrixDeviceSchema.parse({ active: !character.matrixDevices.some((d) => d.active) })}
         addLabel="Type in device"
         extra={fromBooks(update, ['matrixDevice'])}
-        emptyText="No commlink, cyberdeck or RCC. The active device is used for Matrix stats on the sheet."
+        emptyText="No commlink, cyberdeck or RCC yet."
       />
+    </Section>
+  )
+}
+
+export function ProgramsSection({ character, update }: { character: Character; update: Update }) {
+  const matrix = computeDerived(character).matrix
+  const owned = new Set(character.programs.map((p) => p.name.trim().toLowerCase()))
+  const slotsLeft = matrix ? matrix.programSlots - matrix.runningPrograms.length : 0
+  const add = (def: ProgramDef) =>
+    update((c) => ({
+      ...c,
+      programs: [
+        ...c.programs,
+        ProgramSchema.parse({
+          name: def.name,
+          kind: def.kind,
+          cost: PROGRAM_COST[def.kind],
+          running: slotsLeft > 0,
+          source: { book: 'CRB', page: def.page },
+        }),
+      ],
+    }))
+  const boughtAsGear = character.gear.filter((g) => /program|software/i.test(`${g.name} ${g.category}`))
+  return (
+    <Section title="Programs" icon={<AppWindow className="size-4" />} className="lg:col-span-2">
+      <p className="mb-3 text-sm text-muted">
+        Your software library. Everything here is owned; tick <span className="text-fg">Running</span> on the ones
+        loaded right now. How many can run at once is the program slots of your deck (or commlink).
+        {matrix?.device && (
+          <>
+            {' '}
+            Now: <span className="text-fg">{matrix.runningPrograms.length}</span> of{' '}
+            <span className="text-fg">{matrix.programSlots}</span> slots on {matrix.device.name || 'your device'}.
+          </>
+        )}
+      </p>
+      {boughtAsGear.length > 0 && (
+        <p className="mb-3 flex gap-2 text-sm text-amber">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+          {boughtAsGear.map((g) => g.name).join(', ')} {boughtAsGear.length === 1 ? 'is' : 'are'} listed under Gear. Add
+          each program here instead so it can run on your deck, then remove the gear entry.
+        </p>
+      )}
+      <ListEditor
+        items={character.programs}
+        onChange={setList(update, 'programs')}
+        fields={programFields}
+        newItem={() => ProgramSchema.parse({ running: slotsLeft > 0 })}
+        addLabel="Type in program"
+        emptyText="No programs yet. Pick some below."
+      />
+      {(['basic', 'hacking'] as const).map((kind) => {
+        const choices = PROGRAMS.filter((p) => p.kind === kind && !owned.has(p.name.toLowerCase()))
+        if (choices.length === 0) return null
+        return (
+          <div key={kind} className="mt-3">
+            <div className="mb-1 text-xs text-muted">
+              Add {PROGRAM_KIND_LABELS[kind].toLowerCase()} program ({PROGRAM_COST[kind]}¥ each)
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {choices.map((p) => (
+                <button
+                  key={p.name}
+                  className="chip cursor-pointer border-accent/30 text-fg hover:border-accent hover:text-accent"
+                  title={p.effect}
+                  onClick={() => add(p)}
+                >
+                  + {p.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      })}
     </Section>
   )
 }

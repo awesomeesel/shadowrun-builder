@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Sparkles,
   Undo2,
+  Wifi,
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useOutletContext } from 'react-router'
@@ -40,6 +41,7 @@ import {
   type Roll,
 } from '../../rules/sr6/play'
 import type { CharacterContext } from './CharacterPage'
+import { ProgramToggles } from './MatrixParts'
 
 const MAX_EDGE = 7
 
@@ -277,6 +279,17 @@ function ActiveSession({ character, update }: CharacterContext) {
                 )
               })}
           </ul>
+        </Section>
+      )}
+
+      {derived.matrix && (
+        <Section title="Matrix" icon={<Wifi className="size-4" />}>
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            <Stat label="AR init." value={formatInitiative(derived.matrix.arInitiative)} />
+            <Stat label="Cold-sim init." value={formatInitiative(derived.matrix.coldSimInitiative)} />
+            <Stat label="Hot-sim init." value={formatInitiative(derived.matrix.hotSimInitiative)} />
+          </div>
+          <ProgramToggles character={character} update={update} matrix={derived.matrix} />
         </Section>
       )}
 

@@ -170,14 +170,30 @@ export const ComplexFormSchema = z.object({
 export const MatrixDeviceSchema = z.object({
   id: id(),
   name: z.string().default(''),
-  kind: z.enum(['commlink', 'cyberdeck', 'rcc', 'other']).default('commlink'),
+  kind: z.enum(['commlink', 'cyberdeck', 'cyberjack', 'rcc', 'other']).default('commlink'),
   deviceRating: int(1),
   attack: int(0),
   sleaze: int(0),
   dataProcessing: int(0),
   firewall: int(0),
-  /** The device used for Matrix stats on the sheet. */
+  /** How many programs can run on it at once. */
+  programSlots: int(0),
+  /**
+   * In use for the Matrix persona. Several can be active: a cyberdeck gives
+   * Attack and Sleaze, a cyberjack or commlink Data Processing and Firewall.
+   */
   active: z.boolean().default(false),
+  cost: int(0),
+  notes: text(),
+  source: SourceRefSchema.optional(),
+})
+
+/** A program the character owns; running ones use the persona's program slots. */
+export const ProgramSchema = z.object({
+  id: id(),
+  name: z.string().default(''),
+  kind: z.enum(['basic', 'hacking', 'other']).default('basic'),
+  running: z.boolean().default(false),
   cost: int(0),
   notes: text(),
   source: SourceRefSchema.optional(),
@@ -370,6 +386,7 @@ export const CharacterSchema = z.object({
   powerPointsBought: int(0),
   complexForms: z.array(ComplexFormSchema).default([]),
   matrixDevices: z.array(MatrixDeviceSchema).default([]),
+  programs: z.array(ProgramSchema).default([]),
   vehicles: z.array(VehicleSchema).default([]),
   sins: z.array(SinSchema).default([]),
   licenses: z.array(LicenseSchema).default([]),
@@ -427,6 +444,7 @@ export type Spell = z.infer<typeof SpellSchema>
 export type AdeptPower = z.infer<typeof AdeptPowerSchema>
 export type ComplexForm = z.infer<typeof ComplexFormSchema>
 export type MatrixDevice = z.infer<typeof MatrixDeviceSchema>
+export type Program = z.infer<typeof ProgramSchema>
 export type Vehicle = z.infer<typeof VehicleSchema>
 export type KnowledgeSkill = z.infer<typeof KnowledgeSkillSchema>
 export type Language = z.infer<typeof LanguageSchema>

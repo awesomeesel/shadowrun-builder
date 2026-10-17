@@ -164,7 +164,7 @@ function priorityDescription(category: PriorityCategory, level: PriorityLevel): 
   const row = PRIORITY_TABLE[level]
   switch (category) {
     case 'metatype':
-      return `${row.metatypes.map((m) => METATYPES[m].name).join(', ')} · ${row.adjustmentPoints} adj.`
+      return `${row.metatypes.map((m) => METATYPES[m].name).join(', ')} · ${row.adjustmentPoints} adjustment points`
     case 'attributes':
       return `${row.attributePoints} points`
     case 'skills':
@@ -326,16 +326,31 @@ export function AttributesSection({
       b.attributes[attribute][field] = Math.max(0, b.attributes[attribute][field] + delta)
     })
 
+  const evaluation = evaluateBuild(character)
+  const isMaxed = (a: AttributeId) =>
+    a !== 'magic' && a !== 'resonance' && buildAttributeValue(build, a) >= attributeMaximum(character.metatype, a)
+  const tooManyMaxed = rows.filter(isMaxed).length > CREATION_RULES.maxAttributesAtMax
+  const left = (budget: Budget | undefined) => (budget ? `${budget.remaining} left` : '')
+
   return (
     <Section title="Attributes" icon={<BarChart3 className="size-4" />}>
+      <AttributeHelp character={character} build={build} evaluation={evaluation} />
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-xs text-muted">
+          <tr className="align-bottom text-[11px] leading-tight text-muted sm:text-xs">
             <th className="pb-2 text-left font-normal">Attribute</th>
-            <th className="pb-2 font-normal">Adj.</th>
-            <th className="pb-2 font-normal">Points</th>
-            <th className="pb-2 font-normal">Karma</th>
-            <th className="pb-2 text-right font-normal">Value</th>
+            <th className="pb-2 font-normal" title="Adjustment points from your metatype priority">
+              Adjustment
+              <div className="text-accent">{left(evaluation?.adjustmentPoints)}</div>
+            </th>
+            <th className="pb-2 font-normal" title="Attribute points from your attributes priority">
+              Attribute points
+              <div className="text-accent">{left(evaluation?.attributePoints)}</div>
+            </th>
+            <th className="pb-2 font-normal" title="Extra steps bought with karma">
+              Karma
+            </th>
+            <th className="pb-2 text-right font-normal">Rating</th>
           </tr>
         </thead>
         <tbody>
@@ -351,8 +366,7 @@ export function AttributesSection({
               <tr key={attribute} className="border-t border-line/60">
                 <td className={`py-1 ${highlight.includes(attribute) ? 'text-accent' : ''}`}>
                   {highlight.includes(attribute) && <span title="Key attribute for your role">★ </span>}
-                  <span className="hidden sm:inline">{label.name} </span>
-                  <span className="text-xs text-muted">{label.short}</span>
+                  {label.name}
                 </td>
                 <td className="py-1">
                   <Stepper
@@ -377,9 +391,22 @@ export function AttributesSection({
                     onStep={(d) => step(attribute, 'karma', d)}
                   />
                 </td>
-                <td className={`py-1 text-right font-semibold tabular-nums ${value > max ? 'text-danger' : ''}`}>
-                  {value}
-                  <span className="text-xs font-normal text-muted">/{max}</span>
+                <td className="py-1 text-right">
+                  <div className={`font-semibold tabular-nums ${value > max ? 'text-danger' : ''}`}>{value}</div>
+                  {value >= max ? (
+                    <div
+                      className={`text-[10px] font-semibold tracking-wider whitespace-nowrap uppercase ${
+                        value > max || (tooManyMaxed && isMaxed(attribute)) ? 'text-danger' : 'text-accent'
+                      }`}
+                      title={`The highest a ${METATYPES[character.metatype].name.toLowerCase()} can have`}
+                    >
+                      {value > max ? `over max ${max}` : 'at max'}
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-muted" title="The highest your metatype can reach">
+                      max {max}
+                    </div>
+                  )}
                 </td>
               </tr>
             )
@@ -387,6 +414,51 @@ export function AttributesSection({
         </tbody>
       </table>
     </Section>
+  )
+}
+
+/** Plain-language explanation of where attribute ratings come from and what "max" means. */
+function AttributeHelp({
+  character,
+  build,
+  evaluation,
+}: {
+  character: Character
+  build: Build
+  evaluation: BuildEvaluation | null
+}) {
+  const metatype = METATYPES[character.metatype].name
+  const awakened = MAGIC_TYPES[build.magicType].attribute
+  const boosted = Object.keys(METATYPES[character.metatype].maximums)
+    .filter((a) => a !== 'edge' && attributeMaximum(character.metatype, a as AttributeId) > 6)
+    .map((a) => ATTRIBUTE_LABELS[a as AttributeId].name)
+  const adjustmentTargets = ['Edge', ...(awakened ? [ATTRIBUTE_LABELS[awakened].name] : []), ...boosted]
+  return (
+    <div className="mb-4 grid gap-2 rounded-lg border border-line/70 bg-bg/40 p-3 text-sm">
+      <p>
+        Every attribute starts at <strong>1</strong>. You raise it from three pots:
+      </p>
+      <ul className="grid gap-1 pl-1 text-muted">
+        <li>
+          <span className="text-fg">Adjustment</span> ({evaluation?.adjustmentPoints.total ?? 0} points, from your
+          metatype priority): only for {adjustmentTargets.join(', ')}. The other rows show “–”.
+        </li>
+        <li>
+          <span className="text-fg">Attribute points</span> ({evaluation?.attributePoints.total ?? 0}, from your
+          attributes priority): for the eight physical and mental attributes.
+        </li>
+        <li>
+          <span className="text-fg">Karma</span>: buys extra steps if you run out. Each step costs the new rating ×{' '}
+          {CREATION_RULES.karmaPerRating}, so use points first.
+        </li>
+      </ul>
+      <p className="text-muted">
+        <span className="text-fg">Max</span> is the highest a {metatype.toLowerCase()} can ever have in that attribute.
+        Reaching it is fine, but a new character may have only{' '}
+        <strong className="text-fg">{CREATION_RULES.maxAttributesAtMax} attribute at max</strong>. That keeps room to
+        grow: you can raise more with karma after you start playing.
+      </p>
+    </div>
   )
 }
 
@@ -422,7 +494,7 @@ export function SkillsSection({
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span className="min-w-0 flex-1">
                   {def?.name ?? skill.skillId}
-                  {def && <span className="ml-1 text-xs text-muted">{ATTRIBUTE_LABELS[def.attribute].short}</span>}
+                  {def && <span className="ml-1 text-xs text-muted">· {ATTRIBUTE_LABELS[def.attribute].name}</span>}
                 </span>
                 <span className="text-xs text-muted">Points</span>
                 <Stepper

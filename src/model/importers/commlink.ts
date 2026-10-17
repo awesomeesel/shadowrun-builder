@@ -9,6 +9,7 @@ import { KNOWN_BOOKS } from '../../books/catalog'
 import { parseAttackRatings } from '../../books/extract/values'
 import { knownBonusAttribute, knownBonuses } from '../../rules/sr6/bonuses'
 import { computeDerived, ownedSkillPools, weaponPool } from '../../rules/sr6/derived'
+import { addDevice } from '../../rules/sr6/matrix'
 import type { MetatypeId } from '../../rules/sr6/metatypes'
 import { SKILLS_BY_ID } from '../../rules/sr6/skills'
 import { AUGMENTATION_GRADES, type GradeId } from '../../rules/sr6/special'
@@ -370,20 +371,23 @@ export function fromCommlink(data: Json): { character: Character; report: Import
       source: pageRef(v.page),
     }),
   )
-  const matrixDevices = arr(data.matrixItems).map((m, i) =>
+  const matrixDevices = arr(data.matrixItems).map((m) =>
     MatrixDeviceSchema.parse({
       name: str(m.name),
       kind: /deck/i.test(str(first(m, 'subType', 'type')))
         ? 'cyberdeck'
-        : /rcc|rigger/i.test(str(first(m, 'subType', 'type')))
-          ? 'rcc'
-          : 'commlink',
+        : /cyberjack/i.test(`${str(first(m, 'subType', 'type'))} ${str(m.name)}`)
+          ? 'cyberjack'
+          : /rcc|rigger/i.test(str(first(m, 'subType', 'type')))
+            ? 'rcc'
+            : 'commlink',
       deviceRating: num(first(m, 'deviceRating', 'rating')),
       attack: num(m.attack),
       sleaze: num(m.sleaze),
       dataProcessing: num(first(m, 'dataProcessing', 'dataprocessing')),
       firewall: num(m.firewall),
-      active: i === 0,
+      programSlots: num(first(m, 'programSlots', 'slots')),
+      active: false,
       notes: str(m.description),
       source: pageRef(m.page),
     }),
@@ -463,7 +467,7 @@ export function fromCommlink(data: Json): { character: Character; report: Import
     adeptPowers,
     complexForms,
     vehicles,
-    matrixDevices,
+    matrixDevices: matrixDevices.reduce<typeof matrixDevices>((list, d) => addDevice(list, d), []),
     contacts,
     sins,
     licenses,

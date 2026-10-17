@@ -4,6 +4,7 @@ import { formatBonuses, parseBonuses } from './bonuses'
 describe('bonus text', () => {
   it.each([
     ['REA +2, +2D6', { attributes: { reaction: 2 }, initiativeDice: 2 }],
+    ['Reaction +2, agility +1', { attributes: { reaction: 2, agility: 1 }, initiativeDice: 0 }],
     ['agi+1; str +2', { attributes: { agility: 1, strength: 2 }, initiativeDice: 0 }],
     ['ID +1', { attributes: {}, initiativeDice: 1 }],
     ['+1d6 init', { attributes: {}, initiativeDice: 1 }],
@@ -18,6 +19,8 @@ describe('bonus text', () => {
   })
 
   it('formats back to text', () => {
-    expect(formatBonuses({ attributes: { strength: 2, reaction: 1 }, initiativeDice: 1 })).toBe('REA +1, STR +2, +1D6')
+    expect(formatBonuses({ attributes: { strength: 2, reaction: 1 }, initiativeDice: 1 })).toBe(
+      'Reaction +1, Strength +2, +1D6',
+    )
   })
 })

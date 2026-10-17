@@ -1,6 +1,13 @@
-import type { Bonuses, Character, CharacterSkill, MatrixDevice, Weapon } from '../../model/character'
+import type { Bonuses, Character, CharacterSkill, MatrixDevice, Program, Weapon } from '../../model/character'
 import { ATTRIBUTE_IDS, type AttributeId } from './attributes'
 import { SKILLS, SKILLS_BY_ID, type SkillDef } from './skills'
+import {
+  TOOLBOX_DATA_PROCESSING,
+  VIRTUAL_MACHINE_SLOTS,
+  cyberjackStats,
+  isCyberjackName,
+  ratingFromName,
+} from './matrix'
 import { AUGMENTATION_GRADES, SPECIAL_RULES, TRADITIONS } from './special'
 
 /** Damage boxes per wound modifier step (-1 for every 3 boxes filled). */
@@ -32,9 +39,18 @@ export interface SkillPool {
   expertisePool: number | null
 }
 
+/** One piece of hardware that makes up the persona, and what it contributes. */
+export interface PersonaPart {
+  name: string
+  /** e.g. "Attack/Sleaze", "Data Processing/Firewall". */
+  provides: string
+}
+
 export interface MatrixStats {
-  /** The active device, or undefined for a technomancer's living persona. */
+  /** The device whose Device Rating and program slots the persona uses; undefined for a living persona. */
   device: MatrixDevice | undefined
+  /** Everything combined into the persona: deck, cyberjack, commlink. Empty for a living persona. */
+  parts: PersonaPart[]
   deviceRating: number
   attack: number
   sleaze: number
@@ -44,6 +60,12 @@ export interface MatrixStats {
   arInitiative: Initiative
   coldSimInitiative: Initiative
   hotSimInitiative: Initiative
+  /** Matrix initiative bonus printed for the cyberjack (0 without one). */
+  cyberjackInitiativeBonus: number
+  programSlots: number
+  runningPrograms: Program[]
+  /** Advice when the hardware doesn't add up, e.g. a deck with nothing giving Data Processing. */
+  warnings: string[]
 }
 
 export interface DerivedStats {
@@ -179,15 +201,63 @@ function magicStats(character: Character, a: Attributes): NonNullable<DerivedSta
   }
 }
 
+const MATRIX_KEYS = ['attack', 'sleaze', 'dataProcessing', 'firewall'] as const
+
+/**
+ * The persona is built from every active device: a cyberdeck brings Attack and
+ * Sleaze, a cyberjack (or commlink) Data Processing and Firewall. Each attribute
+ * comes from whichever piece has the highest. Device Rating and program slots
+ * are the deck's, or the main device's without one.
+ */
 function matrixStats(character: Character, a: Attributes): MatrixStats | null {
-  const device = character.matrixDevices.find((d) => d.active)
-  let persona: Omit<MatrixStats, 'monitor' | 'arInitiative' | 'coldSimInitiative' | 'hotSimInitiative'>
-  if (device) {
-    persona = { device, ...device }
+  const active = character.matrixDevices.filter((d) => d.active)
+  const jacks = [
+    ...active
+      .filter((d) => d.kind === 'cyberjack')
+      .map((d) => ({ ...d, initiativeBonus: cyberjackStats(d.dataProcessing - 3).initiativeBonus })),
+    ...character.augmentations
+      .filter((aug) => isCyberjackName(aug.name))
+      .map((aug) => {
+        const stats = cyberjackStats(ratingFromName(aug.name, aug.rating))
+        return { name: aug.name, attack: 0, sleaze: 0, ...stats }
+      }),
+  ]
+  const devices = active.filter((d) => d.kind !== 'cyberjack')
+  const byRating = (x: MatrixDevice, y: MatrixDevice) => y.deviceRating - x.deviceRating
+  const main = devices.filter((d) => d.kind === 'cyberdeck').sort(byRating)[0] ?? [...devices].sort(byRating)[0]
+  const running = character.programs.filter((p) => p.running)
+  const has = (name: string) => running.some((p) => p.name.trim().toLowerCase() === name)
+  const warnings: string[] = []
+
+  let persona: Pick<MatrixStats, 'device' | 'parts' | 'deviceRating' | (typeof MATRIX_KEYS)[number]>
+  if (main || jacks.length > 0) {
+    const pieces = [...devices, ...jacks]
+    const best = (key: (typeof MATRIX_KEYS)[number]) => Math.max(0, ...pieces.map((p) => p[key]))
+    persona = {
+      device: main,
+      parts: pieces.map((p) => ({
+        name: p.name || 'Unnamed device',
+        provides: MATRIX_KEYS.filter((k) => p[k] > 0 && p[k] === best(k))
+          .map((k) => MATRIX_LABELS[k])
+          .join(', '),
+      })),
+      deviceRating: main?.deviceRating ?? Math.max(...jacks.map((j) => j.dataProcessing - 3)),
+      attack: best('attack'),
+      sleaze: best('sleaze'),
+      dataProcessing: best('dataProcessing'),
+      firewall: best('firewall'),
+    }
+    if (main?.kind === 'cyberdeck' && persona.dataProcessing === 0 && persona.firewall === 0) {
+      warnings.push(
+        'A cyberdeck has no Data Processing or Firewall. Add a cyberjack (as an augmentation or a device) or make a commlink active too.',
+      )
+    }
+    if (!main) warnings.push('A cyberjack needs a cyberdeck or commlink to get online. Make one active.')
   } else if (a.resonance > 0) {
     // Living persona.
     persona = {
       device: undefined,
+      parts: [],
       deviceRating: a.resonance,
       attack: a.charisma,
       sleaze: a.intuition,
@@ -197,6 +267,11 @@ function matrixStats(character: Character, a: Attributes): MatrixStats | null {
   } else {
     return null
   }
+  if (has('toolbox')) persona.dataProcessing += TOOLBOX_DATA_PROCESSING
+  const programSlots = (main?.programSlots ?? 0) + (has('virtual machine') ? VIRTUAL_MACHINE_SLOTS : 0)
+  if (main && running.length > programSlots) {
+    warnings.push(`${running.length} programs are running but only ${programSlots} fit. Stop some of them.`)
+  }
   const vrScore = persona.dataProcessing + a.intuition
   return {
     ...persona,
@@ -204,7 +279,18 @@ function matrixStats(character: Character, a: Attributes): MatrixStats | null {
     arInitiative: { score: a.reaction + a.intuition, dice: 1 },
     coldSimInitiative: { score: vrScore, dice: SPECIAL_RULES.vrColdDice },
     hotSimInitiative: { score: vrScore, dice: SPECIAL_RULES.vrHotDice },
+    cyberjackInitiativeBonus: Math.max(0, ...jacks.map((j) => j.initiativeBonus)),
+    programSlots,
+    runningPrograms: running,
+    warnings,
   }
+}
+
+export const MATRIX_LABELS: Record<(typeof MATRIX_KEYS)[number], string> = {
+  attack: 'Attack',
+  sleaze: 'Sleaze',
+  dataProcessing: 'Data Processing',
+  firewall: 'Firewall',
 }
 
 function woundModifier(filledBoxes: number): number {

@@ -159,3 +159,42 @@ describe('duplicates', () => {
     expect(entries[0]).toMatchObject({ kind: 'matrixDevice', page: 1, deviceRating: 2, attributes: '1/1' })
   })
 })
+
+describe('Matrix device tables', () => {
+  it('joins a header split over two lines and reads program slots', () => {
+    const entries = extractBook([
+      page([
+        t(298, 705, 'ACTIVE PROGRAM'),
+        t(94, 700, 'ITEM'),
+        t(152, 700, 'DEVICE RATING'),
+        t(222, 700, 'ATTRIBUTES (A/S)'),
+        t(392, 700, 'AVAIL'),
+        t(468, 700, 'COST'),
+        t(316, 695, 'SLOTS'),
+        t(88, 685, 'Testdeck'),
+        t(174, 685, '4'),
+        t(246, 685, '7/6'),
+        t(324, 685, '8'),
+        t(396, 685, '4(I)'),
+        t(464, 685, '107,000¥'),
+      ]),
+    ])
+    expect(entries[0]).toMatchObject({ kind: 'matrixDevice', deviceRating: 4, attributes: '7/6', programSlots: 8 })
+  })
+
+  it('treats accessories without Matrix attributes as gear', () => {
+    const entries = extractBook([
+      page([
+        t(68, 700, 'ITEM'),
+        t(150, 700, 'DEVICE RATING'),
+        t(380, 700, 'AVAIL'),
+        t(460, 700, 'COST'),
+        t(68, 690, 'Test gloves'),
+        t(170, 690, '3'),
+        t(390, 690, '1'),
+        t(460, 690, '150¥'),
+      ]),
+    ])
+    expect(entries[0]).toMatchObject({ kind: 'gear', name: 'Test gloves' })
+  })
+})

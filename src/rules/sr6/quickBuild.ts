@@ -18,6 +18,7 @@ import { MENTAL_ATTRIBUTES, PHYSICAL_ATTRIBUTES, type AttributeId } from './attr
 import { applyBuild, buildAttributeValue, canUseAdjustment, evaluateBuild, finishBuild, startBuild } from './build'
 import { CREATION_RULES, MAGIC_TYPES, PRIORITY_TABLE } from './creation'
 import { computeDerived } from './derived'
+import { addDevice } from './matrix'
 import { attributeMaximum, type MetatypeId } from './metatypes'
 import type { RoleDef } from './roles'
 import { AUGMENTATION_GRADES, SPECIAL_CREATION_RULES } from './special'
@@ -379,11 +380,11 @@ function pickFromCatalog(
     if (best) add(best.entry, best.rating)
   })
 
-  // Wear the first armor, use the first device, and specialise in the first weapon.
+  // Wear the first armor, use the first device of each type, and specialise in the first weapon.
   c = {
     ...c,
     gear: c.gear.map((g, i) => ({ ...g, equipped: g.armor > 0 && c.gear.findIndex((x) => x.armor > 0) === i })),
-    matrixDevices: c.matrixDevices.map((d, i) => ({ ...d, active: i === 0 })),
+    matrixDevices: c.matrixDevices.reduce<typeof c.matrixDevices>((list, d) => addDevice(list, d), []),
   }
   const weapon = c.weapons[0]
   if (weapon) {

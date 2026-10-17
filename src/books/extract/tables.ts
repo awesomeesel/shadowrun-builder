@@ -43,7 +43,10 @@ function mergeStackedHeaders(header: Line, above: Line | undefined, below: Line 
   for (const extra of [above, below]) {
     if (!isStackedHeader(extra, header)) continue
     for (const item of extra.items) {
-      const near = columns.find((c) => Math.abs(c.x - item[0]) <= COLUMN_SLACK)
+      // Same start, or (for a label centred under a wider one, like "SLOTS" under "ACTIVE PROGRAM") inside it.
+      const near =
+        columns.find((c) => Math.abs(c.x - item[0]) <= COLUMN_SLACK) ??
+        columns.find((c) => item[0] >= c.x && item[0] + item[4] <= c.end + COLUMN_SLACK)
       if (near) {
         near.header = `${near.header} ${item[3].trim()}`
         near.x = Math.min(near.x, item[0])
@@ -179,12 +182,13 @@ function toEntry(columns: Column[], c: string[], page: number, category: string)
   const base = { page, name, category, availability: col(/^AVAIL/), cost: parseScaled(col(/^COST$/)) }
   const first = columns[0].header
 
-  if (has(/^ESSENCE$/)) {
+  // Cyberjack tables shorten the header to "ESS".
+  if (has(/^ESS(ENCE)?$/)) {
     return {
       ...base,
       kind: 'augmentation',
       rating: parseRatingRange(col(/^RATING$/)) ?? split.rating,
-      essence: parseScaled(col(/^ESSENCE$/)),
+      essence: parseScaled(col(/^ESS(ENCE)?$/)),
       capacity: col(/^CAPACITY$/),
     }
   }
@@ -214,7 +218,8 @@ function toEntry(columns: Column[], c: string[], page: number, category: string)
       seats: col(/^SEAT/),
     }
   }
-  if (has(/^DEVICE RATING$/)) {
+  // Accessories and tags also list a Device Rating, but only real devices have Matrix attributes.
+  if (has(/^DEVICE RATING$/) && (has(/^ATTRIBUTES/) || has(/^DATA PROCESSING$/) || has(/^FIREWALL$/))) {
     const attributeHeader = columns.find((column) => /^ATTRIBUTES/.test(column.header))?.header ?? ''
     const attributes = has(/^ATTRIBUTES/)
       ? col(/^ATTRIBUTES/)
@@ -225,6 +230,7 @@ function toEntry(columns: Column[], c: string[], page: number, category: string)
       deviceRating: parseInt0(col(/^DEVICE RATING$/)),
       attributes,
       attributeNames: attributeHeader.match(/\(([^)]+)\)/)?.[1] ?? (attributes ? 'D/F' : ''),
+      programSlots: parseInt0(col(/PROGRAM SLOTS$/)),
     }
   }
   if (has(/^DEFENSE RATING$/)) {

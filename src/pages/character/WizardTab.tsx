@@ -242,7 +242,7 @@ export function WizardTab() {
       tips: [
         'Attribute points only go on the eight physical and mental attributes.',
         `Adjustment points go on Edge${magicType.attribute ? `, ${magicType.attribute === 'magic' ? 'Magic' : 'Resonance'}` : ''} and attributes your metatype can raise above 6 (like a troll’s Body).`,
-        'Only one attribute may start at its maximum.',
+        '“Max” is the highest your metatype can reach. You may reach it, but only one attribute can be at max when the character is created.',
         `Karma costs the new rating × ${CREATION_RULES.karmaPerRating} per step, so spend points first and karma last.`,
         'Body and Willpower set how much damage you can take. Edge is your luck: you spend it during play to boost rolls.',
       ],

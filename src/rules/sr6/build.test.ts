@@ -86,7 +86,7 @@ describe('evaluateBuild', () => {
       b.attributes.agility.points = 5
       b.attributes.reaction.points = 5
     })
-    expect(messages(c).some((x) => x.includes('2 attributes are at their maximum'))).toBe(true)
+    expect(messages(c).some((x) => x.startsWith('Agility and Reaction are both at their maximum'))).toBe(true)
   })
 
   it('gives awakened characters their priority Magic rating', () => {
