@@ -69,6 +69,9 @@ const str = (v: unknown) => (typeof v === 'string' ? v.trim() : typeof v === 'nu
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : Number(v) || 0)
 const arr = (v: unknown): Json[] =>
   Array.isArray(v) ? v.filter((x): x is Json => typeof x === 'object' && x !== null) : []
+/** Names from a list of objects with a name, or of plain strings. */
+const names = (v: unknown): string[] =>
+  Array.isArray(v) ? v.map((x) => (typeof x === 'string' ? x : str((x as Json)?.name))).filter(Boolean) : []
 const first = (o: Json, ...keys: string[]) => {
   for (const k of keys) if (o[k] !== undefined && o[k] !== null && o[k] !== '') return o[k]
   return undefined
@@ -434,8 +437,6 @@ export function fromCommlink(data: Json): { character: Character; report: Import
   )
 
   const extraNotes = [
-    num(data.initiation) ? `Initiation grade ${num(data.initiation)}` : '',
-    num(data.submersion) ? `Submersion grade ${num(data.submersion)}` : '',
     arr(data.martialArts).length
       ? `Martial arts: ${arr(data.martialArts)
           .map((m) => str(m.name))
@@ -478,6 +479,10 @@ export function fromCommlink(data: Json): { character: Character; report: Import
     licenses,
     lifestyles,
     nuyen: num(data.nuyen),
+    initiateGrade: num(data.initiation),
+    metamagics: names(data.metamagic),
+    submersionGrade: num(data.submersion),
+    echoes: names(data.echoes),
     // Commlink's "karma" is everything earned; "freeKarma" is what's left to spend (as the Roll20 sheet reads it).
     karma: { available: num(data.freeKarma), career: num(data.karma) },
     notes: [str(data.notes), ...extraNotes].filter(Boolean).join('\n'),

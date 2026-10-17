@@ -14,7 +14,7 @@ import {
   type Roll,
 } from '../../../rules/sr6/play'
 import type { Update } from '../CharacterPage'
-import { Counter, PlayDialog, RollStep } from './RollStep'
+import { CenteringToggle, Counter, PlayDialog, RollStep } from './RollStep'
 
 /** Duration S (sustained) or L (limited) can be kept running. */
 const canSustain = (spell: Spell) => /\b[SL]\b|sustain|limited/i.test(spell.duration)
@@ -108,7 +108,11 @@ function CastDialog({
   const drainValue = spellDrain(spell.drain, ampUp, area)
   const penalty = derived.woundModifier + sustainPenalty(character)
   const castPool = Math.max(0, (magic?.spellcasting ?? 0) + penalty)
-  const drainPool = Math.max(0, (magic?.drainResistance ?? 0) + derived.woundModifier)
+  const [centering, setCentering] = useState(false)
+  const drainPool = Math.max(
+    0,
+    (magic?.drainResistance ?? 0) + derived.woundModifier + (centering ? (magic?.centeringDice ?? 0) : 0),
+  )
   const boxes = drain ? Math.max(0, drainValue - drain.hits) : 0
   const type = drainType(boxes, derived.attributes.magic)
   const damage = spell.notes.match(/Damage\s+([PS])/i)?.[1]?.toUpperCase()
@@ -175,15 +179,18 @@ function CastDialog({
       </RollStep>
 
       {cast && (
-        <RollStep
-          label="Drain resistance"
-          pool={drainPool}
-          roll={drain}
-          onRoll={() => roll('Drain resistance', drainPool, setDrain)}
-        >
-          Willpower + your tradition's attribute against Drain {drainValue}. Drain above your Magic (
-          {derived.attributes.magic}) is Physical.
-        </RollStep>
+        <>
+          {!drain && <CenteringToggle dice={magic?.centeringDice ?? 0} checked={centering} onChange={setCentering} />}
+          <RollStep
+            label="Drain resistance"
+            pool={drainPool}
+            roll={drain}
+            onRoll={() => roll('Drain resistance', drainPool, setDrain)}
+          >
+            Willpower + your tradition's attribute against Drain {drainValue}. Drain above your Magic (
+            {derived.attributes.magic}) is Physical.
+          </RollStep>
+        </>
       )}
 
       {drain && (

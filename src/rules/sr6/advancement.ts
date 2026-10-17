@@ -14,6 +14,7 @@ import {
   type Quality,
 } from '../../model/character'
 import { ATTRIBUTE_LABELS, type AttributeId } from './attributes'
+import { gradeCost, gradeEffects } from './initiation'
 import { attributeMaximum } from './metatypes'
 import { addLedgerEntry } from './play'
 import { SKILLS_BY_ID } from './skills'
@@ -32,8 +33,6 @@ export const ADVANCEMENT = {
   complexForm: 5,
   /** Skill ranks range from 1 to 9 (p. 92). */
   maxSkillRank: 9,
-  /** Magic and Resonance can't go above 6 without initiation or submersion. */
-  maxSpecialRank: 6,
 } as const
 
 export interface Purchase {
@@ -69,7 +68,14 @@ export function raiseAttribute(character: Character, attribute: AttributeId): Pu
   const next = current + 1
   const name = ATTRIBUTE_LABELS[attribute].name
   const special = attribute === 'magic' || attribute === 'resonance'
-  const max = special ? ADVANCEMENT.maxSpecialRank : attributeMaximum(character.metatype, attribute)
+  const effects = gradeEffects(character)
+  // Initiation and submersion raise the limit of 6 by the grade.
+  const max =
+    attribute === 'magic'
+      ? effects.maxMagic
+      : attribute === 'resonance'
+        ? effects.maxResonance
+        : attributeMaximum(character.metatype, attribute)
   return {
     label: `${name} ${current} → ${next}`,
     cost: ADVANCEMENT.karmaPerRank * next,
@@ -240,5 +246,35 @@ export function learnComplexForm(character: Character, form: Partial<Character['
             ? `You already know ${name}.`
             : undefined,
     apply: (c) => ({ ...c, complexForms: [...c.complexForms, ComplexFormSchema.parse({ ...form, name })] }),
+  }
+}
+
+/**
+ * Initiate (Awakened) or submerge (technomancers) to the next grade for
+ * 10 + the new grade in karma, learning one metamagic or echo (pp. 166, 195).
+ * The grade can't go above Magic or Resonance.
+ */
+export function raiseGrade(character: Character, kind: 'initiation' | 'submersion', ability: string): Purchase {
+  const initiation = kind === 'initiation'
+  const current = initiation ? character.initiateGrade : character.submersionGrade
+  const next = current + 1
+  const limit = initiation ? character.attributes.magic : character.attributes.resonance
+  const attribute = initiation ? 'Magic' : 'Resonance'
+  return {
+    label: `${initiation ? 'Initiation' : 'Submersion'} grade ${next}: ${ability}`,
+    cost: gradeCost(next),
+    training: initiation ? `${next + 1} months` : `${next + 1} weeks`,
+    blocked:
+      limit <= 0
+        ? `You don't have ${attribute}.`
+        : next > limit
+          ? `Your grade can't go above your ${attribute} (${limit}).`
+          : !ability.trim()
+            ? `Pick a ${initiation ? 'metamagic' : 'echo'}.`
+            : undefined,
+    apply: (c) =>
+      initiation
+        ? { ...c, initiateGrade: next, metamagics: [...c.metamagics, ability] }
+        : { ...c, submersionGrade: next, echoes: [...c.echoes, ability] },
   }
 }

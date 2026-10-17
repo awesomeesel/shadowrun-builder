@@ -17,12 +17,20 @@ import {
   learnLanguage,
   learnSpell,
   raiseAttribute,
+  raiseGrade,
   raiseSkill,
   removeNegativeQuality,
   whyNot,
   type Purchase,
 } from '../../rules/sr6/advancement'
 import { ATTRIBUTE_IDS, ATTRIBUTE_LABELS } from '../../rules/sr6/attributes'
+import {
+  MATRIX_UPGRADE,
+  availableAbilities,
+  gradeCost,
+  gradeEffects,
+  upgradeableAttributes,
+} from '../../rules/sr6/initiation'
 import { attributeMaximum } from '../../rules/sr6/metatypes'
 import { SKILLS, SKILLS_BY_ID } from '../../rules/sr6/skills'
 import type { CharacterContext } from './CharacterPage'
@@ -70,6 +78,8 @@ export function KarmaTab() {
       <SpecializationShop {...props} />
       <KnowledgeShop {...props} />
       <QualitiesShop {...props} />
+      {character.attributes.magic > 0 && <GradeShop {...props} kind="initiation" />}
+      {character.attributes.resonance > 0 && <GradeShop {...props} kind="submersion" />}
       {character.attributes.magic > 0 && <SpellShop {...props} />}
       {character.attributes.resonance > 0 && <ComplexFormShop {...props} />}
 
@@ -120,7 +130,11 @@ function AttributesShop(props: ShopProps) {
         {shown.map((a) => {
           const p = raiseAttribute(character, a)
           const max =
-            a === 'magic' || a === 'resonance' ? ADVANCEMENT.maxSpecialRank : attributeMaximum(character.metatype, a)
+            a === 'magic'
+              ? gradeEffects(character).maxMagic
+              : a === 'resonance'
+                ? gradeEffects(character).maxResonance
+                : attributeMaximum(character.metatype, a)
           return (
             <li key={a} className="flex items-center gap-2 border-t border-line/50 py-1 first:border-0">
               <span className="flex-1">{ATTRIBUTE_LABELS[a].name}</span>
@@ -430,6 +444,90 @@ function ComplexFormShop(props: ShopProps) {
           </BuyButton>
         </div>
       </div>
+    </Section>
+  )
+}
+
+/** Initiation (metamagics) or submersion (echoes): the next grade for 10 + grade karma. */
+function GradeShop({ kind, ...props }: ShopProps & { kind: 'initiation' | 'submersion' }) {
+  const { character } = props
+  const initiation = kind === 'initiation'
+  const grade = initiation ? character.initiateGrade : character.submersionGrade
+  const taken = initiation ? character.metamagics : character.echoes
+  const adept =
+    character.adeptPowers.length > 0 ||
+    character.build?.magicType === 'adept' ||
+    character.build?.magicType === 'mysticAdept'
+  const choices = availableAbilities(initiation ? 'metamagic' : 'echo', taken, adept)
+  const [choice, setChoice] = useState('')
+  const [attribute, setAttribute] = useState('')
+  const upgrade = choice === MATRIX_UPGRADE
+  const ability = upgrade ? (attribute ? `${MATRIX_UPGRADE}: ${attribute}` : '') : choice
+  const def = choices.find((c) => c.name === choice)
+  const attributeName = initiation ? 'Magic' : 'Resonance'
+  return (
+    <Section
+      title={initiation ? 'Initiation' : 'Submersion'}
+      icon={<Sparkles className="size-4" />}
+      className="lg:col-span-2"
+    >
+      <p className="mb-2 text-xs text-muted">
+        {grade === 0
+          ? `Not ${initiation ? 'initiated' : 'submerged'} yet.`
+          : `Grade ${grade}${taken.length > 0 ? `: ${taken.join(', ')}` : ''}.`}{' '}
+        The next grade costs {gradeCost(grade + 1)} karma and teaches one {initiation ? 'metamagic' : 'echo'}. Your{' '}
+        {attributeName} can then be raised up to 6 + grade with karma; the grade can't be higher than your{' '}
+        {attributeName}.
+        {initiation &&
+          ' The GM may ask for a test with your best magic skill + Magic (threshold: the new grade, one roll per month).'}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <select
+          {...noAutofillField}
+          className="input min-w-0 flex-1"
+          value={choice}
+          onChange={(e) => {
+            setChoice(e.target.value)
+            setAttribute('')
+          }}
+          aria-label={initiation ? 'Metamagic' : 'Echo'}
+        >
+          <option value="">{initiation ? 'Pick a metamagic…' : 'Pick an echo…'}</option>
+          {choices.map((c) => (
+            <option key={c.name} value={c.name}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        {upgrade && (
+          <select
+            {...noAutofillField}
+            className="input"
+            value={attribute}
+            onChange={(e) => setAttribute(e.target.value)}
+            aria-label="Persona attribute"
+          >
+            <option value="">Attribute…</option>
+            {upgradeableAttributes(character.echoes).map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+        )}
+        <BuyButton
+          {...props}
+          purchase={(p) => {
+            props.purchase(p)
+            setChoice('')
+            setAttribute('')
+          }}
+          p={raiseGrade(character, kind, ability)}
+        >
+          {initiation ? 'Initiate' : 'Submerge'} to grade {grade + 1}
+        </BuyButton>
+      </div>
+      {def && <p className="mt-1.5 text-xs text-muted">{def.effect}</p>}
     </Section>
   )
 }

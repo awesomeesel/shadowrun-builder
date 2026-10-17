@@ -177,6 +177,7 @@ describe('augmentations and special attributes', () => {
       spellcasting: 7,
       summoning: null, // no Conjuring skill
       drainResistance: 5, // WIL 3 + CHA 2
+      centeringDice: 0,
       powerPoints: { available: 4, used: 1.5 },
     })
     expect(computeDerived(runner()).magic).toBeNull()

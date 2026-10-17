@@ -21,7 +21,7 @@ import { computeDerived } from '../../../rules/sr6/derived'
 import { formatInitiative } from '../../../rules/sr6/format'
 import { applyDamage, drainType, recordRoll, rollPool, sustainPenalty, type Roll } from '../../../rules/sr6/play'
 import type { Update } from '../CharacterPage'
-import { Counter, PlayDialog, RollStep } from './RollStep'
+import { CenteringToggle, Counter, PlayDialog, RollStep } from './RollStep'
 import type { QuickPool } from './types'
 
 type Kind = Companion['kind']
@@ -231,7 +231,9 @@ function CallDialog({
   const basePool = (spirit ? derived.magic?.summoning : derived.resonance?.tasking) ?? 0
   const pool = Math.max(0, basePool + penalty)
   const resistBase = spirit ? derived.magic?.drainResistance : derived.resonance?.compileFadingResistance
-  const resistPool = Math.max(0, (resistBase ?? 0) + derived.woundModifier)
+  const [centering, setCentering] = useState(false)
+  const centeringDice = spirit && centering ? (derived.magic?.centeringDice ?? 0) : 0
+  const resistPool = Math.max(0, (resistBase ?? 0) + derived.woundModifier + centeringDice)
   const boxes = result && resist ? Math.max(0, result.drainValue - resist.hits) : 0
   const damageType = drainType(boxes, power)
 
@@ -331,19 +333,24 @@ function CallDialog({
       </RollStep>
 
       {result && (
-        <RollStep
-          label={spirit ? 'Drain resistance' : 'Fading resistance'}
-          pool={resistPool}
-          roll={resist}
-          onRoll={() => {
-            const r = rollPool(resistPool)
-            setResist(r)
-            update((c) => recordRoll(c, spirit ? 'Drain resistance' : 'Fading resistance', r))
-          }}
-        >
-          {spirit ? 'Willpower + your tradition attribute' : 'Willpower + Charisma'} against {result.drainValue} (the{' '}
-          {thing}'s hits). Above your {spirit ? 'Magic' : 'Resonance'} ({power}) it's Physical.
-        </RollStep>
+        <>
+          {spirit && !resist && (
+            <CenteringToggle dice={derived.magic?.centeringDice ?? 0} checked={centering} onChange={setCentering} />
+          )}
+          <RollStep
+            label={spirit ? 'Drain resistance' : 'Fading resistance'}
+            pool={resistPool}
+            roll={resist}
+            onRoll={() => {
+              const r = rollPool(resistPool)
+              setResist(r)
+              update((c) => recordRoll(c, spirit ? 'Drain resistance' : 'Fading resistance', r))
+            }}
+          >
+            {spirit ? 'Willpower + your tradition attribute' : 'Willpower + Charisma'} against {result.drainValue} (the{' '}
+            {thing}'s hits). Above your {spirit ? 'Magic' : 'Resonance'} ({power}) it's Physical.
+          </RollStep>
+        </>
       )}
 
       {resist && (
@@ -389,7 +396,9 @@ function OpposeDialog({
   const penalty = derived.woundModifier + sustainPenalty(character)
   const basePool = (spirit ? derived.magic?.summoning : derived.resonance?.tasking) ?? 0
   const pool = Math.max(0, basePool + penalty)
-  const resistPool = Math.max(0, (derived.magic?.drainResistance ?? 0) + derived.woundModifier)
+  const [centering, setCentering] = useState(false)
+  const centeringDice = centering ? (derived.magic?.centeringDice ?? 0) : 0
+  const resistPool = Math.max(0, (derived.magic?.drainResistance ?? 0) + derived.woundModifier + centeringDice)
   const boxes = result && resist ? Math.max(0, result.drainValue - resist.hits) : 0
   const damageType = drainType(boxes, derived.attributes.magic)
   const theirDice = spirit ? force * 2 : force + (registered ? compilerResonance : 0)
@@ -477,19 +486,24 @@ function OpposeDialog({
         )}
       </RollStep>
       {spirit && result && result.drainValue > 0 && (
-        <RollStep
-          label="Drain resistance"
-          pool={resistPool}
-          roll={resist}
-          onRoll={() => {
-            const r = rollPool(resistPool)
-            setResist(r)
-            update((c) => recordRoll(c, 'Drain resistance', r))
-          }}
-        >
-          Against {result.drainValue} (twice the spirit's hits). Above your Magic ({derived.attributes.magic}) it's
-          Physical.
-        </RollStep>
+        <>
+          {!resist && (
+            <CenteringToggle dice={derived.magic?.centeringDice ?? 0} checked={centering} onChange={setCentering} />
+          )}
+          <RollStep
+            label="Drain resistance"
+            pool={resistPool}
+            roll={resist}
+            onRoll={() => {
+              const r = rollPool(resistPool)
+              setResist(r)
+              update((c) => recordRoll(c, 'Drain resistance', r))
+            }}
+          >
+            Against {result.drainValue} (twice the spirit's hits). Above your Magic ({derived.attributes.magic}) it's
+            Physical.
+          </RollStep>
+        </>
       )}
       {resist && (
         <p className="text-base">

@@ -444,6 +444,12 @@ export const CharacterSchema = z.object({
   adeptPowers: z.array(AdeptPowerSchema).default([]),
   /** Power points a mystic adept has bought with karma. */
   powerPointsBought: int(0),
+  /** Initiation (Awakened) and the metamagic learned at each grade. */
+  initiateGrade: int(0),
+  metamagics: z.array(z.string()).default([]),
+  /** Submersion (technomancers) and the echo learned at each grade, e.g. "Matrix Attribute Upgrade: Firewall". */
+  submersionGrade: int(0),
+  echoes: z.array(z.string()).default([]),
   complexForms: z.array(ComplexFormSchema).default([]),
   matrixDevices: z.array(MatrixDeviceSchema).default([]),
   programs: z.array(ProgramSchema).default([]),

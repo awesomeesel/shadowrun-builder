@@ -5,6 +5,7 @@
 import type { Character, Vehicle } from '../../model/character'
 import type { Initiative } from './derived'
 import { computeDerived, effectiveAttributes } from './derived'
+import { gradeEffects } from './initiation'
 import { ratingFromName } from './matrix'
 
 /** Autosofts a drone can run, and the drone attribute each one rolls with (p. 201). */
@@ -47,7 +48,9 @@ export function handlingPenalty(damage: number): number {
 /** Extra dice for jumped-in tests: the control rig's rating (p. 197). */
 export function controlRigRating(character: Character): number {
   const rig = character.augmentations.find((a) => /control rig/i.test(a.name))
-  return rig ? Math.max(1, ratingFromName(rig.name, rig.rating)) : 0
+  if (rig) return Math.max(1, ratingFromName(rig.name, rig.rating))
+  // The Machine Mind echo works like a rating 1 control rig (p. 195).
+  return gradeEffects(character).machineMind ? 1 : 0
 }
 
 export interface VehiclePool {

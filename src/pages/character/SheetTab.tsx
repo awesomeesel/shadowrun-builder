@@ -305,11 +305,11 @@ export function SheetTab() {
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <Stat label="Spellcasting" value={derived.magic.spellcasting ?? '–'} hint="Sorcery + Magic" />
               <Stat
-                label="Drain resist"
+                label="Drain resistance"
                 value={derived.magic.drainResistance ?? '–'}
                 hint={`Willpower + tradition attribute (${TRADITIONS[character.tradition].name})`}
               />
-              <Stat label="Astral init." value={formatInitiative(derived.astralInitiative)} />
+              <Stat label="Astral initiative" value={formatInitiative(derived.astralInitiative)} />
               {(character.adeptPowers.length > 0 ||
                 character.powerPointsBought > 0 ||
                 character.build?.magicType === 'adept' ||
@@ -321,6 +321,15 @@ export function SheetTab() {
                 />
               )}
             </div>
+            {character.initiateGrade > 0 && (
+              <p className="mt-3 text-sm">
+                <span className="text-muted">Initiate grade {character.initiateGrade}:</span>{' '}
+                {character.metamagics.join(', ') || 'no metamagics listed'}
+                {derived.magic.centeringDice > 0 && (
+                  <span className="text-muted"> · Centering: +{derived.magic.centeringDice} drain resistance dice</span>
+                )}
+              </p>
+            )}
             {character.spells.length > 0 && (
               <div className="-mx-4 mt-4 overflow-x-auto px-4">
                 <table className="w-full min-w-[28rem] text-sm">
@@ -375,8 +384,14 @@ export function SheetTab() {
           <Section title="Resonance" icon={<Radio className="size-4" />}>
             <div className="grid grid-cols-2 gap-2">
               <Stat label="Tasking" value={derived.resonance.tasking ?? '–'} hint="Tasking + Resonance" />
-              <Stat label="Fading resist" value={derived.resonance.fadingResistance} />
+              <Stat label="Fading resistance" value={derived.resonance.fadingResistance} />
             </div>
+            {character.submersionGrade > 0 && (
+              <p className="mt-3 text-sm">
+                <span className="text-muted">Submersion grade {character.submersionGrade}:</span>{' '}
+                {character.echoes.join(', ') || 'no echoes listed'}
+              </p>
+            )}
             {character.complexForms.length > 0 && (
               <ul className="mt-3 grid gap-1 text-sm">
                 {character.complexForms.map((form) => (

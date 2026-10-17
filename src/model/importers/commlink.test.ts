@@ -21,7 +21,8 @@ const sample = {
   karma: 40,
   freeKarma: 3,
   nuyen: 1200,
-  initiation: 0,
+  initiation: 1,
+  metamagic: [{ name: 'Centering' }],
   attributes: [
     attr('BODY', 4),
     attr('AGILITY', 5, 7),
@@ -147,6 +148,8 @@ describe('Commlink import', () => {
       nuyen: 1200,
       karma: { available: 3, career: 40 },
       notes: 'Likes dogs.',
+      initiateGrade: 1,
+      metamagics: ['Centering'],
     })
     expect(c.attributes).toMatchObject({ body: 4, agility: 5, reaction: 4, magic: 0, resonance: 0 })
   })

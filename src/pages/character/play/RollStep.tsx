@@ -126,3 +126,27 @@ export function Counter({
     </div>
   )
 }
+
+/** The Centering metamagic: + Initiate Grade dice on a drain roll, for a Minor Action (p. 167). */
+export function CenteringToggle({
+  dice,
+  checked,
+  onChange,
+}: {
+  dice: number
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  if (dice <= 0) return null
+  return (
+    <label className="flex items-center gap-2">
+      <input
+        type="checkbox"
+        className="size-4 accent-accent"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      Centering: +{dice} dice on the drain roll (a Minor Action)
+    </label>
+  )
+}

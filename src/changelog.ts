@@ -11,6 +11,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 6,
+    date: '2026-10-17',
+    title: 'Initiation and submersion',
+    items: [
+      'Initiate (mages and adepts) or submerge (technomancers) on the Karma tab: 10 + grade karma, one metamagic or echo per grade.',
+      'Magic and Resonance can then be raised above 6 (up to 6 + grade).',
+      'Centering adds dice to drain rolls, Power Point gives adepts more power points, and echoes like Matrix Attribute Upgrade and Overclocking change your Matrix numbers.',
+      'Grades show on the Sheet and the play sheet, and come along when importing from Commlink.',
+    ],
+  },
+  {
     id: 5,
     date: '2026-10-17',
     title: 'A play sheet to print, and a jump menu on the Edit tab',

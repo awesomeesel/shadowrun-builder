@@ -590,6 +590,7 @@ export function MagicSection({ character, update }: { character: Character; upda
             }
           />
         </label>
+        <GradeFields character={character} update={update} kind="initiation" />
       </div>
       <h3 className="mb-2 text-xs tracking-wider text-muted uppercase">Spells</h3>
       <ListEditor
@@ -625,6 +626,9 @@ export function MagicSection({ character, update }: { character: Character; upda
 export function ComplexFormsSection({ character, update }: { character: Character; update: Update }) {
   return (
     <Section title="Complex forms" icon={<Radio className="size-4" />} className="lg:col-span-2">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <GradeFields character={character} update={update} kind="submersion" />
+      </div>
       <ListEditor
         items={character.complexForms}
         onChange={setList(update, 'complexForms')}
@@ -812,5 +816,61 @@ export function IdentitySection({ character, update }: { character: Character; u
         emptyText="No lifestyle."
       />
     </Section>
+  )
+}
+
+/**
+ * Initiate Grade and metamagics, or Submersion grade and echoes, for typing in
+ * an existing character. New grades are bought on the Karma tab.
+ */
+function GradeFields({
+  character,
+  update,
+  kind,
+}: {
+  character: Character
+  update: Update
+  kind: 'initiation' | 'submersion'
+}) {
+  const initiation = kind === 'initiation'
+  const grade = initiation ? character.initiateGrade : character.submersionGrade
+  const list = initiation ? character.metamagics : character.echoes
+  const [draft, setDraft] = useState<string | null>(null)
+  const setList = (text: string) => {
+    const items = text
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean)
+    update((c) => (initiation ? { ...c, metamagics: items } : { ...c, echoes: items }))
+  }
+  return (
+    <>
+      <label className="block">
+        <span className="mb-1 block text-xs text-muted">{initiation ? 'Initiate grade' : 'Submersion grade'}</span>
+        <NumberInput
+          value={grade}
+          min={0}
+          onChange={(n) =>
+            update((c) =>
+              initiation ? { ...c, initiateGrade: Math.max(0, n) } : { ...c, submersionGrade: Math.max(0, n) },
+            )
+          }
+        />
+      </label>
+      <label className="col-span-2 block">
+        <span className="mb-1 block text-xs text-muted">{initiation ? 'Metamagics' : 'Echoes'} (comma-separated)</span>
+        <input
+          {...noAutofill}
+          className="input w-full"
+          placeholder={initiation ? 'Centering, Masking' : 'NeuroFilter, Matrix Attribute Upgrade: Firewall'}
+          value={draft ?? list.join(', ')}
+          onChange={(e) => {
+            setDraft(e.target.value)
+            setList(e.target.value)
+          }}
+          onBlur={() => setDraft(null)}
+        />
+      </label>
+    </>
   )
 }

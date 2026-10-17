@@ -244,6 +244,13 @@ export function PlaySheet({ character }: { character: Character }) {
                 </tbody>
               </table>
             )}
+            {character.initiateGrade > 0 && (
+              <p className="mb-1">
+                <span className="font-semibold">Initiate grade {character.initiateGrade}:</span>{' '}
+                {character.metamagics.join(', ')}
+                {d.magic?.centeringDice ? ` (Centering: +${d.magic.centeringDice} drain dice)` : ''}
+              </p>
+            )}
             {character.adeptPowers.length > 0 && (
               <p className="mb-1">
                 <span className="font-semibold">Adept powers:</span>{' '}
@@ -290,6 +297,12 @@ export function PlaySheet({ character }: { character: Character }) {
                 </div>
               )}
             </div>
+            {character.submersionGrade > 0 && (
+              <p className="mt-1">
+                <span className="font-semibold">Submersion grade {character.submersionGrade}:</span>{' '}
+                {character.echoes.join(', ')}
+              </p>
+            )}
             {character.attributes.resonance > 0 && (
               <div className="mt-1">
                 <div className="font-semibold">Sprites (Fading resisted with Willpower + Charisma)</div>

@@ -17,7 +17,7 @@ Ideas and plans for Shadowrun Builder. Add your own anywhere; tick them off with
       Google Drive sync could be the base.
 - [x] **Karma shop** – spend karma between runs at the book's prices (attributes, skills, specializations,
       qualities, spells), logged in the karma history.
-- [ ] **Initiation and submersion** – 10 + grade karma; raises the Magic/Resonance limit above 6 and gives
+- [x] **Initiation and submersion** – 10 + grade karma; raises the Magic/Resonance limit above 6 and gives
       metamagics/echoes.
 - [x] **Healing between runs** – first aid, medkit and natural healing rolls in the end-session dialog.
 - [ ] **Commlink import for mages, deckers and riggers** – field names now follow Roll20's SR6 sheet importer

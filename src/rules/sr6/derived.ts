@@ -8,6 +8,7 @@ import {
   type Weapon,
 } from '../../model/character'
 import { ATTRIBUTE_IDS, type AttributeId } from './attributes'
+import { gradeEffects } from './initiation'
 import { METATYPES } from './metatypes'
 import { SKILLS, SKILLS_BY_ID, type SkillDef } from './skills'
 import {
@@ -111,6 +112,8 @@ export interface DerivedStats {
     /** Conjuring + Magic, for summoning and banishing spirits. */
     summoning: number | null
     drainResistance: number | null
+    /** Extra drain resistance dice while using the Centering metamagic (0 without it). */
+    centeringDice: number
     powerPoints: { available: number; used: number }
   } | null
   /** Present for technomancers. */
@@ -256,8 +259,10 @@ function magicStats(character: Character, a: Attributes): NonNullable<DerivedSta
     spellcasting: ownedPool(character, a, 'sorcery'),
     summoning: ownedPool(character, a, 'conjuring'),
     drainResistance: drainAttribute ? a.willpower + a[drainAttribute] : null,
+    centeringDice: gradeEffects(character).centeringDice,
     powerPoints: {
-      available: isMysticAdept ? character.powerPointsBought : a.magic,
+      // The Power Point metamagic adds one each time it's taken (p. 168).
+      available: (isMysticAdept ? character.powerPointsBought : a.magic) + gradeEffects(character).extraPowerPoints,
       used: Math.round(character.adeptPowers.reduce((sum, p) => sum + p.powerPoints, 0) * 100) / 100,
     },
   }
@@ -323,10 +328,11 @@ function matrixStats(character: Character, a: Attributes): MatrixStats | null {
       device: undefined,
       parts: [],
       deviceRating: a.resonance,
-      attack: a.charisma,
-      sleaze: a.intuition,
-      dataProcessing: a.logic,
-      firewall: a.willpower,
+      // Matrix Attribute Upgrade echoes add to the living persona (p. 195).
+      attack: a.charisma + gradeEffects(character).persona.attack,
+      sleaze: a.intuition + gradeEffects(character).persona.sleaze,
+      dataProcessing: a.logic + gradeEffects(character).persona.dataProcessing,
+      firewall: a.willpower + gradeEffects(character).persona.firewall,
     }
   } else {
     return null
@@ -342,7 +348,14 @@ function matrixStats(character: Character, a: Attributes): MatrixStats | null {
     monitor: SPECIAL_RULES.matrixMonitorBase + Math.ceil(persona.deviceRating / 2),
     arInitiative: { score: a.reaction + a.intuition, dice: 1 },
     coldSimInitiative: { score: vrScore, dice: SPECIAL_RULES.vrColdDice },
-    hotSimInitiative: { score: vrScore, dice: SPECIAL_RULES.vrHotDice },
+    // Overclocking (an echo) adds a die in hot-sim (p. 195).
+    hotSimInitiative: {
+      score: vrScore,
+      dice: Math.min(
+        SPECIAL_RULES.maxInitiativeDice,
+        SPECIAL_RULES.vrHotDice + (living ? gradeEffects(character).hotSimDice : 0),
+      ),
+    },
     cyberjackInitiativeBonus: Math.max(0, ...jacks.map((j) => j.initiativeBonus)),
     programSlots,
     runningPrograms: running,

@@ -5,6 +5,7 @@ import type { Character } from '../../../model/character'
 import { computeDerived } from '../../../rules/sr6/derived'
 import { applyDamage, drainType, recordRoll, rollPool, type DamageType, type Roll } from '../../../rules/sr6/play'
 import type { Update } from '../CharacterPage'
+import { CenteringToggle } from './RollStep'
 
 type Source = 'attack' | 'drain' | 'fading' | 'direct'
 
@@ -36,6 +37,7 @@ export function DamageDialog({
   const [value, setValue] = useState(5)
   const [type, setType] = useState<DamageType>('P')
   const [roll, setRoll] = useState<Roll | null>(null)
+  const [centering, setCentering] = useState(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -49,7 +51,8 @@ export function DamageDialog({
       ? type === 'P'
         ? derived.pools.physicalDamageResistance
         : derived.pools.damageResistance
-      : (sources.find((s) => s.id === source)?.pool ?? 0)
+      : (sources.find((s) => s.id === source)?.pool ?? 0) +
+        (source === 'drain' && centering ? (derived.magic?.centeringDice ?? 0) : 0)
   const boxes = Math.max(0, value - (roll?.hits ?? 0))
   // Drain and Fading are Stun, but Physical when more than Magic/Resonance (pp. 131, 189).
   const finalType: DamageType =
@@ -136,6 +139,9 @@ export function DamageDialog({
             )}
           </div>
 
+          {source === 'drain' && !roll && (
+            <CenteringToggle dice={derived.magic?.centeringDice ?? 0} checked={centering} onChange={setCentering} />
+          )}
           {source !== 'direct' && (
             <div className="rounded-lg border border-line bg-bg/40 p-3">
               {roll ? (
