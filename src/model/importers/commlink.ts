@@ -51,7 +51,8 @@ export interface ImportReport {
   notes: string[]
   checks: ImportCheck[]
   /** Karma and nuyen exactly as the file gives them, for the user to confirm. */
-  resources: { karma: number; nuyen: number }
+  /** Karma left (Commlink's freeKarma), total karma earned (its karma) and nuyen, for the user to confirm. */
+  resources: { karma: number; career: number; nuyen: number }
 }
 
 export function isCommlinkExport(data: unknown): data is Json {
@@ -336,8 +337,10 @@ export function fromCommlink(data: Json): { character: Character; report: Import
     }),
   )
   const adeptPowers = arr(data.adeptPowers).map((p) => {
-    const name = str(p.name)
-    const level = num(first(p, 'level', 'rating'))
+    // Commlink puts the level at the end of the name, e.g. "Improved Reflexes 2".
+    const named = str(p.name).match(/^(.*?)\s*(\d+)$/)
+    const name = named ? named[1] : str(p.name)
+    const level = num(first(p, 'level', 'rating')) || (named ? parseInt(named[2], 10) : 0)
     return AdeptPowerSchema.parse({
       name,
       level,
@@ -360,10 +363,11 @@ export function fromCommlink(data: Json): { character: Character; report: Import
     VehicleSchema.parse({
       name: str(v.name),
       kind: v.isDrone ? 'drone' : 'vehicle',
-      handling: str(first(v, 'handling', 'handl')),
+      // Handling can come as a list (on-road, off-road); speed as "top speed/interval".
+      handling: Array.isArray(v.handling) ? v.handling.map(str).join('/') : str(first(v, 'handling', 'handl')),
       acceleration: str(first(v, 'acceleration', 'accel')),
-      speedInterval: str(first(v, 'speedInterval', 'speed_interval')),
-      topSpeed: str(first(v, 'topSpeed', 'speed')),
+      speedInterval: str(first(v, 'speedInterval', 'speed_interval')) || (str(v.speed).split('/')[1] ?? '').trim(),
+      topSpeed: str(first(v, 'topSpeed')) || str(v.speed).split('/')[0].trim(),
       body: num(v.body),
       armor: num(v.armor),
       pilot: num(v.pilot),
@@ -442,7 +446,6 @@ export function fromCommlink(data: Json): { character: Character; report: Import
           .map((m) => str(m.name))
           .join(', ')}`
       : '',
-    num(data.freeKarma) ? `Unspent free karma in Commlink: ${num(data.freeKarma)}` : '',
   ].filter(Boolean)
   if (extraNotes.length) notes.push(`Added to the notes: ${extraNotes.join('; ')}.`)
 
@@ -475,7 +478,8 @@ export function fromCommlink(data: Json): { character: Character; report: Import
     licenses,
     lifestyles,
     nuyen: num(data.nuyen),
-    karma: { available: num(data.karma), career: 0 },
+    // Commlink's "karma" is everything earned; "freeKarma" is what's left to spend (as the Roll20 sheet reads it).
+    karma: { available: num(data.freeKarma), career: num(data.karma) },
     notes: [str(data.notes), ...extraNotes].filter(Boolean).join('\n'),
   })
   notes.push('Commlink exports no prices or quality karma costs; these are 0 unless your books filled them in.')
@@ -486,7 +490,7 @@ export function fromCommlink(data: Json): { character: Character; report: Import
       source: 'Commlink 6',
       notes,
       checks: compare(data, character, weapons),
-      resources: { karma: num(data.karma), nuyen: num(data.nuyen) },
+      resources: { karma: num(data.freeKarma), career: num(data.karma), nuyen: num(data.nuyen) },
     },
   }
 }

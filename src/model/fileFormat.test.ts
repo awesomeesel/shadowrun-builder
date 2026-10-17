@@ -56,6 +56,20 @@ describe('character files', () => {
     expect(() => parseCharacterFile(json)).toThrow(/Character #2/)
   })
 
+  it('repairs spell drain values mixed up by older rulebook extraction', () => {
+    const file = JSON.stringify({
+      format: 'shadowrun-builder/character',
+      character: {
+        name: 'Mage',
+        spells: [
+          { name: 'Heal', drain: '5 3' },
+          { name: 'Manabolt', drain: '4' },
+        ],
+      },
+    })
+    expect(parseCharacterFile(file)[0].spells.map((s) => s.drain)).toEqual(['3', '4'])
+  })
+
   it('makes safe file names', () => {
     expect(characterFileName(createCharacter({ name: 'Mr. Johnson!' }))).toBe('mr-johnson.sr6char.json')
     expect(characterFileName(createCharacter({ name: '???' }))).toBe('character.sr6char.json')

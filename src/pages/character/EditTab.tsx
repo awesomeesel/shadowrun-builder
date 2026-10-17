@@ -1,7 +1,8 @@
 import { BarChart3, Coins, NotebookPen, Target, UserRound } from 'lucide-react'
 import { noAutofill, noAutofillField } from '../../components/noAutofill'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useOutletContext } from 'react-router'
+import { JumpMenu } from '../../components/JumpMenu'
 import { Field, NumberInput, Section } from '../../components/ui'
 import type { Character } from '../../model/character'
 import {
@@ -32,52 +33,56 @@ import {
 
 export function EditTab() {
   const { character, update } = useOutletContext<CharacterContext>()
+  const page = useRef<HTMLDivElement>(null)
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <BasicsSection character={character} update={update} />
-      {character.mode === 'build' ? (
-        <section className="card p-4 text-sm text-muted">
-          Attributes, skills, karma and nuyen are managed on the{' '}
-          <Link to="../build" relative="path" className="text-accent hover:underline">
-            Build
-          </Link>{' '}
-          tab until the build is finished.
-        </section>
-      ) : (
-        <>
-          <AttributesSection character={character} update={update} />
-          <SkillsSection character={character} update={update} />
-        </>
-      )}
-      <QualitiesSection character={character} update={update} />
-      <WeaponsSection character={character} update={update} />
-      <GearSection character={character} update={update} />
-      <ContactsSection character={character} update={update} />
-      <KnowledgeSection character={character} update={update} />
-      <IdentitySection character={character} update={update} />
-      <AugmentationsSection character={character} update={update} />
-      {(character.attributes.magic > 0 || character.spells.length > 0 || character.adeptPowers.length > 0) && (
-        <MagicSection character={character} update={update} />
-      )}
-      {(character.attributes.resonance > 0 || character.complexForms.length > 0) && (
-        <ComplexFormsSection character={character} update={update} />
-      )}
-      <MatrixDevicesSection character={character} update={update} />
-      <ProgramsSection character={character} update={update} />
-      <VehiclesSection character={character} update={update} />
-      {character.mode !== 'build' && <ResourcesSection character={character} update={update} />}
-      <Section title="Notes" icon={<NotebookPen className="size-4" />} className="lg:col-span-2">
-        <textarea
-          {...noAutofillField}
-          className="input min-h-32 w-full"
-          value={character.notes}
-          onChange={(e) => {
-            const notes = e.target.value
-            update((c) => ({ ...c, notes }))
-          }}
-        />
-      </Section>
-    </div>
+    <>
+      <JumpMenu container={page} />
+      <div ref={page} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <BasicsSection character={character} update={update} />
+        {character.mode === 'build' ? (
+          <section className="card p-4 text-sm text-muted">
+            Attributes, skills, karma and nuyen are managed on the{' '}
+            <Link to="../build" relative="path" className="text-accent hover:underline">
+              Build
+            </Link>{' '}
+            tab until the build is finished.
+          </section>
+        ) : (
+          <>
+            <AttributesSection character={character} update={update} />
+            <SkillsSection character={character} update={update} />
+          </>
+        )}
+        <QualitiesSection character={character} update={update} />
+        <WeaponsSection character={character} update={update} />
+        <GearSection character={character} update={update} />
+        <ContactsSection character={character} update={update} />
+        <KnowledgeSection character={character} update={update} />
+        <IdentitySection character={character} update={update} />
+        <AugmentationsSection character={character} update={update} />
+        {(character.attributes.magic > 0 || character.spells.length > 0 || character.adeptPowers.length > 0) && (
+          <MagicSection character={character} update={update} />
+        )}
+        {(character.attributes.resonance > 0 || character.complexForms.length > 0) && (
+          <ComplexFormsSection character={character} update={update} />
+        )}
+        <MatrixDevicesSection character={character} update={update} />
+        <ProgramsSection character={character} update={update} />
+        <VehiclesSection character={character} update={update} />
+        {character.mode !== 'build' && <ResourcesSection character={character} update={update} />}
+        <Section title="Notes" icon={<NotebookPen className="size-4" />} className="lg:col-span-2">
+          <textarea
+            {...noAutofillField}
+            className="input min-h-32 w-full"
+            value={character.notes}
+            onChange={(e) => {
+              const notes = e.target.value
+              update((c) => ({ ...c, notes }))
+            }}
+          />
+        </Section>
+      </div>
+    </>
   )
 }
 

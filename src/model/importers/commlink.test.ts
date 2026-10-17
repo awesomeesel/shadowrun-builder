@@ -18,7 +18,8 @@ const sample = {
   gender: 'FEMALE',
   heat: 2,
   reputation: 1,
-  karma: 3,
+  karma: 40,
+  freeKarma: 3,
   nuyen: 1200,
   initiation: 0,
   attributes: [
@@ -87,11 +88,32 @@ const sample = {
     { name: 'Wired reflexes', level: null, essence: 0.002, page: 'Core Rulebook 287' },
     { name: 'Muscle toner', level: null, essence: 4.0000001e-4, page: 'Core Rulebook 292' },
   ],
-  spells: [],
-  adeptPowers: [],
+  spells: [
+    {
+      name: 'Test Bolt',
+      category: 'Combat',
+      type: 'Mana',
+      range: 'LOS',
+      duration: 'Instant',
+      drain: '4',
+      page: 'Core Rulebook 133',
+    },
+  ],
+  adeptPowers: [{ name: 'Combat Sense 2', cost: 1, page: 'Core Rulebook 156' }],
   complexForms: [],
   vehicles: [],
-  drones: [],
+  drones: [
+    {
+      name: 'Test Drone',
+      handling: ['3', '5'],
+      acceleration: 15,
+      speed: '80/10',
+      pilot: 3,
+      body: 4,
+      armor: 4,
+      sensor: 3,
+    },
+  ],
   lifestyles: [{ customName: 'Coffin motel', name: 'Squatter', cost: 0, paidMonths: 2 }],
   sins: [{ name: 'Jane Fake', quality: 3 }],
   contacts: [{ name: 'Fixy', type: 'Fixer', loyalty: 2, influence: 4, favors: 1 }],
@@ -123,7 +145,7 @@ describe('Commlink import', () => {
       heat: 2,
       reputation: 1,
       nuyen: 1200,
-      karma: { available: 3, career: 0 },
+      karma: { available: 3, career: 40 },
       notes: 'Likes dogs.',
     })
     expect(c.attributes).toMatchObject({ body: 4, agility: 5, reaction: 4, magic: 0, resonance: 0 })
@@ -185,7 +207,7 @@ describe('Commlink import', () => {
   })
 
   it('reports karma and nuyen from the file for the user to confirm', () => {
-    expect(report.resources).toEqual({ karma: 3, nuyen: 1200 })
+    expect(report.resources).toEqual({ karma: 3, career: 40, nuyen: 1200 })
   })
 
   it('reports what it guessed and compares with Commlink', () => {
@@ -200,6 +222,18 @@ describe('Commlink import', () => {
         { label: 'Testco Carbine pool', commlink: '14', ours: '14' },
       ]),
     )
+  })
+
+  it('reads spells, adept power levels from the name, and drone speed', () => {
+    expect(c.spells[0]).toMatchObject({ name: 'Test Bolt', category: 'combat', type: 'mana', drain: '4' })
+    expect(c.adeptPowers[0]).toMatchObject({ name: 'Combat Sense', level: 2, powerPoints: 1 })
+    expect(c.vehicles[0]).toMatchObject({
+      kind: 'drone',
+      handling: '3/5',
+      topSpeed: '80',
+      speedInterval: '10',
+      pilot: 3,
+    })
   })
 
   it('maps metavariants to their base metatype', () => {

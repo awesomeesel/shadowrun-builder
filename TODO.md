@@ -20,9 +20,10 @@ Ideas and plans for Shadowrun Builder. Add your own anywhere; tick them off with
 - [ ] **Initiation and submersion** – 10 + grade karma; raises the Magic/Resonance limit above 6 and gives
       metamagics/echoes.
 - [x] **Healing between runs** – first aid, medkit and natural healing rolls in the end-session dialog.
-- [ ] **Commlink import for mages, deckers and riggers** – needs example export files.
-- [ ] **Printable sheet** – a print/PDF view of the character sheet.
-- [ ] **Jump menu for the Edit tab** – it's a long page.
+- [ ] **Commlink import for mages, deckers and riggers** – field names now follow Roll20's SR6 sheet importer
+      (spells, adept powers, drones); still worth testing with a real mage, decker and rigger export.
+- [x] **Printable sheet** – a print/PDF view of the character sheet.
+- [x] **Jump menu for the Edit tab** – it's a long page.
 - [x] **"New version available" banner** – so nobody needs Cmd+Shift+R after an update.
 
 ## How to ship

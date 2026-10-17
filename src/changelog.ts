@@ -11,6 +11,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 5,
+    date: '2026-10-17',
+    title: 'Print your sheet, and find your way on the Edit tab',
+    items: [
+      'Print / PDF button on the Sheet: a clean black-on-white sheet for the table or as a backup.',
+      'The Edit tab has a menu at the top to jump straight to any section.',
+      'Commlink import reads karma correctly: karma left and total karma earned are now separate.',
+      'Rulebook reading fixed: Heal and Darkness have the right Drain, and 12 spells that were missing (Armor, Invisibility, Cooling Heal and more) can now be picked from the books.',
+    ],
+  },
+  {
     id: 4,
     date: '2026-10-17',
     title: 'Karma shop, healing and more',

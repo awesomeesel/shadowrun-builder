@@ -519,5 +519,24 @@ export function createCharacter(overrides: Partial<Character> = {}): Character {
 /** Upgrade raw data from an older schema version so it can be parsed by `CharacterSchema`. */
 export function migrateCharacter(raw: unknown): unknown {
   // Only version 1 exists so far; future migrations go here, keyed on raw.schemaVersion.
-  return raw
+  return repairSpellDrain(raw)
+}
+
+/**
+ * Older rulebook extraction sometimes put a neighbouring spell's Drain in front
+ * of the real one ("5 3" for Heal). The real value is the last number.
+ */
+function repairSpellDrain(raw: unknown): unknown {
+  if (typeof raw !== 'object' || raw === null || !Array.isArray((raw as { spells?: unknown }).spells)) return raw
+  const spells = (raw as { spells: unknown[] }).spells
+  const broken = (s: unknown): s is { drain: string } =>
+    typeof s === 'object' &&
+    s !== null &&
+    typeof (s as { drain?: unknown }).drain === 'string' &&
+    /^\d+\s+\d+$/.test((s as { drain: string }).drain.trim())
+  if (!spells.some(broken)) return raw
+  return {
+    ...raw,
+    spells: spells.map((s) => (broken(s) ? { ...s, drain: s.drain.trim().split(/\s+/).pop() } : s)),
+  }
 }

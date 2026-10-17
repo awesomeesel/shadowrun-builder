@@ -16,6 +16,7 @@ import {
   Wifi,
   IdCard,
 } from 'lucide-react'
+import { Printer } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useOutletContext } from 'react-router'
 import { SourceLink } from '../../components/SourceLink'
@@ -58,11 +59,18 @@ export function SheetTab() {
   )
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 print:grid-cols-2 print:gap-2">
       <section className="card p-4 lg:col-span-2">
         <div className="flex gap-4">
           <Portrait src={character.portrait} metatype={character.metatype} className="size-16 sm:size-20" />
           <div className="min-w-0 flex-1">
+            {/* On screen the page header shows the name; on paper this does. */}
+            <h1 className="hidden font-display text-2xl font-semibold print:block">
+              {character.name || 'Unnamed runner'}
+              {character.realName && (
+                <span className="ml-2 text-base font-normal text-muted">({character.realName})</span>
+              )}
+            </h1>
             <div className="text-sm text-muted">
               {[METATYPES[character.metatype].name, character.concept].filter(Boolean).join(' · ')}
             </div>
@@ -79,6 +87,13 @@ export function SheetTab() {
               </div>
             )}
           </div>
+          <button
+            className="btn h-fit shrink-0 print:hidden"
+            onClick={() => window.print()}
+            title="Print the sheet, or save it as a PDF from the print dialog"
+          >
+            <Printer className="size-4" /> <span className="hidden sm:inline">Print / PDF</span>
+          </button>
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12">
           {visibleAttributes.map((a) => (
@@ -146,7 +161,7 @@ export function SheetTab() {
         icon={<Target className="size-4" />}
         className="lg:row-span-2"
         aside={
-          <label className="flex items-center gap-2 text-xs text-muted">
+          <label className="flex items-center gap-2 text-xs text-muted print:hidden">
             <input type="checkbox" checked={showUntrained} onChange={(e) => setShowUntrained(e.target.checked)} />
             Show untrained
           </label>
@@ -234,7 +249,7 @@ export function SheetTab() {
                   {c.notes && <div className="text-xs text-muted">{c.notes}</div>}
                 </span>
                 <span className="shrink-0 text-xs text-muted tabular-nums" title="Connection / Loyalty">
-                  C{c.connection} L{c.loyalty}
+                  Connection {c.connection} · Loyalty {c.loyalty}
                 </span>
               </li>
             ))}
@@ -314,7 +329,7 @@ export function SheetTab() {
                     <th className="pb-1 font-normal">Spell</th>
                     <th className="pb-1 font-normal">Type</th>
                     <th className="pb-1 text-center font-normal">Range</th>
-                    <th className="pb-1 text-center font-normal">Dur.</th>
+                    <th className="pb-1 text-center font-normal">Duration</th>
                     <th className="pb-1 text-right font-normal">Drain</th>
                   </tr>
                 </thead>
@@ -327,7 +342,7 @@ export function SheetTab() {
                         {spell.notes && <div className="text-xs text-muted">{spell.notes}</div>}
                       </td>
                       <td className="py-1.5 text-xs text-muted capitalize">
-                        {spell.category} · {spell.type === 'mana' ? 'M' : 'P'}
+                        {spell.category} · {spell.type === 'mana' ? 'Mana' : 'Physical'}
                       </td>
                       <td className="py-1.5 text-center">{spell.range || '–'}</td>
                       <td className="py-1.5 text-center">{spell.duration || '–'}</td>

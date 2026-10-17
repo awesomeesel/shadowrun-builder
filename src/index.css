@@ -99,3 +99,54 @@
     display: none;
   }
 }
+
+/* Printing (or saving as PDF) the character sheet: black on white, compact, no app chrome. */
+@media print {
+  :root {
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-raised: #ffffff;
+    --color-line: #b8bec8;
+    --color-fg: #111111;
+    --color-muted: #555b66;
+    --color-accent: #0b6e52;
+    --color-neon: #a3005f;
+    --color-amber: #7a4d00;
+    --color-danger: #b0002b;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+
+  html {
+    font-size: 11px;
+  }
+
+  body {
+    background: #ffffff;
+    background-image: none;
+    color-scheme: light;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .card {
+    box-shadow: none;
+    backdrop-filter: none;
+    break-inside: avoid;
+  }
+
+  /* Links to rulebook pages are useless on paper. */
+  a[href]:not([data-print]) {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+@media print {
+  /* Sections that are wide on a big screen are wide on paper too. */
+  .lg\:col-span-2 {
+    grid-column: span 2 / span 2;
+  }
+}

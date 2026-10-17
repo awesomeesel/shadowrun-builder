@@ -34,7 +34,9 @@ export default function App() {
   return (
     <>
       <RouterProvider router={router} />
-      <Updates />
+      <div className="print:hidden">
+        <Updates />
+      </div>
     </>
   )
 }

@@ -55,7 +55,7 @@ export function CharacterPage() {
 
   return (
     <div>
-      <header ref={header} className="sticky top-0 z-10 border-b border-line bg-bg/90 backdrop-blur-md">
+      <header ref={header} className="sticky top-0 z-10 border-b border-line bg-bg/90 backdrop-blur-md print:hidden">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 pt-3 sm:px-8">
           <Link to="/" className="text-muted hover:text-fg" aria-label="Back to characters">
             <ArrowLeft className="size-5" />
@@ -119,7 +119,7 @@ export function CharacterPage() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-8">
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-8 print:max-w-none print:p-0">
         <Outlet context={{ character, update } satisfies CharacterContext} />
       </main>
     </div>

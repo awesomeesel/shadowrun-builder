@@ -15,7 +15,11 @@ export function Section({
   icon?: ReactNode
 }) {
   return (
-    <section className={`card min-w-0 p-4 ${className}`}>
+    // data-jump lets a page's jump menu find its sections; the scroll margin keeps the title clear of sticky bars.
+    <section
+      data-jump={title}
+      className={`card min-w-0 scroll-mt-[calc(var(--header-h,5.6rem)+3.5rem)] p-4 ${className}`}
+    >
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <h2 className="flex items-center gap-1.5 font-display text-sm tracking-widest text-accent uppercase">
           {icon}

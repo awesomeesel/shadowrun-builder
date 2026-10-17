@@ -133,7 +133,11 @@ function ResourcesCheck({
   source: string
   resources: ImportReport['resources']
 }) {
-  const [values, setValues] = useState({ available: resources.karma, career: 0, nuyen: resources.nuyen })
+  const [values, setValues] = useState({
+    available: resources.karma,
+    career: resources.career,
+    nuyen: resources.nuyen,
+  })
   // Saves run one after another so fast typing can't store an older value last.
   const queue = useRef(Promise.resolve())
   const change = (patch: Partial<typeof values>) => {
@@ -155,10 +159,9 @@ function ResourcesCheck({
         <Coins className="size-3.5" /> Karma and nuyen
       </h3>
       <p className="mb-3 text-sm">
-        The {source} file says <strong>{resources.karma} karma</strong> and{' '}
-        <strong>{resources.nuyen.toLocaleString()}¥</strong>. It doesn't say whether karma already spent is taken off.
-        If {resources.karma} is everything the character has earned, enter it as career karma and type in what’s
-        actually left to spend.
+        From the {source} file: <strong>{resources.karma} karma</strong> left to spend,{' '}
+        <strong>{resources.career} karma</strong> earned in total, and{' '}
+        <strong>{resources.nuyen.toLocaleString()}¥</strong>. Check them against Commlink and fix anything that's off.
       </p>
       <div className="grid grid-cols-3 gap-3">
         <Field label="Karma left">
@@ -171,11 +174,6 @@ function ResourcesCheck({
           <NumberInput value={values.nuyen} min={0} onChange={(nuyen) => change({ nuyen })} />
         </Field>
       </div>
-      {resources.karma > 0 && values.career === 0 && (
-        <button className="btn mt-2 text-sm" onClick={() => change({ career: resources.karma, available: 0 })}>
-          {resources.karma} is the total earned
-        </button>
-      )}
     </section>
   )
 }

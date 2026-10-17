@@ -73,9 +73,39 @@ export function groupLines(items: PdfItem[]): Line[] {
   return groups.map(makeLine)
 }
 
-/** Where the right text column starts. Left-column words never begin this far right. */
-export function columnSplit(width: number): number {
-  return width * 0.46
+/** Where the columns split when the page gives no clearer answer. */
+const DEFAULT_SPLIT = 0.46
+
+/**
+ * The x position between the two text columns: the middle of the gap nearest
+ * the page centre that the fewest text fragments cross (headings or tables
+ * spanning both columns may cross it). Falls back to 46% of the width when
+ * there is no clear gutter.
+ */
+export function columnSplit(page: PageLayout, items = contentItems(page)): number {
+  const from = Math.floor(page.width * 0.38)
+  const to = Math.ceil(page.width * 0.62)
+  const crossings = new Uint16Array(to - from)
+  for (const [x, , , , w] of items) {
+    for (let px = Math.max(from, Math.floor(x)); px < Math.min(to, Math.ceil(x + w)); px++) crossings[px - from]++
+  }
+  const fewest = Math.min(...crossings)
+  // Gaps between table columns can be wider than the gutter, so take the gap nearest the centre.
+  const centre = page.width / 2
+  let best: number | null = null
+  let run = -1
+  for (let i = 0; i <= crossings.length; i++) {
+    if (i < crossings.length && crossings[i] === fewest) {
+      if (run === -1) run = i
+    } else if (run !== -1) {
+      const middle = from + (run + i) / 2
+      if (i - run >= 6 && (best === null || Math.abs(middle - centre) < Math.abs(best - centre))) best = middle
+      run = -1
+    }
+  }
+  // A real gutter is crossed by little text (headings or tables spanning both columns).
+  const clear = best !== null && fewest <= Math.max(2, items.length * 0.03)
+  return clear ? best! : page.width * DEFAULT_SPLIT
 }
 
 /**
@@ -83,8 +113,8 @@ export function columnSplit(width: number): number {
  * column. Footer lines are dropped.
  */
 export function readingOrder(page: PageLayout): Line[] {
-  const split = columnSplit(page.width)
   const body = contentItems(page)
+  const split = columnSplit(page, body)
   return [...groupLines(body.filter((i) => i[0] < split)), ...groupLines(body.filter((i) => i[0] >= split))]
 }
 
