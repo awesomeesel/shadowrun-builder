@@ -75,7 +75,7 @@ export function MonitorTrack({
         <span className="tabular-nums">
           {filled} / {monitor.boxes}
           {filled > 0 && (
-            <button className="ml-3 text-muted hover:text-fg print:hidden" onClick={() => onChange(0)}>
+            <button className="ml-3 text-muted hover:text-fg" onClick={() => onChange(0)}>
               Clear
             </button>
           )}

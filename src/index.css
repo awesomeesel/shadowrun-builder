@@ -143,10 +143,3 @@
     text-decoration: none;
   }
 }
-
-@media print {
-  /* Sections that are wide on a big screen are wide on paper too. */
-  .lg\:col-span-2 {
-    grid-column: span 2 / span 2;
-  }
-}

@@ -13,9 +13,9 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     id: 5,
     date: '2026-10-17',
-    title: 'Print your sheet, and find your way on the Edit tab',
+    title: 'A play sheet to print, and a jump menu on the Edit tab',
     items: [
-      'Print / PDF button on the Sheet: a clean black-on-white sheet for the table or as a backup.',
+      'Print play sheet (on the Sheet tab): one page for pen-and-paper play, with boxes for damage, Edge, ammo, Matrix damage and Overwatch, and lines for sustained spells, spirits, money and notes.',
       'The Edit tab has a menu at the top to jump straight to any section.',
       'Commlink import reads karma correctly: karma left and total karma earned are now separate.',
       'Rulebook reading fixed: Heal and Darkness have the right Drain, and 12 spells that were missing (Armor, Invisibility, Cooling Heal and more) can now be picked from the books.',
