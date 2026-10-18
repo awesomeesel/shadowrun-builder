@@ -269,14 +269,16 @@
   <div class="cols" style="grid-template-columns:1.1fr 1fr">
     <div class="phones" style="flex-direction:column">
       <div class="phones">
-        <div class="shot"><img src="shots/play-phone.png" /></div>
+        <div class="shot crop" style="height:92mm"><img src="shots/edge-actions-phone.png" /></div>
         <div class="shot"><img src="shots/play-roll-phone.png" /></div>
       </div>
-      <div class="caption">Left: the top of a running session, with damage tracks and Edge. Right: an attack
-        rolled. Tap a die to spend Edge on it.</div>
-      <div class="tip" style="margin-top:3mm"><b>Tip</b> Rolling with real dice? Use the app as a smart sheet:
-        it still shows the right pool, with wound modifiers, sustained spells and range already counted. Just
-        mark the damage and Edge.</div>
+      <div class="caption">Left: Edge actions that fit your runner, chosen before you roll. Right: an attack rolled;
+        tap a die to spend Edge on it.</div>
+      <div class="tip" style="margin-top:3mm"><b>New to the game?</b> A short guide sits at the top of every session
+        until you hide it, and every <b>ⓘ</b> (next to pools, stats and damage tracks) says what it is and when to roll
+        it, with the page in the book.</div>
+      <div class="note"><b>Real dice?</b> Use the app as a smart sheet: it shows the right pool with wounds, sustained
+        spells and range counted. Just mark damage and Edge.</div>
     </div>
     <div>
       <h3>A session, start to finish</h3>
@@ -285,11 +287,11 @@
           sustained spells, spirits and rent, with one-tap fixes like <i>Heal all</i> and <i>Reload all</i>.</li>
         <li><span class="ui">Start session</span>: Edge refills and you get the play screen. Your rolls are
           logged for the session summary.</li>
-        <li><b>Status</b>: tap boxes to mark damage, or use <span class="ui">Take damage…</span>: enter the
-          damage and it rolls your resistance (or drain) and fills the boxes, including overflow. The wound modifier is applied to every
-          pool by itself.</li>
-        <li><b>Edge</b>: diamonds show what you have (at most 7). After a roll, spend it on the result: reroll
-          one die, +1 to a die, buy a hit, or reroll all misses.</li>
+        <li><b>Status</b>: tap boxes to mark damage, or use <span class="ui">Take damage…</span>: it rolls your
+          resistance and fills the boxes. Wound modifiers come off every pool by themselves. Statuses (Burning,
+          Cover…) are listed with what they do.</li>
+        <li><b>Edge</b> (at most 7): <i>before</i> a roll, pick an Edge action such as Shank or Called Shot—Vitals
+          and tap <span class="ui">Use</span>; <i>after</i> it, reroll a die, add 1, buy a hit or reroll misses.</li>
         <li><b>Combat</b>: roll initiative to start a fight. The tracker counts rounds and the Major and Minor
           actions you have left.</li>
         <li><b>Attack</b>: pick the range and firing mode and tap <span class="ui">Attack</span>. Ammo counts
@@ -306,7 +308,8 @@
           someone else’s.</li>
         <li><b>Drones and vehicles</b>: their own damage tracks and pilot rolls.</li>
         <li><b>Matrix</b>: your persona’s numbers, programs, Matrix damage and Overwatch Score.</li>
-        <li><b>Roll dice</b>: any pool you like, with a +/− modifier for cover, smartlinks and the like.</li>
+        <li><b>Roll dice</b>: every skill, with specializations as their own pool (↳ Blades), plus a +/− modifier.
+          Your qualities are listed with what they do.</li>
       </ul>
       <div class="note"><b>Pen and paper?</b> On the Sheet tab, <span class="ui">Print play sheet</span> makes a
         one-page sheet with boxes for damage, Edge, ammo and Overwatch, and lines for spells, spirits, money and
@@ -342,6 +345,8 @@
         <li>The share icon at the top of a shared character turns green. Tap it to see “Up to date”, to stop
           sharing that runner, or to leave the campaign.</li>
         <li>If the GM closes the campaign, you’ll see it there and can remove it.</li>
+        <li><b>From your GM</b>: damage, a status, Edge or a reward shows at the top of your character. Nothing
+          changes until you <span class="ui">Accept</span>; <span class="ui">Decline</span> if it’s wrong.</li>
       </ul>
 
       <h3>No internet at the table?</h3>
@@ -358,8 +363,9 @@
         <div class="shot"><img src="shots/join-phone.png" /></div>
         <div class="shot"><img src="shots/share-dialog-phone.png" /></div>
       </div>
-      <div class="caption">Left: what the QR code opens. Right: <i>Share with GM</i> on a character, with the
-        campaign it’s shared with, joining another, and Send a copy.</div>
+      <div class="caption">Left: what the QR code opens. Right: <i>Share with GM</i> on a character.</div>
+      <div class="shot" style="margin:3mm auto 0;width:72%"><img src="shots/inbox-phone.png" /></div>
+      <div class="caption">Damage, a status and a reward from the GM, waiting for the player.</div>
     </div>
   </div>
 
@@ -388,7 +394,7 @@
   <p class="lede">The <span class="ui">GM</span> button on the start page opens your screen. Each campaign keeps your
     group together: its runners, encounters, run log and notes.</p>
 
-  <div class="shot crop" style="height:118mm"><img src="shots/campaign-full.png" style="height:auto;width:100%" /></div>
+  <div class="shot crop" style="height:74mm"><img src="shots/campaign-full.png" style="height:auto;width:100%" /></div>
   <div class="caption">A campaign page: the runners shared with it (live), the party overview, encounters, and further
     down the run log and notes.</div>
 
@@ -414,9 +420,23 @@
       <p>Connect <span class="ui">Google Drive</span> and everything on the GM screen is backed up to a “GM” folder in
         your Drive: campaigns with their codes and passwords, encounters, notes and run log. Connect the same Drive
         on your laptop and tablet and it follows you. An orange banner warns you while nothing is backed up.</p>
-      <div class="warn"><b>Heads-up</b> Only the device that made a campaign can close it or remove runners. On
-        your other devices you can see and run everything else.</div>
+      <div class="warn"><b>Heads-up</b> Only the device that made a campaign can close it, remove runners or send
+        to players. On your other devices you can see and run everything else.</div>
     </div>
+  </div>
+
+  <h3>Sending to players</h3>
+  <div class="cols-3-2">
+    <div>
+      <ul>
+        <li><span class="ui">Send…</span> on a runner: damage (to resist, or straight onto the boxes), a status,
+          Edge, or karma and nuyen. It lands on the player’s sheet once they accept.</li>
+        <li>Anything not yet accepted shows as <i>Waiting for the player</i>; the × takes it back.</li>
+        <li><span class="ui">Log a run</span> can send the run’s karma and nuyen to everyone who played.</li>
+        <li>Under Runners, choose what you may send. Untick both and the Send buttons disappear.</li>
+      </ul>
+    </div>
+    <div class="shot" style="margin-top:0"><img src="shots/send-dialog.png" /></div>
   </div>
 
   <div class="footer"><span>Shadowrun Builder · Player &amp; GM guide</span><span>5 / 6</span></div>
@@ -464,6 +484,8 @@
         <li><span class="ui">+ Status</span>: Burning 3, Cover II, Dazed for 2 rounds… Dazed, Chilled and Zapped
           also lower initiative.</li>
         <li>Dice chips roll with wounds already counted, and Edge boosts after the roll.</li>
+        <li>Shared runners show the player’s own damage and Edge; <span class="ui">Send…</span> sends them damage, a
+          status or Edge to accept.</li>
       </ul>
 
       <h3>Rules reference</h3>

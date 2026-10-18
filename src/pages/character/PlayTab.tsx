@@ -36,6 +36,7 @@ import { SpellsSection } from './play/SpellsSection'
 import type { QuickPool } from './play/types'
 import { VehiclesSection } from './play/VehiclesSection'
 import { StatusList } from './play/StatusList'
+import { QuickNote } from './play/QuickNote'
 import { EdgeActions } from './play/EdgeActions'
 import { NewPlayerTips, QualityReminders } from './play/Guidance'
 import { HelpButton } from '../../components/Help'
@@ -248,6 +249,18 @@ function ActiveSession({ character, update }: CharacterContext) {
         <button className="btn" onClick={() => setEnding(true)}>
           <Flag className="size-4" /> End session
         </button>
+        <QuickNote
+          notes={session.notes}
+          onAdd={(text) => {
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            update((c) => {
+              const s = c.play.session
+              if (!s) return c
+              const notes = `${s.notes}${s.notes && !s.notes.endsWith('\n') ? '\n' : ''}[${time}] ${text}`
+              return { ...c, play: { ...c.play, session: { ...s, notes } } }
+            })
+          }}
+        />
       </section>
 
       <NewPlayerTips />

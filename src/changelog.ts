@@ -11,6 +11,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 11,
+    date: '2026-10-18',
+    title: 'Quick notes at the top of the session',
+    items: [
+      'Jot something down without scrolling: type in the box at the top of the Play tab and press Enter. It goes into the session notes with the time, and the latest note shows right under it.',
+    ],
+  },
+  {
     id: 10,
     date: '2026-10-18',
     title: 'More help on the Play tab',

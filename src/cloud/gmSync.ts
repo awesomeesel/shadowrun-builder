@@ -35,7 +35,18 @@ const APP_TAG = 'shadowrun-builder'
 const FORMAT = 'shadowrun-builder/gm-item'
 
 /** Campaign fields worth backing up; the rest is this device's sharing bookkeeping. */
-const CAMPAIGN_FIELDS = ['id', 'role', 'code', 'password', 'name', 'notes', 'joinHidden', 'runs', 'joinedAt', 'gmSends'] as const
+const CAMPAIGN_FIELDS = [
+  'id',
+  'role',
+  'code',
+  'password',
+  'name',
+  'notes',
+  'joinHidden',
+  'runs',
+  'joinedAt',
+  'gmSends',
+] as const
 
 const campaignUpdatedAt = (c: Campaign) => c.updatedAt ?? c.joinedAt
 
