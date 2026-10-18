@@ -9,6 +9,7 @@ import { SPIRIT_TYPES, spiritStats, type SpiritTypeId } from './companions'
 import { computeDerived, weaponPool } from './derived'
 import { npcStats, type NpcEntry, type NpcPool } from './npc'
 import { minorActions, rollPool } from './play'
+import { IC_BY_ID } from './ic'
 import { STATUS_BY_NAME, statusInitiative, statusLabel } from './statuses'
 
 export interface CombatantStats {
@@ -84,6 +85,36 @@ export function combatantStats(p: Participant, character?: Character): Combatant
       sheetStatuses: [],
     }
   }
+  if (p.kind === 'ic' && p.ic) {
+    const ic = p.ic
+    const def = IC_BY_ID.get(ic.type)
+    const rolls = ic.hostRating * 2
+    return {
+      initiative: { score: ic.dataProcessing * 2, dice: 3 },
+      // In the Matrix, Defense Rating is Data Processing + Firewall (p. 175).
+      defenseRating: ic.dataProcessing + ic.firewall,
+      monitor: { physical: rolls, stun: null },
+      // IC are programs: Matrix damage gives them no wound modifiers.
+      woundStep: 1000,
+      pools: [
+        ...(def?.defense
+          ? [{ label: 'Attack', pool: rolls, info: `AR ${rolls} · they defend with ${def.defense}. ${def.effect}` }]
+          : []),
+        { label: 'Matrix Perception', pool: rolls },
+        { label: 'Defense', pool: rolls, ignoreWounds: true },
+      ],
+      edge: 0,
+      eric: [0, 0, 0],
+      majors: 1,
+      minors: minorActions(3),
+      isGrunt: false,
+      extras: [
+        `Attack Rating ${rolls} (Host Rating × 2). ${def ? `${def.defense ? `Defends with ${def.defense}. ` : ''}${def.effect}` : ''}`,
+        `Host ${ic.hostName || ''} rating ${ic.hostRating}: Attack ${ic.attack}, Sleaze ${ic.sleaze}, Data Processing ${ic.dataProcessing}, Firewall ${ic.firewall}.`,
+      ],
+      sheetStatuses: [],
+    }
+  }
   if (p.kind === 'runner' && character) {
     const d = computeDerived(character)
     return {
@@ -128,7 +159,7 @@ export function combatantStats(p: Participant, character?: Character): Combatant
 /** −1 per full step of boxes on each track. */
 export function woundModifier(p: Participant, stats: CombatantStats): number {
   const step = stats.woundStep
-  return -(Math.floor(p.damage.physical / step) + Math.floor(p.damage.stun / step))
+  return -(Math.floor(p.damage.physical / step) + Math.floor(p.damage.stun / step)) || 0
 }
 
 /** Initiative including status changes (Chilled −4, Dazed −4, Zapped −2). */

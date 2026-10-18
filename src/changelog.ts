@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 15,
+    date: '2026-10-18',
+    title: 'IC in encounters, and Edge for the opposition',
+    items: [
+      'GMs: Add → Matrix (IC) sets up a host (rating and its four attributes) and launches IC into the fight: Killer, Black IC, Patrol and the rest, with their numbers, defense roll and effect. One of each type, up to the host rating.',
+      'NPCs and grunt groups can use Edge actions (Called Shot—Vitals, Knockout Blow…) from their card, paid from their Edge or the group’s shared pool. A group that already used Edge this round is marked, since grunts may only use it once per round.',
+      'Rules reference: a short entry on hosts and IC.',
+    ],
+  },
+  {
     id: 14,
     date: '2026-10-18',
     title: 'A louder-looking intro',

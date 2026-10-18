@@ -6,7 +6,8 @@ import { entrySummary } from '../books/toCharacter'
 import { noAutofill, noAutofillField } from '../components/noAutofill'
 import { db } from '../db/db'
 import { CharacterSchema, migrateCharacter } from '../model/character'
-import { ParticipantSchema, type Encounter } from '../model/encounter'
+import { ParticipantSchema, type Encounter, type Participant } from '../model/encounter'
+import { IC_TYPES, hostAttributes, isStandardSpread, type HostAttributes } from '../rules/sr6/ic'
 import { SPIRIT_TYPES } from '../rules/sr6/companions'
 import { addNpcs } from '../rules/sr6/encounter'
 import { latestSheets } from '../share/campaigns'
@@ -15,15 +16,18 @@ import { addCastMember, castStatsSummary } from './castStats'
 import type { NpcEntry } from '../rules/sr6/npc'
 import { Counter } from '../pages/character/play/RollStep'
 
-type Tab = 'cast' | 'books' | 'spirit' | 'runner' | 'custom'
+type Tab = 'cast' | 'books' | 'spirit' | 'runner' | 'custom' | 'matrix'
 
 /** Add enemies from the books, spirits, the runners, or a quick custom enemy. */
 export function AddCombatants({
   campaignId,
+  participants = [],
   update,
   onClose,
 }: {
   campaignId?: string
+  /** Who's already in the fight, so a host doesn't launch a second copy of an IC. */
+  participants?: Participant[]
   update: (change: (e: Encounter) => Encounter) => void
   onClose: () => void
 }) {
@@ -46,6 +50,7 @@ export function AddCombatants({
     ['spirit', 'Spirit'],
     ['runner', 'Runner'],
     ['custom', 'Quick enemy'],
+    ['matrix', 'Matrix (IC)'],
   ]
   return (
     <div
@@ -82,6 +87,7 @@ export function AddCombatants({
           {tab === 'runner' && <RunnerForm add={add} campaignId={campaignId} />}
           {tab === 'custom' && <CustomForm add={add} />}
           {tab === 'cast' && <CastForm add={add} cast={cast ?? []} />}
+          {tab === 'matrix' && <HostForm add={add} participants={participants} />}
         </div>
         <div className="flex justify-end border-t border-line p-3">
           <button className="btn btn-primary" onClick={onClose}>
@@ -422,6 +428,129 @@ function CastForm({ add, cast }: { add: Add; cast: CastMember[] }) {
       </ul>
       <p className="text-xs text-muted">Add or edit people under Cast on the campaign page.</p>
       {added.length > 0 && <p className="text-xs text-accent">Added: {added.join(', ')}</p>}
+    </div>
+  )
+}
+
+/**
+ * A host and the IC it launches (p. 185–187). Every IC shares the host's
+ * numbers. A host launches one IC per combat round, so add them as it does.
+ */
+function HostForm({ add, participants }: { add: Add; participants: Participant[] }) {
+  const [hostName, setHostName] = useState('Security host')
+  const [rating, setRating] = useState(4)
+  const [attrs, setAttrs] = useState<HostAttributes>(hostAttributes(4))
+  const [picked, setPicked] = useState<string[]>([])
+  const [done, setDone] = useState('')
+  // IC this host already has running in the fight: one copy of each type at most.
+  const running = participants.filter((p) => p.kind === 'ic' && p.ic?.hostName === hostName && !p.out)
+  const runningTypes = new Set(running.map((p) => p.ic!.type))
+  const room = Math.max(0, rating - running.length)
+  const setAttr = (key: keyof HostAttributes) => (value: number) => setAttrs({ ...attrs, [key]: value })
+
+  return (
+    <div className="grid gap-4 text-sm">
+      <div className="flex flex-wrap items-end gap-4">
+        <label className="min-w-0 flex-1 basis-48">
+          <div className="mb-1 text-xs text-muted">Host</div>
+          <input
+            {...noAutofill}
+            className="input w-full"
+            value={hostName}
+            onChange={(e) => setHostName(e.target.value)}
+          />
+        </label>
+        <Counter
+          label="Host rating"
+          value={rating}
+          min={1}
+          max={12}
+          onChange={(r) => {
+            setRating(r)
+            setAttrs(hostAttributes(r))
+          }}
+        />
+      </div>
+      <div className="flex flex-wrap gap-4">
+        <Counter label="Attack" value={attrs.attack} min={1} max={15} onChange={setAttr('attack')} />
+        <Counter label="Sleaze" value={attrs.sleaze} min={1} max={15} onChange={setAttr('sleaze')} />
+        <Counter
+          label="Data Processing"
+          value={attrs.dataProcessing}
+          min={1}
+          max={15}
+          onChange={setAttr('dataProcessing')}
+        />
+        <Counter label="Firewall" value={attrs.firewall} min={1} max={15} onChange={setAttr('firewall')} />
+      </div>
+      <p className={`text-xs ${isStandardSpread(rating, attrs) ? 'text-muted' : 'text-amber'}`}>
+        {isStandardSpread(rating, attrs)
+          ? `Usual spread: ${rating}, ${rating + 1}, ${rating + 2} and ${rating + 3} in any order (p. 185). Defense Rating ${attrs.dataProcessing + attrs.firewall}, IC rolls and Attack Rating ${rating * 2}.`
+          : `Hosts usually have ${rating}, ${rating + 1}, ${rating + 2} and ${rating + 3} in some order (p. 185).`}
+      </p>
+      <div>
+        <div className="mb-1 text-xs text-muted">
+          IC to launch ({running.length} running, room for {room} more; one of each type)
+        </div>
+        <div className="grid gap-1.5 sm:grid-cols-2">
+          {IC_TYPES.map((t) => {
+            const on = picked.includes(t.id)
+            const disabled = runningTypes.has(t.id) || (!on && picked.length >= room)
+            return (
+              <label
+                key={t.id}
+                className={`flex items-start gap-2 rounded-lg border px-2.5 py-1.5 ${on ? 'border-accent/60' : 'border-line'} ${disabled ? 'opacity-50' : ''}`}
+                title={t.effect}
+              >
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={on}
+                  disabled={disabled}
+                  onChange={(e) => setPicked(e.target.checked ? [...picked, t.id] : picked.filter((id) => id !== t.id))}
+                />
+                <span className="min-w-0">
+                  <span className="font-semibold">{t.name}</span>
+                  {runningTypes.has(t.id) && <span className="text-xs text-muted"> · running</span>}
+                  <span className="block text-xs text-muted">
+                    {t.defense ? `Defend: ${t.defense}. ` : ''}
+                    {t.effect}
+                  </span>
+                </span>
+              </label>
+            )
+          })}
+        </div>
+      </div>
+      <p className="text-xs text-muted">
+        A host launches one IC per combat round, at the start of its turn (p. 185); add them as it does.
+      </p>
+      <button
+        className="btn btn-primary justify-self-start"
+        disabled={picked.length === 0 || !hostName.trim()}
+        onClick={() => {
+          const host = hostName.trim()
+          add((enc) => ({
+            ...enc,
+            participants: [
+              ...enc.participants,
+              ...picked.map((type) =>
+                ParticipantSchema.parse({
+                  kind: 'ic',
+                  name: `${IC_TYPES.find((t) => t.id === type)!.name}${type === 'black' ? '' : ' IC'}`,
+                  group: '',
+                  ic: { type, hostName: host, hostRating: rating, ...attrs },
+                }),
+              ),
+            ],
+          }))
+          setDone(`Launched ${picked.map((id) => IC_TYPES.find((t) => t.id === id)!.name).join(', ')} on ${host}.`)
+          setPicked([])
+        }}
+      >
+        Launch IC
+      </button>
+      {done && <p className="text-xs text-accent">{done}</p>}
     </div>
   )
 }

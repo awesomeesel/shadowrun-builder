@@ -24,7 +24,8 @@ Ideas and plans for Shadowrun Builder. Add your own anywhere; tick them off with
 - [x] **Player statuses on GM cards** – shared runners' own statuses show in encounters and count for initiative.
 - [x] **Sample encounters and Composure reminder** – grunts by Professional Rating from the books; Composure
       prompt once boxes exceed the rating.
-- [ ] **Matrix participant in encounters** – a host with IC that can join an encounter, for deckers to fight.
+- [x] **Matrix participant in encounters** – a host with IC that can join an encounter, for deckers to fight.
+- [x] **Edge for grunts in encounters** – Edge actions from the card; once-per-round use for grunt groups.
 - [x] **Karma shop** – spend karma between runs at the book's prices (attributes, skills, specializations,
       qualities, spells), logged in the karma history.
 - [x] **Initiation and submersion** – 10 + grade karma; raises the Magic/Resonance limit above 6 and gives

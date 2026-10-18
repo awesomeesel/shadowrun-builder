@@ -58,6 +58,7 @@ export function EncounterPage() {
   const [adding, setAdding] = useState(false)
   const [messages, setMessages] = useState<string[]>([])
   const [roll, setRoll] = useState<GmRoll | null>(null)
+  const [edgeNote, setEdgeNote] = useState('')
 
   const shared = useLiveQuery(() => db.sharedSheets.toArray())
   // Runners shared by players are linked as "shared:<sheet id>".
@@ -113,7 +114,12 @@ export function EncounterPage() {
       const p = e.participants.find((x) => x.id === participantId)
       if (!p) return e
       if (stats.get(p.id)?.isGrunt && p.group) {
-        return { ...e, groupEdge: { ...e.groupEdge, [p.group]: Math.max(0, (e.groupEdge[p.group] ?? 0) - cost) } }
+        return {
+          ...e,
+          groupEdge: { ...e.groupEdge, [p.group]: Math.max(0, (e.groupEdge[p.group] ?? 0) - cost) },
+          // Grunt groups may use Edge once per round (p. 203); remember when they did.
+          groupEdgeUsed: { ...e.groupEdgeUsed, [p.group]: e.round },
+        }
       }
       return {
         ...e,
@@ -253,6 +259,14 @@ export function EncounterPage() {
         )}
       </header>
 
+      {edgeNote && (
+        <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber/50 bg-amber/10 px-3 py-2 text-sm text-amber">
+          <span className="mr-auto">{edgeNote}</span>
+          <button className="text-muted hover:text-fg" onClick={() => setEdgeNote('')} aria-label="Dismiss">
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
       {messages.length > 0 && (
         <div className="mb-4 rounded-lg border border-amber/50 bg-amber/10 p-3 text-sm">
           <div className="mb-1 flex items-center justify-between">
@@ -290,6 +304,13 @@ export function EncounterPage() {
               live={p.characterId?.startsWith('shared:')}
               update={update}
               onRoll={(label, pool, info, initiativeScore) => doRoll(p.id, label, pool, info, initiativeScore)}
+              edgeUsedThisRound={
+                !!p.group && encounter.round > 0 && encounter.groupEdgeUsed[p.group] === encounter.round
+              }
+              onEdgeAction={(label, cost) => {
+                spendEdge(p.id, cost)
+                setEdgeNote(`${p.name}: ${label}, ${cost} Edge spent. Roll the action now.`)
+              }}
             />
           ))}
         </ol>
@@ -327,6 +348,7 @@ export function EncounterPage() {
       {adding && (
         <AddCombatants
           campaignId={encounter.campaignId}
+          participants={encounter.participants}
           update={(change) => void update(change)}
           onClose={() => setAdding(false)}
         />

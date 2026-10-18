@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronDown, Dices, Plus, Send, Skull, Trash2, Undo2, X } from 'lucide-react'
+import { ChevronDown, Dices, Plus, Send, Skull, Sparkles, Trash2, Undo2, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { noAutofill, noAutofillField } from '../components/noAutofill'
@@ -7,6 +7,7 @@ import { db } from '../db/db'
 import type { Character } from '../model/character'
 import { gmSends } from '../share/messages'
 import { Waiting } from './Campaigns'
+import { EdgeActionPicker } from './EdgeActionPicker'
 import { SendDialog } from './SendDialog'
 import { StatusSchema, type Encounter, type Participant } from '../model/encounter'
 import { effectiveInitiative, woundModifier, type CombatantStats } from '../rules/sr6/encounter'
@@ -17,6 +18,7 @@ const KIND_LABEL: Record<Participant['kind'], string> = {
   spirit: 'Spirit',
   runner: 'Runner',
   custom: 'Enemy',
+  ic: 'IC',
 }
 
 /** One combatant on the action screen. */
@@ -29,6 +31,8 @@ export function ParticipantCard({
   live = false,
   update,
   onRoll,
+  edgeUsedThisRound = false,
+  onEdgeAction,
 }: {
   participant: Participant
   stats: CombatantStats
@@ -39,9 +43,13 @@ export function ParticipantCard({
   live?: boolean
   update: (change: (e: Encounter) => Encounter) => Promise<void>
   onRoll: (label: string, pool: number, info?: string, initiativeScore?: number) => void
+  /** A grunt group that already spent its Edge this round. */
+  edgeUsedThisRound?: boolean
+  onEdgeAction?: (label: string, cost: number) => void
 }) {
   const [open, setOpen] = useState(false)
   const [addingStatus, setAddingStatus] = useState(false)
+  const [pickingEdge, setPickingEdge] = useState(false)
   const change = (fn: (x: Participant) => Participant) =>
     void update((e) => ({ ...e, participants: e.participants.map((x) => (x.id === p.id ? fn(x) : x)) }))
 
@@ -146,30 +154,38 @@ export function ParticipantCard({
             total={stats.minors}
             onChange={(minorLeft) => change((x) => ({ ...x, minorLeft }))}
           />
-          <div
-            className="flex items-center gap-1"
-            title={fromSheet ? 'From the player’s sheet' : shared ? `Shared by ${p.group}` : undefined}
-          >
-            <span className="text-muted">{shared ? 'Group Edge' : 'Edge'}</span>
-            {fromSheet ? (
-              <span className="w-4 text-center font-display text-base tabular-nums text-amber">{edge}</span>
-            ) : (
-              <>
-                <button
-                  className="btn size-6 p-0"
-                  onClick={() => setEdge(edge - 1)}
-                  disabled={edge <= 0}
-                  aria-label="Spend Edge"
-                >
-                  −
-                </button>
+          {p.kind !== 'ic' && (
+            <div
+              className="flex items-center gap-1"
+              title={fromSheet ? 'From the player’s sheet' : shared ? `Shared by ${p.group}` : undefined}
+            >
+              <span
+                className="text-muted"
+                title={edgeUsedThisRound ? 'Group Edge already used this round (once per round, p. 203)' : undefined}
+              >
+                {shared ? 'Group Edge' : 'Edge'}
+                {edgeUsedThisRound && <span className="text-amber"> · used</span>}
+              </span>
+              {fromSheet ? (
                 <span className="w-4 text-center font-display text-base tabular-nums text-amber">{edge}</span>
-                <button className="btn size-6 p-0" onClick={() => setEdge(edge + 1)} aria-label="Gain Edge">
-                  +
-                </button>
-              </>
-            )}
-          </div>
+              ) : (
+                <>
+                  <button
+                    className="btn size-6 p-0"
+                    onClick={() => setEdge(edge - 1)}
+                    disabled={edge <= 0}
+                    aria-label="Spend Edge"
+                  >
+                    −
+                  </button>
+                  <span className="w-4 text-center font-display text-base tabular-nums text-amber">{edge}</span>
+                  <button className="btn size-6 p-0" onClick={() => setEdge(edge + 1)} aria-label="Gain Edge">
+                    +
+                  </button>
+                </>
+              )}
+            </div>
+          )}
           <button
             className="btn px-2 py-1 text-xs"
             onClick={() => change((x) => ({ ...x, out: !x.out }))}
@@ -203,7 +219,7 @@ export function ParticipantCard({
       <div className="grid gap-3 border-t border-line/60 px-3 py-2.5 sm:grid-cols-2">
         {fromSheet && p.characterId && <LiveRunnerBar sheetId={p.characterId.slice('shared:'.length)} />}
         <Track
-          label={single ? 'Condition' : 'Physical'}
+          label={p.kind === 'ic' ? 'Matrix damage' : single ? 'Condition' : 'Physical'}
           boxes={stats.monitor.physical}
           filled={single ? filled : damage.physical}
           readOnly={fromSheet}
@@ -298,6 +314,25 @@ export function ParticipantCard({
             </button>
           )
         })}
+        {!fromSheet && onEdgeAction && edge > 0 && (
+          <button
+            className="chip cursor-pointer border-amber/40 text-xs text-amber hover:border-amber"
+            onClick={() => setPickingEdge(true)}
+            title="Called Shot—Vitals, Knockout Blow…: pick before rolling"
+          >
+            <Sparkles className="size-3" /> Edge action
+          </button>
+        )}
+        {pickingEdge && onEdgeAction && (
+          <EdgeActionPicker
+            name={p.name}
+            edge={edge}
+            shared={shared}
+            usedThisRound={edgeUsedThisRound}
+            onUse={onEdgeAction}
+            onClose={() => setPickingEdge(false)}
+          />
+        )}
         <button
           className="ml-auto flex items-center gap-1 text-xs text-muted hover:text-fg"
           onClick={() => setOpen(!open)}

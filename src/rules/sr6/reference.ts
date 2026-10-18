@@ -227,6 +227,15 @@ export const RULES_REFERENCE: RuleSection[] = [
         ],
         page: 179,
       },
+      {
+        title: 'Hosts and IC',
+        lines: [
+          'Host rating 1–12; its Attack, Sleaze, Data Processing and Firewall are the rating, +1, +2 and +3 in any order.',
+          'IC use Host Rating × 2 for Attack Rating, boxes and most rolls; Initiative is Data Processing × 2 + 3D6.',
+          'One IC launched per round, one of each type, at most the host rating at once. Matrix Defense Rating: Data Processing + Firewall.',
+        ],
+        page: 185,
+      },
     ],
   },
   {

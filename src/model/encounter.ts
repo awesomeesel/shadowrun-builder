@@ -22,13 +22,25 @@ export const StatusSchema = z.object({
 /** Who is in the fight and what kind of stats they use. */
 export const ParticipantSchema = z.object({
   id: id(),
-  kind: z.enum(['npc', 'spirit', 'runner', 'custom']).default('custom'),
+  kind: z.enum(['npc', 'spirit', 'runner', 'custom', 'ic']).default('custom'),
   name: z.string().default(''),
   /** Grunts added together share initiative and an Edge pool (p. 203). */
   group: text(),
   /** A copy of the book stat block, so the encounter doesn't depend on the catalog later. */
   npc: z.custom<NpcEntry>().optional(),
   spirit: z.object({ type: z.string(), force: int(1) }).optional(),
+  /** IC launched by a host: its type and the host's numbers, which all its IC share. */
+  ic: z
+    .object({
+      type: z.string(),
+      hostName: text(),
+      hostRating: int(1),
+      attack: int(1),
+      sleaze: int(1),
+      dataProcessing: int(1),
+      firewall: int(1),
+    })
+    .optional(),
   /** A player character from this device, if linked; otherwise just a name and initiative. */
   characterId: z.string().optional(),
   /** Stats for quick custom enemies and unlinked runners. */
@@ -84,6 +96,8 @@ export const EncounterSchema = z.object({
       }),
     )
     .default([]),
+  /** The round each grunt group last spent Edge: a group may use Edge once per round (p. 203). */
+  groupEdgeUsed: z.record(z.string(), z.number().int()).default({}),
   /** Shared Edge per grunt group. */
   groupEdge: z.record(z.string(), z.number().int()).default({}),
   createdAt: z.string().default(() => new Date().toISOString()),
