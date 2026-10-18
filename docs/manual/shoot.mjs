@@ -20,7 +20,7 @@ async function context(viewport, mobile = false) {
   })
   await ctx.addInitScript(() => {
     try {
-      localStorage.setItem('whatsNewSeen', '999')
+      localStorage.setItem('whatsNewSeen', '999'); sessionStorage.setItem('splashSeen', '1')
     } catch {}
   })
   const page = await ctx.newPage()

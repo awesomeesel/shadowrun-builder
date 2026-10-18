@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, BookOpen, Plus, Radio, Swords } from 'lucide-react'
+import { ArrowLeft, BookOpen, Plus, Radio, Shuffle, Swords } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { db } from '../db/db'
@@ -10,6 +10,7 @@ import { timeAgo } from '../share/timeAgo'
 import { NewCampaignDialog } from './Campaigns'
 import { BackupStatus } from './BackupStatus'
 import { EncounterList } from './EncounterList'
+import { SampleEncounterDialog } from './SampleEncounter'
 
 /** The GM's start page: campaigns (with their runners and encounters), loose encounters, and the rules. */
 export function GmHome() {
@@ -18,6 +19,7 @@ export function GmHome() {
   const sheets = useLiveQuery(() => db.sharedSheets.toArray())
   const encounters = useLiveQuery(async () => (await db.encounters.toArray()).map((e) => EncounterSchema.parse(e)))
   const [creating, setCreating] = useState(false)
+  const [sampling, setSampling] = useState(false)
   const sharing = isSharingConfigured()
 
   const campaignIds = new Set((campaigns ?? []).map((c) => c.id))
@@ -101,15 +103,21 @@ export function GmHome() {
               <Swords className="size-5 text-accent" /> {sharing ? 'Encounters without a campaign' : 'Encounters'}
             </h2>
             {!sharing && (
-              <button className="btn btn-primary" onClick={() => void createLoose()}>
-                <Plus className="size-4" /> New encounter
-              </button>
+              <>
+                <button className="btn" onClick={() => setSampling(true)} title="A ready-made fight from the books">
+                  <Shuffle className="size-4" /> Sample
+                </button>
+                <button className="btn btn-primary" onClick={() => void createLoose()}>
+                  <Plus className="size-4" /> New encounter
+                </button>
+              </>
             )}
           </div>
           <EncounterList encounters={loose} empty="No encounters yet." />
         </section>
       )}
       {creating && <NewCampaignDialog onClose={() => setCreating(false)} />}
+      {sampling && <SampleEncounterDialog runners={4} onClose={() => setSampling(false)} />}
     </div>
   )
 }

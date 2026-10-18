@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 13,
+    date: '2026-10-18',
+    title: 'Sample encounters, Composure checks, and a new intro',
+    items: [
+      'GMs: Sample makes a ready-made fight from your books’ grunts at any Professional Rating (0–10), sized to your group: one more grunt than runners, plus a lieutenant.',
+      'When a grunt has taken more boxes than their Professional Rating, their card reminds you to roll Composure to see if they run, with the dice ready.',
+      'A short jack-in intro with sound plays when you open the app. Tap to skip it, or mute it with the speaker button. If your browser holds the sound back, tap “Tap for sound”. It stays off if your device asks for less motion.',
+    ],
+  },
+  {
     id: 12,
     date: '2026-10-18',
     title: 'A cast of recurring people for GMs',

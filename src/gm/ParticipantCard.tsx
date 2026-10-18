@@ -59,6 +59,13 @@ export function ParticipantCard({
   const filled = damage.physical + damage.stun
   const down = single ? filled >= stats.monitor.physical : damage.physical >= stats.monitor.physical
   const unconscious = !single && stats.monitor.stun !== null && damage.stun >= stats.monitor.stun
+  // Grunts may bolt once their boxes exceed their Professional Rating (p. 203).
+  const rating = p.npc?.professionalRating ?? null
+  const shaken = stats.isGrunt && rating !== null && !down && !p.out && filled > rating
+  // Wound modifiers apply to every test but soaking, Composure included.
+  const composure = p.npc
+    ? Math.max(0, (p.npc.attributes.willpower?.augmented ?? 0) + (p.npc.attributes.charisma?.augmented ?? 0) + wounds)
+    : 0
 
   const setEdge = (value: number) =>
     shared
@@ -174,6 +181,25 @@ export function ParticipantCard({
         </div>
       </div>
 
+      {shaken && (
+        <div className="flex flex-wrap items-center gap-2 border-t border-amber/40 bg-amber/10 px-3 py-2 text-xs">
+          <span className="mr-auto text-amber">
+            {filled} boxes, more than their Professional Rating ({rating}): roll Composure to see if they run (p. 203).
+          </span>
+          <button
+            className="btn px-2 py-1 text-xs"
+            onClick={() =>
+              onRoll(
+                'Composure',
+                composure,
+                'Willpower + Charisma. You decide how many hits they need to hold; if the fight is going badly, grunts bail.',
+              )
+            }
+          >
+            <Dices className="size-3.5" /> Composure {composure}
+          </button>
+        </div>
+      )}
       <div className="grid gap-3 border-t border-line/60 px-3 py-2.5 sm:grid-cols-2">
         {fromSheet && p.characterId && <LiveRunnerBar sheetId={p.characterId.slice('shared:'.length)} />}
         <Track

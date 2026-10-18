@@ -1,4 +1,5 @@
 import { RouterProvider, createHashRouter } from 'react-router'
+import { Splash } from './components/Splash'
 import { Updates } from './components/Updates'
 import { JoinPage } from './share/JoinPage'
 import { ShareSync } from './share/ShareSync'
@@ -47,6 +48,7 @@ export default function App() {
     <>
       <RouterProvider router={router} />
       <ShareSync />
+      <Splash />
       <div className="print:hidden">
         <Updates />
       </div>

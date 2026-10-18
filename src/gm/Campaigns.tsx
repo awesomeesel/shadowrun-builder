@@ -10,6 +10,7 @@ import {
   NotebookPen,
   Plus,
   QrCode,
+  Shuffle,
   Send,
   Swords,
   Trash2,
@@ -46,6 +47,7 @@ import { SendDialog } from './SendDialog'
 import { cancelMessage, describeMessage, gmSends } from '../share/messages'
 import { updateCampaign } from './store'
 import { CastSection } from './Cast'
+import { SampleEncounterDialog } from './SampleEncounter'
 import { PartyOverview } from './PartyOverview'
 import { RunLog } from './RunLog'
 
@@ -126,6 +128,7 @@ export function CampaignPage() {
   const encounters = useLiveQuery(async () => (await db.encounters.toArray()).filter((e) => e.campaignId === id), [id])
   const [notice, setNotice] = useState('')
   const [showJoin, setShowJoin] = useState(false)
+  const [sampling, setSampling] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   if (campaign === undefined) return null
   if (campaign === null) {
@@ -236,10 +239,20 @@ export function CampaignPage() {
             <h2 className="mr-auto flex items-center gap-2 font-display text-xl">
               <Swords className="size-5 text-accent" /> Encounters
             </h2>
+            <button className="btn text-sm" onClick={() => setSampling(true)} title="A ready-made fight from the books">
+              <Shuffle className="size-4" /> Sample
+            </button>
             <button className="btn btn-primary text-sm" onClick={() => void newEncounterHere()}>
               <Plus className="size-4" /> New encounter
             </button>
           </div>
+          {sampling && (
+            <SampleEncounterDialog
+              campaignId={campaign.id}
+              runners={runners.length || 4}
+              onClose={() => setSampling(false)}
+            />
+          )}
           <EncounterList encounters={encounters ?? []} empty="No encounters yet. Prepare the next fight here." />
         </section>
         <RunLog campaign={campaign} runners={runners} />

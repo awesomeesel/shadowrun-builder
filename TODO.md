@@ -22,8 +22,9 @@ Ideas and plans for Shadowrun Builder. Add your own anywhere; tick them off with
       or decline; the GM switches each kind on or off per campaign.
 - [x] **Cast of recurring NPCs** – per campaign, with notes, attitude and optional stats; add to encounters.
 - [x] **Player statuses on GM cards** – shared runners' own statuses show in encounters and count for initiative.
-- [ ] **GM screen extras** – sample encounters per Professional Rating, Composure test reminder when grunts
-      take more boxes than their Professional Rating, and a Matrix/host participant (IC).
+- [x] **Sample encounters and Composure reminder** – grunts by Professional Rating from the books; Composure
+      prompt once boxes exceed the rating.
+- [ ] **Matrix participant in encounters** – a host with IC that can join an encounter, for deckers to fight.
 - [x] **Karma shop** – spend karma between runs at the book's prices (attributes, skills, specializations,
       qualities, spells), logged in the karma history.
 - [x] **Initiation and submersion** – 10 + grade karma; raises the Magic/Resonance limit above 6 and gives
