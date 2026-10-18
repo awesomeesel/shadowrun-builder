@@ -10,6 +10,7 @@ export function Stat({
   hint,
   tone,
   icon,
+  help,
 }: {
   label: string
   value: string | number
@@ -17,6 +18,8 @@ export function Stat({
   hint?: string
   tone?: 'danger' | 'accent'
   icon?: ReactNode
+  /** A help button shown next to the label. */
+  help?: ReactNode
 }) {
   return (
     <div
@@ -26,6 +29,7 @@ export function Stat({
       <div className="flex items-center justify-center gap-1 text-[10px] tracking-wider text-muted uppercase">
         {icon}
         {label}
+        {help}
       </div>
       <div
         className={`${large ? 'text-xl' : 'text-lg'} font-display font-semibold tabular-nums ${
@@ -59,19 +63,25 @@ export function MonitorTrack({
   onChange,
   showModifiers = true,
   size = 'normal',
+  help,
 }: {
   label: string
   monitor: ConditionMonitor
   onChange: (filled: number) => void
   showModifiers?: boolean
   size?: 'normal' | 'large'
+  /** A help button shown next to the label. */
+  help?: ReactNode
 }) {
   const filled = Math.min(monitor.filled, monitor.boxes)
   const box = size === 'large' ? 'size-9 text-xs' : 'size-7 text-[10px]'
   return (
     <div>
       <div className="mb-1.5 flex justify-between text-xs">
-        <span className="text-muted">{label}</span>
+        <span className="flex items-center gap-1 text-muted">
+          {label}
+          {help}
+        </span>
         <span className="tabular-nums">
           {filled} / {monitor.boxes}
           {filled > 0 && (

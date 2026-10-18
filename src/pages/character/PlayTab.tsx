@@ -36,6 +36,10 @@ import { SpellsSection } from './play/SpellsSection'
 import type { QuickPool } from './play/types'
 import { VehiclesSection } from './play/VehiclesSection'
 import { StatusList } from './play/StatusList'
+import { EdgeActions } from './play/EdgeActions'
+import { NewPlayerTips, QualityReminders } from './play/Guidance'
+import { HelpButton } from '../../components/Help'
+import { PLAY_HELP, SKILL_HELP } from '../../rules/sr6/help'
 
 /** Edge can never be above 7 (p. 45). */
 const MAX_EDGE = 7
@@ -183,18 +187,41 @@ function ActiveSession({ character, update }: CharacterContext) {
   const edgeCapped = !!combat && combat.edgeGained >= MAX_EDGE_GAIN_PER_ROUND
 
   const pools: QuickPool[] = [
-    { label: 'Defense', pool: derived.pools.defense },
-    { label: 'Damage resistance', pool: derived.pools.damageResistance, ignoreWounds: true },
+    { label: 'Defense', pool: derived.pools.defense, help: PLAY_HELP.defense },
+    {
+      label: 'Damage resistance',
+      pool: derived.pools.damageResistance,
+      ignoreWounds: true,
+      help: PLAY_HELP.damageResistance,
+    },
     ...(derived.pools.physicalDamageResistance !== derived.pools.damageResistance
-      ? [{ label: 'Resist Physical', pool: derived.pools.physicalDamageResistance, ignoreWounds: true }]
+      ? [
+          {
+            label: 'Resist Physical',
+            pool: derived.pools.physicalDamageResistance,
+            ignoreWounds: true,
+            help: PLAY_HELP.damageResistance,
+          },
+        ]
       : []),
-    ...ownedSkillPools(character).flatMap((s) => (s.pool === null ? [] : [{ label: s.skill.name, pool: s.pool }])),
+    // Each skill, and its specialization as its own pool so the +2 isn't forgotten.
+    ...ownedSkillPools(character).flatMap((s) => {
+      if (s.pool === null) return []
+      const help = SKILL_HELP[s.skill.id]
+      const spec = s.owned?.specialization.trim()
+      return [
+        { label: s.skill.name, pool: s.pool, help },
+        ...(spec && s.specializationPool !== null
+          ? [{ label: `↳ ${spec}`, pool: s.specializationPool, help: PLAY_HELP.specialization }]
+          : []),
+      ]
+    }),
     ...(derived.magic?.spellcasting ? [{ label: 'Spellcasting', pool: derived.magic.spellcasting }] : []),
     ...(derived.resonance?.tasking ? [{ label: 'Tasking', pool: derived.resonance.tasking }] : []),
-    { label: 'Composure', pool: derived.pools.composure },
-    { label: 'Judge Intentions', pool: derived.pools.judgeIntentions },
-    { label: 'Memory', pool: derived.pools.memory },
-    { label: 'Lift / Carry', pool: derived.pools.liftCarry },
+    { label: 'Composure', pool: derived.pools.composure, help: PLAY_HELP.composure },
+    { label: 'Judge Intentions', pool: derived.pools.judgeIntentions, help: PLAY_HELP.judgeIntentions },
+    { label: 'Memory', pool: derived.pools.memory, help: PLAY_HELP.memory },
+    { label: 'Lift / Carry', pool: derived.pools.liftCarry, help: PLAY_HELP.liftCarry },
   ]
 
   const addTimestamp = () => {
@@ -223,22 +250,39 @@ function ActiveSession({ character, update }: CharacterContext) {
         </button>
       </section>
 
+      <NewPlayerTips />
+
       <Section title="Status" icon={<HeartPulse className="size-4" />}>
         <div className="mb-4 grid grid-cols-3 gap-2">
-          <Stat label="Initiative" value={formatInitiative(derived.initiative)} />
-          <Stat label="Defense Rating" value={derived.defenseRating} />
-          <Stat label="Wounds" value={wounds === 0 ? '—' : wounds} tone={wounds < 0 ? 'danger' : undefined} />
+          <Stat
+            label="Initiative"
+            value={formatInitiative(derived.initiative)}
+            help={<HelpButton entry={PLAY_HELP.initiative} />}
+          />
+          <Stat
+            label="Defense Rating"
+            value={derived.defenseRating}
+            help={<HelpButton entry={PLAY_HELP.defenseRating} />}
+          />
+          <Stat
+            label="Wounds"
+            value={wounds === 0 ? '—' : wounds}
+            tone={wounds < 0 ? 'danger' : undefined}
+            help={<HelpButton entry={PLAY_HELP.wounds} />}
+          />
         </div>
         <div className="grid gap-4">
           <MonitorTrack
             size="large"
             label="Physical"
+            help={<HelpButton entry={PLAY_HELP.physical} />}
             monitor={derived.physicalMonitor}
             onChange={(n) => update((c) => ({ ...c, damage: { ...c.damage, physical: n } }))}
           />
           <MonitorTrack
             size="large"
             label="Stun"
+            help={<HelpButton entry={PLAY_HELP.stun} />}
             monitor={derived.stunMonitor}
             onChange={(n) => update((c) => ({ ...c, damage: { ...c.damage, stun: n } }))}
           />
@@ -264,7 +308,7 @@ function ActiveSession({ character, update }: CharacterContext) {
         <div className="mt-5">
           <div className="mb-1.5 flex justify-between text-xs">
             <span className="flex items-center gap-1 text-muted">
-              <Sparkles className="size-3.5" /> Edge
+              <Sparkles className="size-3.5" /> Edge <HelpButton entry={PLAY_HELP.edge} />
             </span>
             <button className="text-muted hover:text-fg" onClick={() => setEdge(derived.attributes.edge)}>
               Reset to {derived.attributes.edge}
@@ -310,9 +354,15 @@ function ActiveSession({ character, update }: CharacterContext) {
 
       <AttackSection character={character} update={update} wounds={wounds} onRoll={doRoll} />
 
+      <EdgeActions character={character} update={update} edge={edge} setEdge={setEdge} />
+
       <Section title="Roll dice" icon={<Dices className="size-4" />}>
         <p className="mb-3 text-xs text-muted">
-          Tap a pool to roll it.{wounds < 0 && ` Your wound modifier (${wounds}) is included, except when soaking.`}
+          <span className="mr-1 inline-flex items-center gap-0.5 text-fg">
+            How a test works <HelpButton entry={PLAY_HELP.howToRoll} />
+          </span>
+          Tap a pool to roll it; ⓘ says what it’s for.
+          {wounds < 0 && ` Your wound modifier (${wounds}) is included, except when soaking.`}
           {character.play.sustained.length > 0 &&
             ` Sustained spells: −${-sustainPenalty(character)} dice (included).`}{' '}
           After the roll you can spend Edge to change it.
@@ -343,16 +393,22 @@ function ActiveSession({ character, update }: CharacterContext) {
         </div>
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
           {pools.map((p, i) => (
-            <button
+            <div
               key={`${p.label}-${i}`}
-              onClick={() => doRoll(p)}
-              className="flex items-center justify-between gap-2 rounded-lg border border-line bg-bg/60 px-2.5 py-2 text-left text-sm hover:border-accent/60"
+              className="flex items-center rounded-lg border border-line bg-bg/60 hover:border-accent/60"
             >
-              <span className="truncate">{p.label}</span>
-              <span className="shrink-0 font-display text-base font-semibold text-accent tabular-nums">
-                {p.ignoreWounds ? p.pool : formatPool(p.pool, wounds + sustainPenalty(character))}
-              </span>
-            </button>
+              <button
+                onClick={() => doRoll(p)}
+                className="flex min-w-0 flex-1 items-center justify-between gap-2 py-2 pl-2.5 text-left text-sm"
+              >
+                <span className="truncate">{p.label}</span>
+                <span className="shrink-0 font-display text-base font-semibold text-accent tabular-nums">
+                  {p.ignoreWounds ? p.pool : formatPool(p.pool, wounds + sustainPenalty(character))}
+                </span>
+              </button>
+              <HelpButton entry={p.help} className="mx-1" />
+              {!p.help && <span className="w-2" />}
+            </div>
           ))}
         </div>
         <CustomRoll onRoll={(pool) => doRoll({ label: 'Custom roll', pool, ignoreWounds: true })} />
@@ -374,6 +430,8 @@ function ActiveSession({ character, update }: CharacterContext) {
       {character.vehicles.length > 0 && <VehiclesSection character={character} update={update} onRoll={doRoll} />}
 
       <MoneySection character={character} update={update} />
+
+      <QualityReminders character={character} />
 
       <Section title="Session notes" icon={<NotebookPen className="size-4" />}>
         <textarea

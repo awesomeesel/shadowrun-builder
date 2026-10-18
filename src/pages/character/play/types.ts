@@ -1,3 +1,5 @@
+import type { HelpEntry } from '../../../rules/sr6/help'
+
 /** A dice pool the player can roll from the Play tab. */
 export interface QuickPool {
   label: string
@@ -11,4 +13,6 @@ export interface QuickPool {
   ignoreWounds?: boolean
   /** A physical initiative roll that starts (or updates) the combat tracker. */
   startsCombat?: boolean
+  /** What the pool is for, behind a help button. */
+  help?: HelpEntry
 }

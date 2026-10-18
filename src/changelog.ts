@@ -11,6 +11,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 10,
+    date: '2026-10-18',
+    title: 'More help on the Play tab',
+    items: [
+      'New to Shadowrun? A short guide at the top of a session explains rolling, fights, getting hit and Edge. Hide it once you know it.',
+      'Tap ⓘ next to any dice pool, stat or damage track for what it means and when to roll it, with the page in the book.',
+      'Edge actions: Shank, Tumble, Called Shot—Vitals and the rest, filtered to fit your runner. Tap Use to pay the Edge. Other ways to spend Edge, and burning Edge, are listed too.',
+      'Specializations get their own pool (↳ Blades 12), and your qualities are listed with what they do.',
+    ],
+  },
+  {
     id: 9,
     date: '2026-10-18',
     title: 'The GM can send things to your sheet',
