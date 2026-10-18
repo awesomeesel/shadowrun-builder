@@ -20,6 +20,8 @@ Ideas and plans for Shadowrun Builder. Add your own anywhere; tick them off with
       FIREBASE_SETUP.md.
 - [x] **GM → players** – the GM sends damage, statuses, Edge, karma and nuyen to shared runners; players accept
       or decline; the GM switches each kind on or off per campaign.
+- [x] **Cast of recurring NPCs** – per campaign, with notes, attitude and optional stats; add to encounters.
+- [x] **Player statuses on GM cards** – shared runners' own statuses show in encounters and count for initiative.
 - [ ] **GM screen extras** – sample encounters per Professional Rating, Composure test reminder when grunts
       take more boxes than their Professional Rating, and a Matrix/host participant (IC).
 - [x] **Karma shop** – spend karma between runs at the book's prices (attributes, skills, specializations,

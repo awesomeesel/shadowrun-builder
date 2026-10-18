@@ -50,7 +50,9 @@ export function ParticipantCard({
   const wounds = woundModifier({ ...p, damage }, stats)
   const shared = stats.isGrunt && !!p.group
   const edge = fromSheet ? (character.play.edge ?? stats.edge) : shared ? (groupEdge ?? 0) : p.edge
-  const initiative = effectiveInitiative(p)
+  // A runner's statuses from their own sheet: shown read-only, and counted for initiative.
+  const playerStatuses = stats.sheetStatuses
+  const initiative = effectiveInitiative(p, stats)
   const statusShift = initiative !== null && p.initiative !== null ? initiative - p.initiative : 0
   // Grunts and spirits have one track; the Stun boxes go on it too.
   const single = stats.monitor.stun === null
@@ -197,6 +199,20 @@ export function ParticipantCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 border-t border-line/60 px-3 py-2">
+        {playerStatuses.map((s) => {
+          const def = STATUS_BY_NAME.get(s.name.toLowerCase())
+          return (
+            <span
+              key={`player-${s.id}`}
+              className="chip gap-1 border-amber/30 text-xs text-amber/90"
+              title={`On the player’s sheet${def ? `: ${def.effect}` : ''}`}
+            >
+              {statusLabel(s)}
+              {s.rounds !== null && <span className="text-muted">· {s.rounds} rd</span>}
+              <span className="text-[10px] text-muted">player</span>
+            </span>
+          )
+        })}
         {p.statuses.map((s) => {
           const def = STATUS_BY_NAME.get(s.name.toLowerCase())
           return (

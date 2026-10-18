@@ -5,6 +5,7 @@ import type { PageLayout } from '../books/layout'
 import type { PageMapping } from '../books/pages'
 import type { Character } from '../model/character'
 import type { GmMessage } from '../share/messages'
+import type { NpcEntry } from '../rules/sr6/npc'
 
 /** A rulebook PDF the user added. The file itself lives in `bookFiles`. */
 export interface Book extends PageMapping {
@@ -86,6 +87,8 @@ export interface Campaign {
   joinHidden?: boolean
   /** Game nights played, newest last. */
   runs?: CampaignRun[]
+  /** Recurring NPCs: contacts, Johnsons, rivals, villains. */
+  cast?: CastMember[]
   /** What the GM may send to players' sheets; both on unless switched off. */
   gmSends?: { damage: boolean; rewards: boolean }
 }
@@ -114,6 +117,21 @@ export interface OutboxItem {
   to: string
   message: GmMessage
   sentAt: string
+}
+
+/** A recurring person in the GM's campaign, ready to drop into an encounter. */
+export interface CastMember {
+  id: string
+  name: string
+  /** What they are to the runners, e.g. "Fixer", "Mr. Johnson (Renraku)". */
+  role: string
+  attitude: 'ally' | 'neutral' | 'enemy'
+  notes: string
+  /** Stats from a book stat block (a copy, so it stays if the book is removed)… */
+  npc?: NpcEntry
+  /** …or a few quick numbers. Neither: a roleplay-only character. */
+  custom?: { initiativeScore: number; initiativeDice: number; defenseRating: number; monitor: number; pool: number }
+  updatedAt: string
 }
 
 /** One game night in the GM's run log. */

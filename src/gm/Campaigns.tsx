@@ -45,6 +45,7 @@ import { EncounterList } from './EncounterList'
 import { SendDialog } from './SendDialog'
 import { cancelMessage, describeMessage, gmSends } from '../share/messages'
 import { updateCampaign } from './store'
+import { CastSection } from './Cast'
 import { PartyOverview } from './PartyOverview'
 import { RunLog } from './RunLog'
 
@@ -229,6 +230,7 @@ export function CampaignPage() {
           )}
         </section>
         {runners.length > 0 && <PartyOverview runners={runners} />}
+        <CastSection campaign={campaign} />
         <section>
           <div className="mb-2 flex items-center gap-2">
             <h2 className="mr-auto flex items-center gap-2 font-display text-xl">

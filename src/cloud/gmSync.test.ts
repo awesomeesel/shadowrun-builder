@@ -118,8 +118,12 @@ describe('GM data backup', () => {
 
     // Another device changes both and syncs.
     const files = await drive.list(folder)
-    const other = { ...campaign(), runs: [run('r1', 'First run'), run('r2', 'Logged on the tablet')] }
     const otherAt = '2026-10-02T10:00:00.000Z'
+    const other = {
+      ...campaign(),
+      runs: [run('r1', 'First run'), run('r2', 'Logged on the tablet')],
+      cast: [{ id: 'c1', name: 'Tablet NPC', role: '', attitude: 'ally' as const, notes: '', updatedAt: otherAt }],
+    }
     const write = (kind: string, id: string, item: unknown, file: (typeof files)[number]) =>
       drive.update(
         file.id,
@@ -142,12 +146,18 @@ describe('GM data backup', () => {
 
     // Meanwhile, this device changed them too.
     await later()
-    await updateCampaign('room1', { runs: [run('r1', 'First run'), run('r3', 'Logged on the laptop')] })
+    await updateCampaign('room1', {
+      runs: [run('r1', 'First run'), run('r3', 'Logged on the laptop')],
+      cast: [
+        { id: 'c2', name: 'Laptop NPC', role: '', attitude: 'enemy', notes: '', updatedAt: new Date().toISOString() },
+      ],
+    })
     await db.encounters.put({ ...encounter, round: 5, updatedAt: new Date().toISOString() })
 
     const report = await syncGmData(drive, folder)
     expect(report.conflicts.sort()).toEqual(['Docks ambush', 'Seattle Nights'])
     expect((await db.campaigns.get('room1'))?.runs?.map((r) => r.id).sort()).toEqual(['r1', 'r2', 'r3'])
+    expect((await db.campaigns.get('room1'))?.cast?.map((m) => m.name).sort()).toEqual(['Laptop NPC', 'Tablet NPC'])
     const rounds = (await db.encounters.toArray())
       .map((e) => [e.name, e.round])
       .sort((a, b) => String(a[0]).localeCompare(String(b[0])))

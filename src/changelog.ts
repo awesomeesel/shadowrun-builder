@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 12,
+    date: '2026-10-18',
+    title: 'A cast of recurring people for GMs',
+    items: [
+      'Each campaign has a Cast: fixers, Johnsons, rivals and villains, sorted into allies, neutral and enemies, with notes. Give the ones who might fight a stat block from your books or a few quick numbers.',
+      'In an encounter, Add → Cast puts them in the fight under their own name, notes included.',
+      'Statuses the player has on their own sheet (Dazed, Cover…) now show on their card in encounters and count for the turn order.',
+    ],
+  },
+  {
     id: 11,
     date: '2026-10-18',
     title: 'Quick notes at the top of the session',

@@ -46,6 +46,7 @@ const CAMPAIGN_FIELDS = [
   'runs',
   'joinedAt',
   'gmSends',
+  'cast',
 ] as const
 
 const campaignUpdatedAt = (c: Campaign) => c.updatedAt ?? c.joinedAt
@@ -160,13 +161,22 @@ async function resolveConflict(drive: Drive, folderId: string, local: Item, file
     return
   }
   if (local.kind === 'campaign') {
-    // Run log entries from both sides are kept; everything else follows the newer side.
+    // Run log entries and cast members from both sides are kept; everything else follows the newer side.
     const mine = local.data as Campaign
     const theirs = remote as Campaign
     const [newer, older] = local.updatedAt > remoteUpdatedAt ? [mine, theirs] : [theirs, mine]
     const runs = new Map((older.runs ?? []).map((r) => [r.id, r]))
     for (const r of newer.runs ?? []) runs.set(r.id, r)
-    const merged = { ...newer, runs: [...runs.values()].sort((a, b) => a.date.localeCompare(b.date)) }
+    const cast = new Map((older.cast ?? []).map((m) => [m.id, m]))
+    for (const m of newer.cast ?? []) {
+      const other = cast.get(m.id)
+      if (!other || m.updatedAt >= other.updatedAt) cast.set(m.id, m)
+    }
+    const merged = {
+      ...newer,
+      runs: [...runs.values()].sort((a, b) => a.date.localeCompare(b.date)),
+      cast: [...cast.values()],
+    }
     const updatedAt = new Date().toISOString()
     await store('campaign', merged, updatedAt)
     await upload(drive, folderId, { ...local, data: merged, updatedAt }, file)

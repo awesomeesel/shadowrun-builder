@@ -10,10 +10,12 @@ import { ParticipantSchema, type Encounter } from '../model/encounter'
 import { SPIRIT_TYPES } from '../rules/sr6/companions'
 import { addNpcs } from '../rules/sr6/encounter'
 import { latestSheets } from '../share/campaigns'
+import type { CastMember } from '../db/db'
+import { addCastMember, castStatsSummary } from './castStats'
 import type { NpcEntry } from '../rules/sr6/npc'
 import { Counter } from '../pages/character/play/RollStep'
 
-type Tab = 'books' | 'spirit' | 'runner' | 'custom'
+type Tab = 'cast' | 'books' | 'spirit' | 'runner' | 'custom'
 
 /** Add enemies from the books, spirits, the runners, or a quick custom enemy. */
 export function AddCombatants({
@@ -25,7 +27,13 @@ export function AddCombatants({
   update: (change: (e: Encounter) => Encounter) => void
   onClose: () => void
 }) {
-  const [tab, setTab] = useState<Tab>('books')
+  const cast = useLiveQuery(
+    async () => (campaignId ? ((await db.campaigns.get(campaignId))?.cast ?? []) : []),
+    [campaignId],
+  )
+  const [picked, setTab] = useState<Tab | null>(null)
+  // Start on the campaign's cast when there is one.
+  const tab: Tab = picked ?? (cast && cast.length > 0 ? 'cast' : 'books')
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -33,6 +41,7 @@ export function AddCombatants({
   }, [onClose])
   const add = (change: (e: Encounter) => Encounter) => update(change)
   const tabs: [Tab, string][] = [
+    ...(cast && cast.length > 0 ? [['cast', 'Cast'] as [Tab, string]] : []),
     ['books', 'From the books'],
     ['spirit', 'Spirit'],
     ['runner', 'Runner'],
@@ -72,6 +81,7 @@ export function AddCombatants({
           {tab === 'spirit' && <SpiritForm add={add} />}
           {tab === 'runner' && <RunnerForm add={add} campaignId={campaignId} />}
           {tab === 'custom' && <CustomForm add={add} />}
+          {tab === 'cast' && <CastForm add={add} cast={cast ?? []} />}
         </div>
         <div className="flex justify-end border-t border-line p-3">
           <button className="btn btn-primary" onClick={onClose}>
@@ -368,6 +378,50 @@ function CustomForm({ add }: { add: Add }) {
         Add
       </button>
       {done && <p className="text-xs text-accent">{done}</p>}
+    </div>
+  )
+}
+
+/** The campaign's recurring people, under their own names and with their notes. */
+function CastForm({ add, cast }: { add: Add; cast: CastMember[] }) {
+  const [added, setAdded] = useState<string[]>([])
+  const order = { enemy: 0, neutral: 1, ally: 2 }
+  const sorted = [...cast].sort((a, b) => order[a.attitude] - order[b.attitude] || a.name.localeCompare(b.name))
+  return (
+    <div className="grid gap-2 text-sm">
+      <ul className="grid gap-1.5">
+        {sorted.map((m) => {
+          const fights = !!(m.npc || m.custom)
+          return (
+            <li key={m.id} className="flex items-center gap-2 rounded-lg border border-line bg-bg/40 px-2.5 py-1.5">
+              <div className="min-w-0 flex-1">
+                <div className="truncate">
+                  {m.name}{' '}
+                  <span
+                    className={`text-xs ${m.attitude === 'enemy' ? 'text-danger' : m.attitude === 'ally' ? 'text-accent' : 'text-muted'}`}
+                  >
+                    {m.role || m.attitude}
+                  </span>
+                </div>
+                <div className="truncate text-xs text-muted">{castStatsSummary(m)}</div>
+              </div>
+              <button
+                className="btn btn-primary px-2.5 py-1 text-xs"
+                disabled={!fights}
+                title={fights ? undefined : 'Give them stats on the campaign page first'}
+                onClick={() => {
+                  add((enc) => addCastMember(enc, m))
+                  setAdded([...added, m.name])
+                }}
+              >
+                Add
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+      <p className="text-xs text-muted">Add or edit people under Cast on the campaign page.</p>
+      {added.length > 0 && <p className="text-xs text-accent">Added: {added.join(', ')}</p>}
     </div>
   )
 }

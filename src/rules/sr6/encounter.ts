@@ -27,6 +27,8 @@ export interface CombatantStats {
   isGrunt: boolean
   /** Attacks or powers to show on the card, e.g. a spirit's Elemental Attack. */
   extras: string[]
+  /** Statuses on a runner's own sheet (set by the player); they count for initiative like the GM's. */
+  sheetStatuses: { id: string; name: string; value: number; rounds: number | null }[]
 }
 
 /** "A1, I2" → 1 Major and 2 Minor actions. */
@@ -56,6 +58,7 @@ export function combatantStats(p: Participant, character?: Character): Combatant
       extras: [p.npc.powers && `Powers: ${p.npc.powers}`, p.npc.weaknesses && `Weaknesses: ${p.npc.weaknesses}`].filter(
         Boolean,
       ) as string[],
+      sheetStatuses: [],
     }
   }
   if (p.kind === 'spirit' && p.spirit && p.spirit.type in SPIRIT_TYPES) {
@@ -78,6 +81,7 @@ export function combatantStats(p: Participant, character?: Character): Combatant
       minors: minorActions(s.initiative.dice),
       isGrunt: false,
       extras: SPIRIT_TYPES[type].attacks.map((a) => `${a} (F = ${p.spirit!.force})`),
+      sheetStatuses: [],
     }
   }
   if (p.kind === 'runner' && character) {
@@ -101,6 +105,7 @@ export function combatantStats(p: Participant, character?: Character): Combatant
       minors: minorActions(d.initiative.dice),
       isGrunt: false,
       extras: [],
+      sheetStatuses: character.play.statuses,
     }
   }
   const c = p.custom ?? { initiativeScore: 8, initiativeDice: 1, defenseRating: 4, monitor: 10, pool: 8 }
@@ -116,6 +121,7 @@ export function combatantStats(p: Participant, character?: Character): Combatant
     minors: minorActions(c.initiativeDice),
     isGrunt: false,
     extras: [],
+    sheetStatuses: [],
   }
 }
 
@@ -126,13 +132,15 @@ export function woundModifier(p: Participant, stats: CombatantStats): number {
 }
 
 /** Initiative including status changes (Chilled −4, Dazed −4, Zapped −2). */
-export function effectiveInitiative(p: Participant): number | null {
-  return p.initiative === null ? null : p.initiative + statusInitiative(p.statuses)
+export function effectiveInitiative(p: Participant, stats?: CombatantStats): number | null {
+  return p.initiative === null
+    ? null
+    : p.initiative + statusInitiative([...p.statuses, ...(stats?.sheetStatuses ?? [])])
 }
 
 /** Highest initiative first; ties go to higher Edge, then Reaction, then Intuition (p. 106). */
 export function turnOrder(encounter: Encounter, stats: Map<string, CombatantStats>): Participant[] {
-  const key = (p: Participant) => effectiveInitiative(p) ?? -Infinity
+  const key = (p: Participant) => effectiveInitiative(p, stats.get(p.id)) ?? -Infinity
   return [...encounter.participants].sort((a, b) => {
     if (a.out !== b.out) return a.out ? 1 : -1
     const diff = key(b) - key(a)
