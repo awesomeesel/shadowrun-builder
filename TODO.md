@@ -18,8 +18,8 @@ Ideas and plans for Shadowrun Builder. Add your own anywhere; tick them off with
 - [x] **GM ↔ players** – campaigns with a QR code, code and optional password (Firebase, encrypted on the device);
       the GM sees shared sheets live and read-only. "Send a copy" as the no-internet fallback. Setup:
       FIREBASE_SETUP.md.
-- [ ] **GM → players** – let the GM send damage or statuses from an encounter to a shared runner (the player
-      accepts it on their Play tab).
+- [x] **GM → players** – the GM sends damage, statuses, Edge, karma and nuyen to shared runners; players accept
+      or decline; the GM switches each kind on or off per campaign.
 - [ ] **GM screen extras** – sample encounters per Professional Rating, Composure test reminder when grunts
       take more boxes than their Professional Rating, and a Matrix/host participant (IC).
 - [x] **Karma shop** – spend karma between runs at the book's prices (attributes, skills, specializations,

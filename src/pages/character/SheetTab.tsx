@@ -108,7 +108,12 @@ export function SheetTab() {
                 }
               />
             ))}
-            <Stat label="Essence" value={derived.essence} />
+            <Stat
+              label="Essence"
+              value={derived.essence}
+              tone={derived.essence <= 0 ? 'danger' : undefined}
+              hint={derived.essence <= 0 ? 'At 0 Essence a character dies (p. 224)' : undefined}
+            />
           </div>
         </section>
 

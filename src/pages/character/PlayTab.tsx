@@ -35,6 +35,7 @@ import { SessionLog } from './play/SessionLog'
 import { SpellsSection } from './play/SpellsSection'
 import type { QuickPool } from './play/types'
 import { VehiclesSection } from './play/VehiclesSection'
+import { StatusList } from './play/StatusList'
 
 /** Edge can never be above 7 (p. 45). */
 const MAX_EDGE = 7
@@ -62,6 +63,7 @@ function NoSession({ character, update }: CharacterContext) {
           money. When you end the session, a summary goes into the log below.
         </p>
         <ReadyCheck character={character} update={update} onHeal={() => setHealing(true)} />
+        {character.play.statuses.length > 0 && <StatusList character={character} update={update} />}
         <div className="mt-5 flex flex-wrap gap-2">
           <input
             {...noAutofill}
@@ -258,6 +260,7 @@ function ActiveSession({ character, update }: CharacterContext) {
             <HeartPulse className="size-4 text-accent" /> Heal…
           </button>
         </div>
+        <StatusList character={character} update={update} />
         <div className="mt-5">
           <div className="mb-1.5 flex justify-between text-xs">
             <span className="flex items-center gap-1 text-muted">

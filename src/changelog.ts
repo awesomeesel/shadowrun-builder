@@ -11,6 +11,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 9,
+    date: '2026-10-18',
+    title: 'The GM can send things to your sheet',
+    items: [
+      'GMs: Send… on a shared runner (campaign page or encounter) sends damage to resist or take, a status, Edge, or karma and nuyen. Logging a run can send its rewards to everyone who played.',
+      'Players: it shows up as “From your GM” on your character. Nothing changes until you accept; damage to resist opens the damage dialog ready to roll. Decline if it’s wrong.',
+      'GMs choose per campaign what may be sent, and can take back anything not yet accepted.',
+      'Statuses (Burning, Cover, Dazed…) now show on the Play tab, from the GM or added yourself.',
+      'Fixed: dermal plating cost 3 Essence per rating instead of 0.3. Saved runners are corrected, and your rulebooks are read again once. Essence at 0 or below is now flagged.',
+    ],
+  },
+  {
     id: 8,
     date: '2026-10-18',
     title: 'Share your runner with the GM',

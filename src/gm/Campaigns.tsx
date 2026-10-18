@@ -10,6 +10,7 @@ import {
   NotebookPen,
   Plus,
   QrCode,
+  Send,
   Swords,
   Trash2,
   Users,
@@ -20,7 +21,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useNavigate, useParams } from 'react-router'
 import { Portrait } from '../components/art'
 import { noAutofill, noAutofillField } from '../components/noAutofill'
-import { db, type Campaign, type SharedSheet } from '../db/db'
+import { db, type Campaign, type OutboxItem, type SharedSheet } from '../db/db'
 import { parseImportFile } from '../model/fileFormat'
 import { computeDerived } from '../rules/sr6/derived'
 import { newEncounter } from '../rules/sr6/encounter'
@@ -41,6 +42,8 @@ import { timeAgo } from '../share/timeAgo'
 import type { CharacterContext } from '../pages/character/CharacterPage'
 import { BackupStatus } from './BackupStatus'
 import { EncounterList } from './EncounterList'
+import { SendDialog } from './SendDialog'
+import { cancelMessage, describeMessage, gmSends } from '../share/messages'
 import { updateCampaign } from './store'
 import { PartyOverview } from './PartyOverview'
 import { RunLog } from './RunLog'
@@ -212,6 +215,7 @@ export function CampaignPage() {
             />
           </div>
           {notice && <p className="mb-2 text-sm text-accent">{notice}</p>}
+          <SendSettings campaign={campaign} />
           {runners.length === 0 ? (
             <div className="card p-6 text-sm text-muted">
               No runners yet. Players scan the QR code or open the link, then pick the characters to share.
@@ -219,7 +223,7 @@ export function CampaignPage() {
           ) : (
             <ul className="grid gap-2">
               {runners.map((s) => (
-                <RunnerRow key={s.id} sheet={s} />
+                <RunnerRow key={s.id} sheet={s} campaign={campaign} />
               ))}
             </ul>
           )}
@@ -382,9 +386,21 @@ function JoinCard({ campaign, onHide, dialog = false }: { campaign: Campaign; on
   )
 }
 
-function RunnerRow({ sheet }: { sheet: SharedSheet }) {
+function RunnerRow({ sheet, campaign }: { sheet: SharedSheet; campaign: Campaign }) {
   const c = sheet.character
   const d = computeDerived(c)
+  const [sending, setSending] = useState(false)
+  const waiting = useLiveQuery(
+    () =>
+      db.outbox
+        .where('roomId')
+        .equals(campaign.id)
+        .filter((m) => m.to === sheet.sheetId)
+        .toArray(),
+    [campaign.id, sheet.sheetId],
+  )
+  const sends = gmSends(campaign)
+  const canSend = !isFileSheet(sheet) && (sends.damage || sends.rewards)
   return (
     <li className="card flex flex-wrap items-center gap-3 p-3">
       <Portrait src={c.portrait} metatype={c.metatype} className="size-10" />
@@ -408,6 +424,15 @@ function RunnerRow({ sheet }: { sheet: SharedSheet }) {
         </span>
       </div>
       <div className="flex gap-1">
+        {canSend && (
+          <button
+            className="btn px-2 py-1 text-xs"
+            onClick={() => setSending(true)}
+            title="Damage, a status, Edge or karma and nuyen"
+          >
+            <Send className="size-3.5" /> Send…
+          </button>
+        )}
         <Link to={sheetPath(sheet)} className="btn px-2 py-1 text-xs">
           <Eye className="size-3.5" /> Sheet
         </Link>
@@ -422,7 +447,52 @@ function RunnerRow({ sheet }: { sheet: SharedSheet }) {
           <Trash2 className="size-3.5" />
         </button>
       </div>
+      {waiting && waiting.length > 0 && <Waiting items={waiting} />}
+      {sending && <SendDialog campaign={campaign} sheet={sheet} onClose={() => setSending(false)} />}
     </li>
+  )
+}
+
+/** Messages the player hasn't accepted or declined yet; the GM can take them back. */
+export function Waiting({ items }: { items: OutboxItem[] }) {
+  return (
+    <div className="flex basis-full flex-wrap items-center gap-1.5 text-xs">
+      <span className="text-muted">Waiting for the player:</span>
+      {items.map((item) => (
+        <span key={item.id} className="chip gap-1 text-xs">
+          {describeMessage(item.message)}
+          <button
+            className="text-muted hover:text-danger"
+            onClick={() => void cancelMessage(item).catch((e) => alert(String(e)))}
+            aria-label={`Take back ${describeMessage(item.message)}`}
+            title="Take it back"
+          >
+            <X className="size-3" />
+          </button>
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/** What the GM may send to players' sheets in this campaign. */
+function SendSettings({ campaign }: { campaign: Campaign }) {
+  const sends = gmSends(campaign)
+  const set = (change: Partial<typeof sends>) => void updateCampaign(campaign.id, { gmSends: { ...sends, ...change } })
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+      <span title="Nothing is sent unless you choose to, and players accept or decline each one">
+        You can send players:
+      </span>
+      <label className="flex items-center gap-1.5">
+        <input type="checkbox" checked={sends.damage} onChange={(e) => set({ damage: e.target.checked })} />
+        damage, statuses and Edge
+      </label>
+      <label className="flex items-center gap-1.5">
+        <input type="checkbox" checked={sends.rewards} onChange={(e) => set({ rewards: e.target.checked })} />
+        karma and nuyen
+      </label>
+    </div>
   )
 }
 

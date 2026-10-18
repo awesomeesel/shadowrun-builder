@@ -1,11 +1,12 @@
 import type { RatingRange, Scaled } from './types'
 
-/** "435¥", "1,500¥", "Rating x 55,000¥", "Rating × 0.75" → Scaled. */
+/** "435¥", "1,500¥", "Rating x 55,000¥", "Rating × 0.75", "Rating x .3" → Scaled. */
 export function parseScaled(text: string): Scaled | null {
   const t = text.replace(/[¥,]/g, '').trim()
   const squared = /rating\s*(?:\^\s*2|²)/i.test(t)
   const perRating = squared || /rating\s*[x×*]/i.test(t)
-  const number = t.replace(/rating\s*(?:\^\s*2|²)/i, '').match(/\d+(?:\.\d+)?/)
+  // A leading dot counts: dermal plating is printed "Rating x .3".
+  const number = t.replace(/rating\s*(?:\^\s*2|²)/i, '').match(/\d*\.\d+|\d+/)
   if (!number) return null
   return squared ? { base: parseFloat(number[0]), perRating, squared } : { base: parseFloat(number[0]), perRating }
 }

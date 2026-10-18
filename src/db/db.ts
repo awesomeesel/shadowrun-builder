@@ -4,6 +4,7 @@ import type { ExtractedEntry } from '../books/extract'
 import type { PageLayout } from '../books/layout'
 import type { PageMapping } from '../books/pages'
 import type { Character } from '../model/character'
+import type { GmMessage } from '../share/messages'
 
 /** A rulebook PDF the user added. The file itself lives in `bookFiles`. */
 export interface Book extends PageMapping {
@@ -85,6 +86,34 @@ export interface Campaign {
   joinHidden?: boolean
   /** Game nights played, newest last. */
   runs?: CampaignRun[]
+  /** What the GM may send to players' sheets; both on unless switched off. */
+  gmSends?: { damage: boolean; rewards: boolean }
+}
+
+/** A message from the GM waiting for the player to accept or decline it. */
+export interface InboxItem {
+  /** `${roomId}/${messageId}` */
+  id: string
+  roomId: string
+  messageId: string
+  characterId: string
+  campaignName: string
+  message: GmMessage
+  sentAt: string
+  /** Accepted or declined here, but not yet removed from the server (e.g. offline). */
+  handled?: boolean
+}
+
+/** A message the GM sent that the player hasn't handled yet. */
+export interface OutboxItem {
+  /** `${roomId}/${messageId}` */
+  id: string
+  roomId: string
+  messageId: string
+  /** The sheet id it went to. */
+  to: string
+  message: GmMessage
+  sentAt: string
 }
 
 /** One game night in the GM's run log. */
@@ -129,6 +158,8 @@ export const db = new Dexie('shadowrun-builder') as Dexie & {
   campaigns: EntityTable<Campaign, 'id'>
   sharedSheets: EntityTable<SharedSheet, 'id'>
   deletedGmItems: EntityTable<DeletedGmItem, 'id'>
+  inbox: EntityTable<InboxItem, 'id'>
+  outbox: EntityTable<OutboxItem, 'id'>
 }
 
 /** GM data deleted on this device, so the next Drive sync trashes it there too. */
@@ -186,4 +217,10 @@ db.version(6).stores({
 // Version 7 backs GM data up to Drive.
 db.version(7).stores({
   deletedGmItems: 'id',
+})
+
+// Version 8 adds messages from the GM to players (damage, statuses, Edge, rewards).
+db.version(8).stores({
+  inbox: 'id, characterId, roomId',
+  outbox: 'id, roomId',
 })

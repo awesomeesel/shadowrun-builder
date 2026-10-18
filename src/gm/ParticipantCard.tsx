@@ -1,8 +1,13 @@
-import { ChevronDown, Dices, Plus, Skull, Trash2, Undo2, X } from 'lucide-react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { ChevronDown, Dices, Plus, Send, Skull, Trash2, Undo2, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { noAutofill, noAutofillField } from '../components/noAutofill'
+import { db } from '../db/db'
 import type { Character } from '../model/character'
+import { gmSends } from '../share/messages'
+import { Waiting } from './Campaigns'
+import { SendDialog } from './SendDialog'
 import { StatusSchema, type Encounter, type Participant } from '../model/encounter'
 import { effectiveInitiative, woundModifier, type CombatantStats } from '../rules/sr6/encounter'
 import { STATUSES, STATUS_BY_NAME, statusLabel } from '../rules/sr6/statuses'
@@ -168,9 +173,7 @@ export function ParticipantCard({
       </div>
 
       <div className="grid gap-3 border-t border-line/60 px-3 py-2.5 sm:grid-cols-2">
-        {fromSheet && (
-          <p className="text-xs text-accent sm:col-span-2">Live from the player’s sheet; they mark their own damage.</p>
-        )}
+        {fromSheet && p.characterId && <LiveRunnerBar sheetId={p.characterId.slice('shared:'.length)} />}
         <Track
           label={single ? 'Condition' : 'Physical'}
           boxes={stats.monitor.physical}
@@ -312,6 +315,50 @@ export function ParticipantCard({
         </div>
       )}
     </li>
+  )
+}
+
+/**
+ * For a runner shared live: their damage comes from the player, and the GM can
+ * send damage, a status or Edge for the player to accept.
+ */
+function LiveRunnerBar({ sheetId }: { sheetId: string }) {
+  const [sending, setSending] = useState(false)
+  const data = useLiveQuery(async () => {
+    const sheet = await db.sharedSheets.get(sheetId)
+    const campaign = sheet && (await db.campaigns.get(sheet.roomId))
+    const waiting = sheet
+      ? await db.outbox
+          .where('roomId')
+          .equals(sheet.roomId)
+          .filter((m) => m.to === sheet.sheetId)
+          .toArray()
+      : []
+    return { sheet, campaign, waiting }
+  }, [sheetId])
+  const canSend = data?.campaign && data.sheet && gmSends(data.campaign).damage
+  return (
+    <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+      <p className="mr-auto text-xs text-accent">Live from the player’s sheet; they mark their own damage.</p>
+      {canSend && (
+        <button
+          className="btn px-2 py-1 text-xs"
+          onClick={() => setSending(true)}
+          title="Send damage, a status or Edge; the player accepts it"
+        >
+          <Send className="size-3.5" /> Send…
+        </button>
+      )}
+      {data && data.waiting.length > 0 && <Waiting items={data.waiting} />}
+      {sending && data?.campaign && data.sheet && (
+        <SendDialog
+          campaign={data.campaign}
+          sheet={data.sheet}
+          kinds={['damage', 'status', 'edge']}
+          onClose={() => setSending(false)}
+        />
+      )}
+    </div>
   )
 }
 

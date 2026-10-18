@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef } from 'react'
 import { db } from '../db/db'
 import { isSharingConfigured, syncCampaign, watchCampaign } from './campaigns'
+import { watchInbox, watchOutbox } from './messages'
 
 /** Wait this long after the last change before sending, so a burst of clicks is one upload. */
 const DEBOUNCE_MS = 2500
@@ -54,7 +55,9 @@ export function ShareSync() {
     void db.campaigns.bulkGet(gmKey.split('|')).then((list) => {
       if (cancelled) return
       for (const campaign of list) {
-        if (campaign) stops.push(watchCampaign(campaign, (error) => void db.campaigns.update(campaign.id, { error })))
+        if (!campaign) continue
+        const onError = (error: string) => void db.campaigns.update(campaign.id, { error })
+        stops.push(watchCampaign(campaign, onError), watchOutbox(campaign))
       }
     })
     return () => {
@@ -62,6 +65,24 @@ export function ShareSync() {
       stops.forEach((stop) => stop())
     }
   }, [gmKey])
+
+  // Player side: messages from the GM for each shared character.
+  useEffect(() => {
+    if (!isSharingConfigured() || !sharingKey) return
+    const stops: (() => void)[] = []
+    let cancelled = false
+    void db.campaigns.bulkGet(sharingKey.split('|').map((s) => s.split(':')[0])).then((list) => {
+      if (cancelled) return
+      for (const campaign of list) {
+        if (!campaign || campaign.closed) continue
+        for (const characterId of campaign.characterIds) stops.push(watchInbox(campaign, characterId))
+      }
+    })
+    return () => {
+      cancelled = true
+      stops.forEach((stop) => stop())
+    }
+  }, [sharingKey])
 
   return null
 }

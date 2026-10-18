@@ -36,6 +36,12 @@ function readyChecks(character: Character): Check[] {
   } else {
     checks.push({ status: 'ok', text: 'No injuries.' })
   }
+  if (d.essence <= 0) {
+    checks.push({
+      status: 'warn',
+      text: `Essence is ${d.essence}. A character whose Essence reaches 0 dies (p. 224); check the augmentations.`,
+    })
+  }
 
   checks.push({ status: 'info', text: `Edge refills to ${d.attributes.edge} when the session starts.` })
 

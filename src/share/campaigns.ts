@@ -51,6 +51,10 @@ function sessionKeys(code: string, password: string): Promise<SessionKeys> {
 
 const keyFor = async (campaign: Campaign) => (await sessionKeys(campaign.code, campaign.password)).key
 
+/** The campaign's sealing key (derived from its code and password). */
+export const campaignKey = (campaign: Pick<Campaign, 'code' | 'password'>) =>
+  sessionKeys(campaign.code, campaign.password).then((k) => k.key)
+
 /** The link (and QR code) players open to join. The password is only included when asked for. */
 export function joinLink(campaign: Pick<Campaign, 'code' | 'password'>, includePassword: boolean): string {
   const base = `${location.origin}${location.pathname}`

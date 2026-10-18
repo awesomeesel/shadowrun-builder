@@ -39,6 +39,25 @@ service cloud.firestore {
         allow delete: if request.auth != null
           && (resource.data.owner == request.auth.uid || isGm());
       }
+
+      // Damage, statuses, Edge and rewards the GM sends to one runner. Only the GM writes;
+      // the player it's for reads it and removes it once accepted or declined.
+      match /inbox/{message} {
+        function isGm() {
+          return get(/databases/$(database)/documents/rooms/$(room)).data.gm == request.auth.uid;
+        }
+        function forMe() {
+          return resource.data.to.matches(request.auth.uid + '_.+');
+        }
+        allow create: if request.auth != null && isGm()
+          && request.resource.data.keys().hasOnly(['to', 'data', 'createdAt'])
+          && request.resource.data.to is string
+          && request.resource.data.data is string
+          && request.resource.data.data.size() < 20000
+          && request.resource.data.createdAt is string;
+        allow update: if false;
+        allow read, delete: if request.auth != null && (forMe() || isGm());
+      }
     }
   }
 }

@@ -2,6 +2,7 @@ import { ArrowLeft, Dices, Download, ListChecks, Pencil, ScrollText, TrendingUp,
 import { useEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
 import { Portrait } from '../../components/art'
+import { GmInbox } from '../../share/GmInbox'
 import { ShareButton } from '../../share/ShareDialog'
 import { CloudButton } from '../../components/CloudSync'
 import { METATYPE_COLORS } from '../../components/metatypeColors'
@@ -122,6 +123,7 @@ export function CharacterPage() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-8 print:max-w-none print:p-0">
+        <GmInbox character={character} update={update} />
         <Outlet context={{ character, update } satisfies CharacterContext} />
       </main>
     </div>

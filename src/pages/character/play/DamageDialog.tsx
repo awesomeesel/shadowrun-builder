@@ -17,10 +17,16 @@ export function DamageDialog({
   character,
   update,
   onClose,
+  initial,
+  onApplied,
 }: {
   character: Character
   update: Update
   onClose: () => void
+  /** Pre-filled damage, e.g. sent by the GM. */
+  initial?: { value: number; type: DamageType }
+  /** Called once the boxes are filled (not when the dialog is just closed). */
+  onApplied?: () => void
 }) {
   const derived = computeDerived(character)
   const sources: { id: Source; label: string; pool: number | null }[] = [
@@ -34,8 +40,8 @@ export function DamageDialog({
     { id: 'direct', label: 'No resistance roll', pool: 0 },
   ]
   const [source, setSource] = useState<Source>('attack')
-  const [value, setValue] = useState(5)
-  const [type, setType] = useState<DamageType>('P')
+  const [value, setValue] = useState(initial?.value ?? 5)
+  const [type, setType] = useState<DamageType>(initial?.type ?? 'P')
   const [roll, setRoll] = useState<Roll | null>(null)
   const [centering, setCentering] = useState(false)
 
@@ -193,6 +199,7 @@ export function DamageDialog({
             disabled={!resisted}
             onClick={() => {
               update((c) => applyDamage(c, boxes, finalType))
+              onApplied?.()
               onClose()
             }}
           >

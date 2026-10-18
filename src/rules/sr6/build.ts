@@ -115,6 +115,14 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
     error(`${METATYPES[character.metatype].name} isn't available at metatype priority ${build.priorities.metatype}.`)
   }
 
+  // Essence
+  const essence = computeDerived(character).essence
+  if (essence <= 0) {
+    error(
+      `Essence is ${essence}. A character whose Essence reaches 0 dies (p. 224); remove or downgrade augmentations.`,
+    )
+  }
+
   // Magic
   const magicAttribute = MAGIC_TYPES[build.magicType].attribute
   if (magicAttribute && priority('magic').magicRating === 0) {

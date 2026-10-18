@@ -2,6 +2,8 @@ import { CalendarDays, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { noAutofill, noAutofillField } from '../components/noAutofill'
 import type { Campaign, CampaignRun, SharedSheet } from '../db/db'
+import { isFileSheet } from '../share/campaigns'
+import { gmSends, sendToRunner } from '../share/messages'
 import { runTotals } from './runTotals'
 import { updateCampaign } from './store'
 
@@ -17,12 +19,44 @@ const formatNuyen = (n: number) => `${n.toLocaleString()}¥`
 export function RunLog({ campaign, runners }: { campaign: Campaign; runners: SharedSheet[] }) {
   const runs = campaign.runs ?? []
   const [editing, setEditing] = useState<CampaignRun | null>(null)
-  const save = (run: CampaignRun) => {
+  const [notice, setNotice] = useState('')
+  const save = (run: CampaignRun, send: boolean) => {
     const exists = runs.some((r) => r.id === run.id)
     const next = exists ? runs.map((r) => (r.id === run.id ? run : r)) : [...runs, run]
     next.sort((a, b) => a.date.localeCompare(b.date))
     void updateCampaign(campaign.id, { runs: next })
     setEditing(null)
+    setNotice('')
+    if (send) void sendRewards(run)
+  }
+  /** Karma and nuyen to each runner who played and is shared live; they accept it on their sheet. */
+  const sendRewards = async (run: CampaignRun) => {
+    const live = runners.filter((s) => !isFileSheet(s) && run.runnerIds.includes(s.character.id))
+    const sent: string[] = []
+    const failed: string[] = []
+    for (const sheet of live) {
+      try {
+        await sendToRunner(campaign, sheet, {
+          kind: 'reward',
+          karma: run.karma,
+          nuyen: run.nuyen,
+          note: run.title || run.date,
+        })
+        sent.push(sheet.character.name)
+      } catch (e) {
+        failed.push(`${sheet.character.name} (${e instanceof Error ? e.message : String(e)})`)
+      }
+    }
+    const missed = run.runnerNames.filter((n) => !live.some((s) => s.character.name === n))
+    setNotice(
+      [
+        sent.length && `Sent to ${sent.join(', ')}; it’s added when they accept.`,
+        missed.length && `Not shared live, so add it by hand: ${missed.join(', ')}.`,
+        failed.length && `Couldn’t send to ${failed.join(', ')}.`,
+      ]
+        .filter(Boolean)
+        .join(' '),
+    )
   }
   const remove = (run: CampaignRun) => {
     if (confirm(`Delete "${run.title || run.date}" from the run log?`))
@@ -52,8 +86,10 @@ export function RunLog({ campaign, runners }: { campaign: Campaign; runners: Sha
           </button>
         )}
       </div>
+      {notice && <p className="mb-3 text-xs text-accent">{notice}</p>}
       {editing && (
         <RunForm
+          canSend={gmSends(campaign).rewards && runners.some((s) => !isFileSheet(s))}
           run={editing}
           runners={runners}
           onSave={save}
@@ -111,16 +147,20 @@ function RunForm({
   run,
   runners,
   isNew,
+  canSend,
   onSave,
   onCancel,
 }: {
   run: CampaignRun
   runners: SharedSheet[]
   isNew: boolean
-  onSave: (run: CampaignRun) => void
+  /** Rewards can be sent to live shared runners. */
+  canSend: boolean
+  onSave: (run: CampaignRun, send: boolean) => void
   onCancel: () => void
 }) {
   const [draft, setDraft] = useState(run)
+  const [send, setSend] = useState(true)
   // Runners who played: today's shared runners plus anyone already on this run who isn't shared any more.
   const choices = [
     ...runners.map((s) => ({ id: s.character.id, name: s.character.name })),
@@ -139,7 +179,7 @@ function RunForm({
       className="card mb-3 grid gap-3 p-4 text-sm"
       onSubmit={(e) => {
         e.preventDefault()
-        onSave(draft)
+        onSave(draft, isNew && canSend && send && (draft.karma > 0 || draft.nuyen > 0))
       }}
     >
       <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
@@ -220,6 +260,17 @@ function RunForm({
           onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
         />
       </label>
+      {isNew && canSend && (
+        <label className="flex items-start gap-2">
+          <input type="checkbox" checked={send} onChange={(e) => setSend(e.target.checked)} />
+          <span>
+            Send the karma and nuyen to the runners who played
+            <span className="block text-xs text-muted">
+              It goes into their karma and money history once they accept. Untick if they add it themselves.
+            </span>
+          </span>
+        </label>
+      )}
       <div className="flex gap-2">
         <button className="btn btn-primary">{isNew ? 'Add to the log' : 'Save'}</button>
         <button type="button" className="btn" onClick={onCancel}>

@@ -375,6 +375,16 @@ export const CombatSchema = z.object({
   edgeGained: int(0),
 })
 
+/** A status on the runner, such as Burning 3 or Cover II, usually set by the GM. */
+export const PlayStatusSchema = z.object({
+  id: id(),
+  name: z.string(),
+  /** The level (Cover II) or number (Burning 3); 0 when it has none. */
+  value: int(0),
+  /** Rounds left as the GM set it; null lasts until removed. */
+  rounds: z.number().int().nullable().default(null),
+})
+
 /** State that only matters at the table: current Edge, loaded ammo and the running session. */
 export const PlaySchema = z
   .object({
@@ -385,6 +395,7 @@ export const PlaySchema = z
     combat: CombatSchema.nullable().default(null),
     /** Boxes filled on the Matrix condition monitor. */
     matrixDamage: int(0),
+    statuses: z.array(PlayStatusSchema).default([]),
     /** Overwatch Score for deckers; Convergence at 40. */
     overwatch: int(0),
     sustained: z.array(SustainedSpellSchema).default([]),
@@ -525,7 +536,30 @@ export function createCharacter(overrides: Partial<Character> = {}): Character {
 /** Upgrade raw data from an older schema version so it can be parsed by `CharacterSchema`. */
 export function migrateCharacter(raw: unknown): unknown {
   // Only version 1 exists so far; future migrations go here, keyed on raw.schemaVersion.
-  return repairSpellDrain(raw)
+  return repairDermalPlating(repairSpellDrain(raw))
+}
+
+/**
+ * Rulebook extraction before version 9 read dermal plating's "Rating x .3"
+ * Essence as 3 per rating. Fix plating whose Essence is exactly that.
+ */
+function repairDermalPlating(raw: unknown): unknown {
+  if (typeof raw !== 'object' || raw === null) return raw
+  const augmentations = (raw as { augmentations?: unknown }).augmentations
+  if (!Array.isArray(augmentations)) return raw
+  type Aug = { name: string; rating?: number; essence: number }
+  const broken = (a: unknown): a is Aug => {
+    if (typeof a !== 'object' || a === null) return false
+    const { name, rating, essence } = a as Partial<Aug>
+    return typeof name === 'string' && /dermal plating/i.test(name) && essence === 3 * Math.max(1, rating ?? 0)
+  }
+  if (!augmentations.some(broken)) return raw
+  return {
+    ...raw,
+    augmentations: augmentations.map((a) =>
+      broken(a) ? { ...a, essence: Math.round(0.3 * Math.max(1, a.rating ?? 0) * 100) / 100 } : a,
+    ),
+  }
 }
 
 /**

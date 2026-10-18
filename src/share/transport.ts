@@ -19,6 +19,15 @@ export interface SheetDoc {
   updatedAt: string
 }
 
+/** Something the GM sends to one shared runner: damage, a status, Edge or a reward. */
+export interface MessageDoc {
+  /** The sheet it's for: `${playerUserId}_${characterId}`. */
+  to: string
+  /** Sealed GmMessagePayload. */
+  data: string
+  createdAt: string
+}
+
 export interface Transport {
   /** This device's user id (anonymous sign-in), stable until site data is cleared. */
   userId(): Promise<string>
@@ -33,15 +42,35 @@ export interface Transport {
     onChange: (sheets: Map<string, SheetDoc>) => void,
     onError: (error: Error) => void,
   ): () => void
+  /** GM only: leave a message for one runner. */
+  sendMessage(roomId: string, message: MessageDoc): Promise<string>
+  /** The player it's for (after handling it) or the GM (taking it back). */
+  deleteMessage(roomId: string, messageId: string): Promise<void>
+  /** Live messages: for one sheet (players), or all of them when `to` is null (the GM). */
+  watchMessages(
+    roomId: string,
+    to: string | null,
+    onChange: (messages: Map<string, MessageDoc>) => void,
+    onError: (error: Error) => void,
+  ): () => void
 }
 
 /** In-memory transport for tests: one shared "server", one user id per client. */
 export function memoryServer() {
   const rooms = new Map<string, RoomDoc>()
   const sheets = new Map<string, Map<string, SheetDoc>>()
+  const messages = new Map<string, Map<string, MessageDoc>>()
   const watchers = new Set<{ roomId: string; fn: (s: Map<string, SheetDoc>) => void }>()
   const notify = (roomId: string) => {
     for (const w of watchers) if (w.roomId === roomId) w.fn(new Map(sheets.get(roomId) ?? []))
+  }
+  const messageWatchers = new Set<{ roomId: string; to: string | null; fn: (m: Map<string, MessageDoc>) => void }>()
+  const notifyMessages = (roomId: string) => {
+    for (const w of messageWatchers) {
+      if (w.roomId !== roomId) continue
+      const all = [...(messages.get(roomId) ?? [])]
+      w.fn(new Map(w.to === null ? all : all.filter(([, m]) => m.to === w.to)))
+    }
   }
   const client = (uid: string): Transport => ({
     userId: async () => uid,
@@ -78,6 +107,28 @@ export function memoryServer() {
       onChange(new Map(sheets.get(roomId) ?? []))
       return () => watchers.delete(watcher)
     },
+    sendMessage: async (roomId, message) => {
+      if (rooms.get(roomId)?.gm !== uid) throw new Error('permission-denied')
+      const id = crypto.randomUUID()
+      if (!messages.has(roomId)) messages.set(roomId, new Map())
+      messages.get(roomId)!.set(id, message)
+      notifyMessages(roomId)
+      return id
+    },
+    deleteMessage: async (roomId, messageId) => {
+      const message = messages.get(roomId)?.get(messageId)
+      if (!message) return
+      if (!message.to.startsWith(`${uid}_`) && rooms.get(roomId)?.gm !== uid) throw new Error('permission-denied')
+      messages.get(roomId)!.delete(messageId)
+      notifyMessages(roomId)
+    },
+    watchMessages: (roomId, to, onChange) => {
+      if (to === null ? rooms.get(roomId)?.gm !== uid : !to.startsWith(`${uid}_`)) throw new Error('permission-denied')
+      const watcher = { roomId, to, fn: onChange }
+      messageWatchers.add(watcher)
+      notifyMessages(roomId)
+      return () => messageWatchers.delete(watcher)
+    },
   })
-  return { client, rooms, sheets }
+  return { client, rooms, sheets, messages }
 }
