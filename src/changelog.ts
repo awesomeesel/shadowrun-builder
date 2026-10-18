@@ -11,6 +11,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 14,
+    date: '2026-10-18',
+    title: 'A louder-looking intro',
+    items: [
+      'The intro is longer and has more action: hostile ICE, a laser sight, a target lock, three shots that crack the screen, and the logo slamming in. Tap to skip.',
+      'The intro sound is gone: browsers only allowed it after a tap, too late to hear it.',
+    ],
+  },
+  {
     id: 13,
     date: '2026-10-18',
     title: 'Sample encounters, Composure checks, and a new intro',
