@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Shadowrun Builder – Player &amp; GM guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  @page { size: A4; margin: 0; }
+  :root {
+    --accent: #0f9b74;
+    --accent-bright: #3ee8b5;
+    --neon: #d4157f;
+    --ink: #15181f;
+    --muted: #5b6270;
+    --line: #dfe3ea;
+    --soft: #f3f6f9;
+    --night: #0b0e14;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: Inter, system-ui, sans-serif;
+    font-size: 9.1pt;
+    line-height: 1.42;
+    color: var(--ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page {
+    width: 210mm;
+    height: 297mm;
+    padding: 13mm 14mm 11mm;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+  }
+  .page:last-child { page-break-after: auto; break-after: auto; }
+  .footer {
+    position: absolute;
+    left: 14mm; right: 14mm; bottom: 7mm;
+    display: flex; justify-content: space-between;
+    font-size: 7.4pt; color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding-top: 2mm;
+  }
+  h1, h2, h3 { font-family: Rajdhani, sans-serif; margin: 0; line-height: 1.1; }
+  h2 {
+    font-size: 21pt; font-weight: 700; letter-spacing: 0.01em;
+    margin-bottom: 1mm;
+  }
+  h2 .num {
+    display: inline-block; min-width: 9mm; color: var(--neon);
+  }
+  .lede { color: var(--muted); font-size: 10pt; margin: 0 0 4mm; }
+  h3 {
+    font-size: 12.5pt; font-weight: 700; color: var(--accent);
+    margin: 3.2mm 0 1mm; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  p { margin: 0 0 2mm; }
+  ul, ol { margin: 0 0 2mm; padding-left: 4.5mm; }
+  li { margin-bottom: 0.9mm; }
+  li::marker { color: var(--accent); }
+  b, strong { font-weight: 600; }
+  .ui {
+    font-weight: 600; white-space: nowrap;
+    background: var(--soft); border: 1px solid var(--line); border-radius: 1.2mm;
+    padding: 0 1.2mm; font-size: 8.5pt;
+  }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .cols-3-2 { display: grid; grid-template-columns: 1.25fr 1fr; gap: 6mm; }
+  .cols-2-3 { display: grid; grid-template-columns: 1fr 1.35fr; gap: 6mm; }
+  .shot {
+    margin: 1.5mm 0 3mm;
+  }
+  .shot img {
+    display: block; width: 100%;
+    border-radius: 2.2mm;
+    border: 1px solid #1f2633;
+    box-shadow: 0 1.2mm 4mm rgba(10, 15, 25, 0.25);
+  }
+  .shot.crop { overflow: hidden; border-radius: 2.2mm; }
+  .shot.crop img { height: auto; width: 100%; }
+  .caption { font-size: 7.6pt; color: var(--muted); margin-top: 1.2mm; }
+  .phones { display: flex; gap: 4mm; align-items: flex-start; }
+  .phones .shot { flex: 1; }
+  .tip, .note, .warn {
+    border-radius: 2mm; padding: 2.4mm 3mm; margin: 2mm 0 3mm;
+    font-size: 8.6pt;
+  }
+  .tip { background: #e9fbf4; border-left: 1.2mm solid var(--accent); }
+  .note { background: var(--soft); border-left: 1.2mm solid #8a94a6; }
+  .warn { background: #fff4e5; border-left: 1.2mm solid #e8a33e; }
+  .tip b:first-child, .note b:first-child, .warn b:first-child {
+    font-family: Rajdhani, sans-serif; font-size: 10pt; text-transform: uppercase; letter-spacing: 0.05em;
+    margin-right: 1mm;
+  }
+  .steps { counter-reset: step; list-style: none; padding-left: 0; }
+  .steps > li { counter-increment: step; position: relative; padding-left: 7mm; margin-bottom: 1.6mm; }
+  .steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0.2mm;
+    width: 4.8mm; height: 4.8mm; border-radius: 50%;
+    background: var(--accent); color: white;
+    font: 700 7.6pt/4.8mm Inter, sans-serif; text-align: center;
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 8.4pt; margin: 1mm 0 3mm; }
+  td, th { border-bottom: 1px solid var(--line); padding: 1.2mm 1.5mm; vertical-align: top; text-align: left; }
+  th { font-weight: 600; color: var(--muted); font-size: 7.8pt; text-transform: uppercase; letter-spacing: 0.04em; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+
+  /* Cover */
+  .cover-band {
+    margin: -13mm -14mm 6mm;
+    padding: 15mm 14mm 9mm;
+    background: radial-gradient(120% 140% at 0% 0%, #10302a 0%, var(--night) 55%), var(--night);
+    color: #e8edf4;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover-band::after {
+    content: ''; position: absolute; right: -25mm; top: -30mm; width: 90mm; height: 90mm;
+    border-radius: 50%; background: radial-gradient(circle, rgba(255, 62, 165, 0.35), transparent 65%);
+  }
+  .brand {
+    font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 34pt; letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, var(--accent-bright), #ff3ea5);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .cover-band .sub { font-family: Rajdhani, sans-serif; font-size: 16pt; font-weight: 600; margin-top: 1mm; }
+  .cover-band .url { margin-top: 3mm; font-size: 9.5pt; color: #9fb0c3; }
+  .cover-band .url b { color: var(--accent-bright); font-weight: 600; }
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin: 2mm 0 4mm; }
+  .card { border: 1px solid var(--line); border-radius: 2mm; padding: 2.5mm; background: white; }
+  .card .t { font-family: Rajdhani, sans-serif; font-weight: 700; font-size: 11pt; color: var(--accent); }
+  .card p { font-size: 8.2pt; margin: 0.6mm 0 0; color: #343a46; }
+  .toc { columns: 2; column-gap: 6mm; font-size: 8.6pt; margin: 0; padding-left: 4.5mm; }
+</style>
+</head>
+<body>
+
+<!-- ============ PAGE 1 ============ -->
+<section class="page">
+  <div class="cover-band">
+    <div class="brand">Shadowrun Builder</div>
+    <div class="sub">Player &amp; GM guide · Shadowrun Sixth World</div>
+    <div class="url">Open it in any browser, on phone, tablet or computer: <b>awesomeesel.github.io/shadowrun-builder</b></div>
+  </div>
+
+  <p style="font-size:10pt">
+    Shadowrun Builder helps you make a Sixth World runner by the book, keeps the sheet up to date as the
+    character grows, and does the bookkeeping at the table: dice pools, damage, Edge, ammo, spells and spirits.
+    The GM gets a screen of their own for campaigns, encounters and a quick rules reference, and can follow the
+    players’ sheets live.
+  </p>
+
+  <div class="cards">
+    <div class="card"><div class="t">Build</div><p>A step-by-step wizard that checks the creation rules as you go.</p></div>
+    <div class="card"><div class="t">Play</div><p>Tap a pool to roll. Damage, Edge, ammo and wound modifiers are tracked for you.</p></div>
+    <div class="card"><div class="t">Share</div><p>Scan the GM’s QR code and your sheet shows up on their screen.</p></div>
+    <div class="card"><div class="t">Run</div><p>GM tools: turn order, enemies from your books, statuses, rules lookup.</p></div>
+  </div>
+
+  <div class="cols-3-2">
+    <div>
+      <h3>Four ways to get a runner</h3>
+      <table>
+        <tr><td><span class="ui">New character</span></td><td>The wizard. Eight steps: concept, priorities, attributes, skills, qualities, gear, contacts and review. Each step has tips and a checklist, and the counters at the top show what you have left to spend.</td></tr>
+        <tr><td><span class="ui">Quick make</span></td><td>A finished, legal runner in one click. Pick a role and metatype. Great for a one-shot or an NPC. With rulebooks in the Library it also picks gear, qualities and spells.</td></tr>
+        <tr><td><span class="ui">Enter existing</span></td><td>Type in a character you already have (on paper or elsewhere) without the creation rules getting in the way.</td></tr>
+        <tr><td><span class="ui">Import</span></td><td>Load a file exported from Shadowrun Builder, or a Commlink (commlink.rocks) export. You get a report of what came across.</td></tr>
+      </table>
+
+      <h3>Where your data lives</h3>
+      <p>Everything is saved in your browser as you go; there is no account and no save button. That also means
+        clearing the browser’s site data deletes it, so connect a backup:</p>
+      <ul>
+        <li><span class="ui">Google Drive</span> (top of the start page) keeps your characters in a
+          “Shadowrun Builder” folder in <i>your own</i> Drive and syncs them between your devices. GMs: campaigns and
+          encounters are backed up there too.</li>
+        <li><span class="ui">Export</span> on a character downloads it as a file; <span class="ui">Export all</span>
+          saves every character at once.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="shot"><img src="shots/list-phone.png" style="max-height:112mm;width:auto;max-width:100%;margin:0 auto" /></div>
+      <div class="caption" style="text-align:center">The start page on a phone: your runners, and the buttons for
+        making new ones. GM, Rules and Library sit at the top.</div>
+      <div class="tip"><b>Tip</b> On a phone, use the browser’s <i>Add to Home Screen</i> to get an icon that opens
+        the app full screen.</div>
+    </div>
+  </div>
+
+  <div class="footer"><span>Shadowrun Builder · Player &amp; GM guide</span><span>1 / 6</span></div>
+</section>
+
+<!-- ============ PAGE 2 ============ -->
+<section class="page">
+  <h2><span class="num">2</span>Building and growing your runner</h2>
+  <p class="lede">The wizard walks you through character creation; the other tabs keep the character right afterwards.</p>
+
+  <div class="shot crop" style="height:66mm"><img src="shots/wizard.png" /></div>
+  <div class="caption">The wizard. Steps along the top (a tick means done), what you have left to spend below them,
+    then tips and a checklist for the current step.</div>
+
+  <div class="cols">
+    <div>
+      <h3>The wizard, step by step</h3>
+      <ul>
+        <li><b>Concept</b>: name and idea. Picking a role (street samurai, decker, face…) makes the
+          wizard suggest priorities, attributes and skills for it. You can ignore every suggestion.</li>
+        <li><b>Priorities</b>: choose A–E for metatype, attributes, skills, magic and resources.</li>
+        <li><b>Attributes</b>: each attribute shows your metatype’s range. The highest value is the limit, not a
+          target.</li>
+        <li><b>Skills, Qualities, Gear, Contacts</b>: pick from the lists. If your rulebooks are in the Library,
+          items come with their prices and page numbers.</li>
+        <li><b>Review</b>: lists anything that breaks the creation rules. When it’s clean, finish the
+          character to start playing.</li>
+      </ul>
+      <p>Prefer one long page? The <span class="ui">Build</span> tab shows every choice at once.</p>
+
+      <h3>After creation</h3>
+      <table>
+        <tr><td>Sheet</td><td>Everything worked out: dice pools, Defense Rating, damage tracks, Matrix numbers.
+          <span class="ui">Print play sheet</span> gives you one page for pen-and-paper play.</td></tr>
+        <tr><td>Play</td><td>The table view: see page 3.</td></tr>
+        <tr><td>Karma</td><td>Spend karma between runs at the book’s prices: attributes, skills,
+          specializations, qualities, spells, initiation and submersion. Every purchase is logged.</td></tr>
+        <tr><td>Edit</td><td>Change anything by hand. The menu at the top jumps to a section.</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>Add your rulebooks</h3>
+      <p>In the <span class="ui">Library</span>, add the Shadowrun 6 PDFs you own. They stay on your device,
+        and if you like you can also keep a copy in your own Google Drive. With books added:</p>
+      <ul>
+        <li>page references like <b>CRB 245</b> open the right page;</li>
+        <li>you can search the text of every book;</li>
+        <li>gear, qualities and spells can be picked from the books, with prices and stats filled in;</li>
+        <li>GMs can add grunts and critters straight from the stat blocks.</li>
+      </ul>
+      <div class="note"><b>Note</b> The app itself contains no book text. It reads the PDFs you add, in your own
+        browser, and only copies them to your Drive if you ask it to.</div>
+
+      <h3>Good to know</h3>
+      <ul>
+        <li>Attribute names are written in full everywhere (Body, Agility…), and pools show how they’re made, e.g.
+          <i>Defense (Reaction + Intuition)</i>.</li>
+        <li>Augmentations, grades (alpha, used…), bone lacing and similar bonuses change the numbers for you.</li>
+        <li>A cyberdeck and a cyberjack work together; programs on the deck count toward its slots.</li>
+        <li>When a new version is out, a banner offers <span class="ui">Reload</span>, and
+          <span class="ui">What’s new</span> lists the changes.</li>
+      </ul>
+      <div class="tip"><b>Tip</b> Use <span class="ui">Duplicate</span> on the start page before a big
+        experiment, such as trying a different build.</div>
+    </div>
+  </div>
+
+  <div class="footer"><span>Shadowrun Builder · Player &amp; GM guide</span><span>2 / 6</span></div>
+</section>
+
+<!-- ============ PAGE 3 ============ -->
+<section class="page">
+  <h2><span class="num">3</span>At the table: the Play tab</h2>
+  <p class="lede">Your character sheet, turned into a play screen. Open it on your phone when the game starts.</p>
+
+  <div class="cols" style="grid-template-columns:1.1fr 1fr">
+    <div class="phones" style="flex-direction:column">
+      <div class="phones">
+        <div class="shot"><img src="shots/play-phone.png" /></div>
+        <div class="shot"><img src="shots/play-roll-phone.png" /></div>
+      </div>
+      <div class="caption">Left: the top of a running session, with damage tracks and Edge. Right: an attack
+        rolled. Tap a die to spend Edge on it.</div>
+      <div class="tip" style="margin-top:3mm"><b>Tip</b> Rolling with real dice? Use the app as a smart sheet:
+        it still shows the right pool, with wound modifiers, sustained spells and range already counted. Just
+        mark the damage and Edge.</div>
+    </div>
+    <div>
+      <h3>A session, start to finish</h3>
+      <ol class="steps">
+        <li><b>Ready check</b>: before the run, the Play tab looks over injuries, ammo, armor, programs,
+          sustained spells, spirits and rent, with one-tap fixes like <i>Heal all</i> and <i>Reload all</i>.</li>
+        <li><span class="ui">Start session</span>: Edge refills and you get the play screen. Your rolls are
+          logged for the session summary.</li>
+        <li><b>Status</b>: tap boxes to mark damage, or use <span class="ui">Take damage…</span>: enter the
+          damage and it rolls your resistance (or drain) and fills the boxes, including overflow. The wound modifier is applied to every
+          pool by itself.</li>
+        <li><b>Edge</b>: diamonds show what you have (at most 7). After a roll, spend it on the result: reroll
+          one die, +1 to a die, buy a hit, or reroll all misses.</li>
+        <li><b>Combat</b>: roll initiative to start a fight. The tracker counts rounds and the Major and Minor
+          actions you have left.</li>
+        <li><b>Attack</b>: pick the range and firing mode and tap <span class="ui">Attack</span>. Ammo counts
+          down; reload with one tap. The result shows the DV and how the Attack Rating compares.</li>
+        <li><span class="ui">End session</span>: write down karma, nuyen, Heat and Reputation. It all goes into
+          the session log and your money and karma history. You can heal between runs here too.</li>
+      </ol>
+
+      <h3>Magic, Matrix and more</h3>
+      <ul>
+        <li><b>Spells</b>: cast, then resist drain. Sustained spells are listed, with their −2 dice each counted
+          for you.</li>
+        <li><b>Spirits and sprites</b>: summon or compile, track services, tasks and damage; banish or decompile
+          someone else’s.</li>
+        <li><b>Drones and vehicles</b>: their own damage tracks and pilot rolls.</li>
+        <li><b>Matrix</b>: your persona’s numbers, programs, Matrix damage and Overwatch Score.</li>
+        <li><b>Roll dice</b>: any pool you like, with a +/− modifier for cover, smartlinks and the like.</li>
+      </ul>
+      <div class="note"><b>Pen and paper?</b> On the Sheet tab, <span class="ui">Print play sheet</span> makes a
+        one-page sheet with boxes for damage, Edge, ammo and Overwatch, and lines for spells, spirits, money and
+        notes.</div>
+    </div>
+  </div>
+
+  <div class="footer"><span>Shadowrun Builder · Player &amp; GM guide</span><span>3 / 6</span></div>
+</section>
+
+<!-- ============ PAGE 4 ============ -->
+<section class="page">
+  <h2><span class="num">4</span>Sharing with your GM</h2>
+  <p class="lede">Your GM can follow your runner live: sheet, damage, Edge and ammo. They can look; only you can
+    change your character.</p>
+
+  <div class="cols-3-2">
+    <div>
+      <h3>Players: joining a campaign</h3>
+      <ol class="steps">
+        <li>The GM shows a <b>QR code</b> (or gives you a <b>code</b> like <i>K7QM-4XRA-P2DN</i> and maybe a
+          <b>password</b>).</li>
+        <li>Scan it with your phone camera. The app opens and finds the campaign; check that the name is right.</li>
+        <li>Tick the runners the GM should see and tap <span class="ui">Join and share</span>. That’s it.</li>
+      </ol>
+      <p>No QR code? Open the character, tap <span class="ui">Share with GM</span> (the share icon at the top), type the
+        code and password, and tap <span class="ui">Find campaign</span>.</p>
+
+      <h3>While you play</h3>
+      <ul>
+        <li>Changes reach the GM a few seconds after you make them, as long as you’re online. Offline changes are
+          sent when you’re back.</li>
+        <li>The share icon at the top of a shared character turns green. Tap it to see “Up to date”, to stop
+          sharing that runner, or to leave the campaign.</li>
+        <li>If the GM closes the campaign, you’ll see it there and can remove it.</li>
+      </ul>
+
+      <h3>No internet at the table?</h3>
+      <p>In the same dialog, <span class="ui">Send a copy</span> sends your character file through the phone’s share
+        menu (chat, mail, AirDrop…). The GM imports it on their campaign page. It’s a snapshot, so send it again after
+        changes.</p>
+
+      <div class="note"><b>Privacy</b> Sheets are encrypted on your device with the campaign code and password
+        before they leave it, so the server in between can’t read them. Only people with the code and password can
+        see the shared runners.</div>
+    </div>
+    <div>
+      <div class="phones">
+        <div class="shot"><img src="shots/join-phone.png" /></div>
+        <div class="shot"><img src="shots/share-dialog-phone.png" /></div>
+      </div>
+      <div class="caption">Left: what the QR code opens. Right: <i>Share with GM</i> on a character, with the
+        campaign it’s shared with, joining another, and Send a copy.</div>
+    </div>
+  </div>
+
+  <h3>GM: inviting the players</h3>
+  <div class="cols-3-2">
+    <div><div class="shot"><img src="shots/join-card.png" /></div><div class="caption">The join panel at the top of a new campaign (an example: this code doesn’t work).</div></div>
+    <div>
+      <ol class="steps">
+        <li>On the <span class="ui">GM</span> screen, tap <span class="ui">New campaign</span>. Give it a name
+          and, if you like, a password.</li>
+        <li>The campaign page opens with the QR code, code and password at the top. Show it to the table.</li>
+        <li>When everyone is in, tap <span class="ui">Hide</span>. It moves to <span class="ui">Join info</span>
+          at the top, which opens it full-size for latecomers.</li>
+      </ol>
+      <div class="tip"><b>Tip</b> Untick “Put the password in the QR code” and say the password out loud. Then a
+        photo of the screen alone isn’t enough to join.</div>
+    </div>
+  </div>
+
+  <div class="footer"><span>Shadowrun Builder · Player &amp; GM guide</span><span>4 / 6</span></div>
+</section>
+
+<!-- ============ PAGE 5 ============ -->
+<section class="page">
+  <h2><span class="num">5</span>For the GM: campaigns</h2>
+  <p class="lede">The <span class="ui">GM</span> button on the start page opens your screen. Each campaign keeps your
+    group together: its runners, encounters, run log and notes.</p>
+
+  <div class="shot crop" style="height:118mm"><img src="shots/campaign-full.png" style="height:auto;width:100%" /></div>
+  <div class="caption">A campaign page: the runners shared with it (live), the party overview, encounters, and further
+    down the run log and notes.</div>
+
+  <div class="cols">
+    <div>
+      <h3>Runners</h3>
+      <p>Each shared runner shows their damage, Edge and when they last changed. Tap <span class="ui">Sheet</span>
+        for their full sheet, read-only. Use the bin icon to remove a runner; the player can share again.</p>
+      <p><span class="ui">Import a runner’s file</span> adds a runner a player sent with Send a copy.</p>
+
+      <h3>Party overview</h3>
+      <p>The numbers you check or roll in secret, for the whole group: Initiative, Defense Rating, Defense, Soak,
+        Perception, Surprise, Composure, Judge Intentions, Memory, Edge, Heat, Reputation, Wounds, plus magic type,
+        astral sight and cyberdecks. Hover a column header to see how it’s made.</p>
+    </div>
+    <div>
+      <h3>Run log and notes</h3>
+      <p><span class="ui">Log a run</span> after each game night: date, title, karma and nuyen paid to each
+        runner, who played and what happened. Totals per runner add up at the top. Notes hold plot threads, NPCs
+        and loose ends. Players never see either.</p>
+
+      <h3>Backups and other devices</h3>
+      <p>Connect <span class="ui">Google Drive</span> and everything on the GM screen is backed up to a “GM” folder in
+        your Drive: campaigns with their codes and passwords, encounters, notes and run log. Connect the same Drive
+        on your laptop and tablet and it follows you. An orange banner warns you while nothing is backed up.</p>
+      <div class="warn"><b>Heads-up</b> Only the device that made a campaign can close it or remove runners. On
+        your other devices you can see and run everything else.</div>
+    </div>
+  </div>
+
+  <div class="footer"><span>Shadowrun Builder · Player &amp; GM guide</span><span>5 / 6</span></div>
+</section>
+
+<!-- ============ PAGE 6 ============ -->
+<section class="page">
+  <h2><span class="num">6</span>For the GM: encounters and rules</h2>
+  <p class="lede">Set up fights before the session; at the table, the action screen keeps the turn order, actions, damage
+    and statuses for everyone.</p>
+
+  <div class="shot crop" style="height:84mm"><img src="shots/encounter.png" style="height:auto;width:100%" /></div>
+  <div class="caption">An encounter in round 1. The fire spirit is acting; Rook’s damage comes live from the player’s
+    phone.</div>
+
+  <div class="cols">
+    <div>
+      <h3>Setting up</h3>
+      <p><span class="ui">New encounter</span> on the campaign page, then <span class="ui">Add</span>:</p>
+      <ul>
+        <li><b>From the books</b>: grunts, critters and contacts from the stat blocks in your Library. Add several at
+          once to make a <b>grunt group</b>: they share one initiative roll and an Edge pool equal to their
+          Professional Rating.</li>
+        <li><b>Spirit</b>: type and Force. <b>Runner</b>: shared runners (live damage and Edge) or just a name.
+          <b>Quick enemy</b>: a few numbers for anything else.</li>
+      </ul>
+
+      <h3>Running the fight</h3>
+      <ol class="steps">
+        <li><span class="ui">Roll NPC initiative</span>. Players roll their own and tell you; type it on their card.</li>
+        <li><span class="ui">Start round 1</span>, then <span class="ui">Next turn</span>. Ties are broken by Edge,
+          then Reaction, then Intuition.</li>
+        <li>At the end of each round, actions refill, timed statuses count down, and a banner reminds you who resists
+          Burning, Corrosive or Poison damage.</li>
+        <li>Pressed Next too soon? <span class="ui">Back</span> undoes it, damage stays. <span class="ui">End
+          fight</span> when it’s over.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>On each card</h3>
+      <ul>
+        <li>Major and Minor action pips: tap to use, tap again to give back.</li>
+        <li>Damage boxes with the wound modifier marked (every 2 boxes for grunts, 3 for others), and
+          <span class="ui">Out</span> for anyone down or fled.</li>
+        <li><span class="ui">+ Status</span>: Burning 3, Cover II, Dazed for 2 rounds… Dazed, Chilled and Zapped
+          also lower initiative.</li>
+        <li>Dice chips roll with wounds already counted, and Edge boosts after the roll.</li>
+      </ul>
+
+      <h3>Rules reference</h3>
+      <p><span class="ui">Rules</span> has short summaries with page numbers: rounds, actions, attacking, Edge, damage
+        and healing, magic and Matrix, statuses. Searching also looks through every book in your Library.</p>
+
+      <h3>Tips &amp; tricks</h3>
+      <ul>
+        <li>Prepare encounters at home; one tap during the game.</li>
+        <li>Keep the Rules page open in a second tab.</li>
+        <li>Use the party overview for secret Perception and Surprise rolls.</li>
+        <li>Log the run before everyone leaves, while it’s fresh.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:0"><b>Trouble?</b>
+    <i>“No campaign with that code and password”</i>: check both with the GM; codes have 12 letters and digits and
+    never use O, 0, I, 1 or L. · <i>The GM can’t see me</i>: open Share with GM and look for “Up to date”. ·
+    <i>Drive says Reconnect</i>: the Google sign-in lasts an hour; tap to continue.</div>
+
+  <div class="footer"><span>Shadowrun Builder · Player &amp; GM guide</span><span>6 / 6</span></div>
+</section>
+
+</body>
+</html>

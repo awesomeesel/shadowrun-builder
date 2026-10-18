@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AlertTriangle, Check, LogOut, Radio, Send, Share2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
 import { noAutofill } from '../components/noAutofill'
 import { db, type Campaign } from '../db/db'
@@ -31,7 +32,8 @@ export function ShareButton({ character }: { character: Character }) {
         {sharedWith ? <Radio className="size-4 text-accent" /> : <Share2 className="size-4" />}
         <span className="hidden sm:inline">{sharedWith ? 'Shared' : 'Share with GM'}</span>
       </button>
-      {open && <ShareDialog character={character} onClose={() => setOpen(false)} />}
+      {/* Rendered on <body>: the sticky header's blur would otherwise trap a fixed dialog inside it. */}
+      {open && createPortal(<ShareDialog character={character} onClose={() => setOpen(false)} />, document.body)}
     </>
   )
 }

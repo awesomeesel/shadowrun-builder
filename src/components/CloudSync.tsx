@@ -1,5 +1,6 @@
 import { Cloud, CloudAlert, CloudOff, ExternalLink, LogOut, RefreshCw, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { connectDrive, disconnectDrive, driveFolderUrl, syncNow, useCloud, type CloudState } from '../cloud/cloud'
 
 function timeAgo(iso?: string) {
@@ -51,7 +52,8 @@ export function CloudButton() {
       >
         {icon} <span className="hidden sm:inline">{statusLabel(cloud)}</span>
       </button>
-      {open && <CloudDialog onClose={() => setOpen(false)} />}
+      {/* Rendered on <body>: the sticky header's blur would otherwise trap a fixed dialog inside it. */}
+      {open && createPortal(<CloudDialog onClose={() => setOpen(false)} />, document.body)}
     </>
   )
 }
