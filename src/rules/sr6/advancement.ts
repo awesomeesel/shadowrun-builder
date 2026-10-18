@@ -17,7 +17,7 @@ import { ATTRIBUTE_LABELS, type AttributeId } from './attributes'
 import { gradeCost, gradeEffects } from './initiation'
 import { attributeMaximum } from './metatypes'
 import { addLedgerEntry } from './play'
-import { SKILLS_BY_ID } from './skills'
+import { SKILLS_BY_ID, aptitudeSkillIds } from './skills'
 
 export const ADVANCEMENT = {
   /** Attributes and active skills cost 5 × the new rank, one rank at a time. */
@@ -97,11 +97,13 @@ export function raiseSkill(character: Character, skillId: string): Purchase {
   const current = owned?.rating ?? 0
   const next = current + 1
   const name = def?.name ?? skillId
+  // Aptitude lets that skill reach 10 instead of 9 (p. 65).
+  const max = ADVANCEMENT.maxSkillRank + (aptitudeSkillIds(character.qualities).has(skillId) ? 1 : 0)
   return {
     label: owned ? `${name} ${current} → ${next}` : `Learned ${name} 1`,
     cost: ADVANCEMENT.karmaPerRank * next,
     training: months(next),
-    blocked: next > ADVANCEMENT.maxSkillRank ? `${name} is at the maximum rank of 9.` : undefined,
+    blocked: next > max ? `${name} is at the maximum rank of ${max}.` : undefined,
     apply: (c) =>
       owned
         ? { ...c, skills: c.skills.map((s) => (s.id === owned.id ? { ...s, rating: next } : s)) }

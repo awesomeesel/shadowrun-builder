@@ -221,3 +221,21 @@ describe('rules checked against the Core Rulebook', () => {
     expect(messages(fresh()).some((m) => m.includes('keeps at most 5,000¥'))).toBe(true)
   })
 })
+
+describe('Aptitude at creation', () => {
+  const withFirearms = (rating: number, qualities: Character['qualities'] = []) => {
+    const skill = { id: 's1', skillId: 'firearms', rating: 0, specialization: '', expertise: '' }
+    return withBuild(fresh({ skills: [skill], qualities }), (b) => {
+      b.skills.s1 = { points: 6, karma: rating - 6, adjustment: 0 }
+    })
+  }
+  const aptitude = [QualitySchema.parse({ name: 'Aptitude (Firearms)', kind: 'positive', karma: 12 })]
+
+  it('allows 7 in the Aptitude skill, and charges 35 karma for 6 → 7', () => {
+    expect(messages(withFirearms(7))).toContain('Firearms 7 is above the creation maximum of 6.')
+    const ok = withFirearms(7, aptitude)
+    expect(messages(ok).some((m) => m.includes('creation maximum'))).toBe(false)
+    expect(evaluateBuild(ok)!.karma.breakdown.skills).toBe(35)
+    expect(messages(withFirearms(8, aptitude))).toContain('Firearms 8 is above the creation maximum of 7.')
+  })
+})

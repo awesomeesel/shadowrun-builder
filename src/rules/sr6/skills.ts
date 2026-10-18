@@ -31,3 +31,17 @@ export const SKILLS: SkillDef[] = [
 ]
 
 export const SKILLS_BY_ID = new Map(SKILLS.map((s) => [s.id, s]))
+
+/**
+ * Skills named by an Aptitude quality, e.g. "Aptitude (Firearms)". Aptitude
+ * raises that skill's limit by 1: 7 at creation, 10 in play (p. 65, 70).
+ */
+export function aptitudeSkillIds(qualities: { name: string }[]): Set<string> {
+  const ids = new Set<string>()
+  for (const q of qualities) {
+    const match = q.name.match(/^\s*aptitude\s*\(([^)]+)\)/i)
+    const skill = match && SKILLS.find((s) => s.name.toLowerCase() === match[1].trim().toLowerCase())
+    if (skill) ids.add(skill.id)
+  }
+  return ids
+}

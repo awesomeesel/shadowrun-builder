@@ -9,7 +9,7 @@ import {
 } from './creation'
 import { METATYPES, attributeMaximum } from './metatypes'
 import { computeDerived } from './derived'
-import { SKILLS_BY_ID } from './skills'
+import { SKILLS_BY_ID, aptitudeSkillIds } from './skills'
 import { AUGMENTATION_GRADES, SPECIAL_CREATION_RULES } from './special'
 
 const POINT_ATTRIBUTES: readonly AttributeId[] = [...PHYSICAL_ATTRIBUTES, ...MENTAL_ATTRIBUTES]
@@ -169,6 +169,7 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
   let skillPointsSpent = 0
   let skillKarma = 0
   let skillsAtMax = 0
+  const aptitude = aptitudeSkillIds(character.qualities)
   for (const skill of character.skills) {
     const alloc = build.skills[skill.id] ?? { points: 0, karma: 0, adjustment: 0 }
     const name = SKILLS_BY_ID.get(skill.skillId)?.name ?? skill.skillId
@@ -180,9 +181,11 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
       skillKarma += RULES.expertiseKarma
       if (!skill.specialization.trim()) error(`${name} needs a specialization before an expertise.`)
     }
-    if (rating > RULES.maxSkillRating)
-      error(`${name} ${rating} is above the creation maximum of ${RULES.maxSkillRating}.`)
-    if (rating === RULES.maxSkillRating) skillsAtMax++
+    // Aptitude lifts that skill's creation maximum from 6 to 7 (p. 65).
+    const max = RULES.maxSkillRating + (aptitude.has(skill.skillId) ? 1 : 0)
+    if (rating > max) error(`${name} ${rating} is above the creation maximum of ${max}.`)
+    // Only one skill may be at the maximum, whether that's 6 or 7 with Aptitude.
+    if (rating >= RULES.maxSkillRating) skillsAtMax++
     if (rating === 0) warning(`${name} has no rating yet.`)
     if (MAGIC_SKILLS.has(skill.skillId) && magicAttribute !== 'magic')
       warning(`${name} is only useful for awakened characters.`)
@@ -191,7 +194,7 @@ export function evaluateBuild(character: Character): BuildEvaluation | null {
   }
   if (skillsAtMax > RULES.maxSkillsAtMax) {
     error(
-      `${skillsAtMax} skills are at rating ${RULES.maxSkillRating}; only ${RULES.maxSkillsAtMax} may be at creation.`,
+      `${skillsAtMax} skills are at rating ${RULES.maxSkillRating} or more; only ${RULES.maxSkillsAtMax} may be at creation.`,
     )
   }
 

@@ -77,3 +77,17 @@ describe('karma shop prices (pp. 67–68)', () => {
     expect(buy(poor, p)).toBe(poor)
   })
 })
+
+describe('Aptitude', () => {
+  it('lets the Aptitude skill reach 10 in play, others stop at 9', () => {
+    const c = createCharacter({
+      skills: [
+        SkillSchema.parse({ skillId: 'firearms', rating: 9 }),
+        SkillSchema.parse({ skillId: 'athletics', rating: 9 }),
+      ],
+      qualities: [QualitySchema.parse({ name: 'Aptitude (Firearms)', karma: 12 })],
+    })
+    expect(raiseSkill(c, 'firearms').blocked).toBeUndefined()
+    expect(raiseSkill(c, 'athletics').blocked).toMatch(/maximum rank of 9/)
+  })
+})
