@@ -1,7 +1,7 @@
 import { CalendarDays, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { noAutofill, noAutofillField } from '../components/noAutofill'
-import type { Campaign, CampaignRun, SharedSheet } from '../db/db'
+import type { Campaign, CampaignJob, CampaignRun, SharedSheet } from '../db/db'
 import { isFileSheet } from '../share/campaigns'
 import { gmSends, sendToRunner } from '../share/messages'
 import { runTotals } from './runTotals'
@@ -16,10 +16,34 @@ const today = () => {
 const formatNuyen = (n: number) => `${n.toLocaleString()}¥`
 
 /** Game nights: what happened, who was there, and the karma and nuyen paid out. */
-export function RunLog({ campaign, runners }: { campaign: Campaign; runners: SharedSheet[] }) {
+export function RunLog({
+  campaign,
+  runners,
+  payout,
+  onPayoutDone,
+}: {
+  campaign: Campaign
+  runners: SharedSheet[]
+  /** A finished job to log: opens the form with its pay filled in. */
+  payout?: CampaignJob | null
+  onPayoutDone?: () => void
+}) {
   const runs = campaign.runs ?? []
-  const [editing, setEditing] = useState<CampaignRun | null>(null)
+  const [editingRun, setEditingRun] = useState<CampaignRun | null>(null)
   const [notice, setNotice] = useState('')
+  const [payoutRun, setPayoutRun] = useState<{ jobId: string; run: CampaignRun } | null>(null)
+  // A new run for the job, made once per job so the form keeps what the GM types.
+  const forJob =
+    payout &&
+    (payoutRun?.jobId === payout.id
+      ? payoutRun.run
+      : { ...blank(), title: payout.title, karma: payout.karma, nuyen: payout.nuyen, jobId: payout.id })
+  if (payout && forJob && payoutRun?.jobId !== payout.id) setPayoutRun({ jobId: payout.id, run: forJob })
+  const editing = editingRun ?? forJob ?? null
+  const setEditing = (run: CampaignRun | null) => {
+    setEditingRun(run)
+    if (!run && payout) onPayoutDone?.()
+  }
   const save = (run: CampaignRun, send: boolean) => {
     const exists = runs.some((r) => r.id === run.id)
     const next = exists ? runs.map((r) => (r.id === run.id ? run : r)) : [...runs, run]
@@ -62,20 +86,22 @@ export function RunLog({ campaign, runners }: { campaign: Campaign; runners: Sha
     if (confirm(`Delete "${run.title || run.date}" from the run log?`))
       void updateCampaign(campaign.id, { runs: runs.filter((r) => r.id !== run.id) })
   }
-  const blank = (): CampaignRun => ({
-    id: crypto.randomUUID(),
-    date: today(),
-    title: '',
-    notes: '',
-    karma: 0,
-    nuyen: 0,
-    runnerIds: runners.map((s) => s.character.id),
-    runnerNames: runners.map((s) => s.character.name),
-  })
+  function blank(): CampaignRun {
+    return {
+      id: crypto.randomUUID(),
+      date: today(),
+      title: '',
+      notes: '',
+      karma: 0,
+      nuyen: 0,
+      runnerIds: runners.map((s) => s.character.id),
+      runnerNames: runners.map((s) => s.character.name),
+    }
+  }
   const totals = runTotals(runs)
 
   return (
-    <section>
+    <section data-jump="Run log">
       <div className="mb-2 flex items-center gap-2">
         <h2 className="mr-auto flex items-center gap-2 font-display text-xl">
           <CalendarDays className="size-5 text-accent" /> Run log
@@ -89,6 +115,7 @@ export function RunLog({ campaign, runners }: { campaign: Campaign; runners: Sha
       {notice && <p className="mb-3 text-xs text-accent">{notice}</p>}
       {editing && (
         <RunForm
+          key={editing.id}
           canSend={gmSends(campaign).rewards && runners.some((s) => !isFileSheet(s))}
           run={editing}
           runners={runners}

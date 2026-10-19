@@ -22,7 +22,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useNavigate, useParams } from 'react-router'
 import { Portrait } from '../components/art'
 import { noAutofill, noAutofillField } from '../components/noAutofill'
-import { db, type Campaign, type OutboxItem, type SharedSheet } from '../db/db'
+import { db, type Campaign, type CampaignJob, type OutboxItem, type SharedSheet } from '../db/db'
 import { parseImportFile } from '../model/fileFormat'
 import { computeDerived } from '../rules/sr6/derived'
 import { newEncounter } from '../rules/sr6/encounter'
@@ -49,6 +49,7 @@ import { updateCampaign } from './store'
 import { CastSection } from './Cast'
 import { SampleEncounterDialog } from './SampleEncounter'
 import { PartyOverview } from './PartyOverview'
+import { JobsSection } from './Jobs'
 import { RunLog } from './RunLog'
 
 export function NewCampaignDialog({ onClose }: { onClose: () => void }) {
@@ -129,6 +130,7 @@ export function CampaignPage() {
   const [notice, setNotice] = useState('')
   const [showJoin, setShowJoin] = useState(false)
   const [sampling, setSampling] = useState(false)
+  const [payout, setPayout] = useState<CampaignJob | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   if (campaign === undefined) return null
   if (campaign === null) {
@@ -233,6 +235,16 @@ export function CampaignPage() {
           )}
         </section>
         {runners.length > 0 && <PartyOverview runners={runners} />}
+        <JobsSection
+          campaign={campaign}
+          encounters={encounters ?? []}
+          onPayOut={(job) => {
+            setPayout(job)
+            requestAnimationFrame(() =>
+              document.querySelector('[data-jump="Run log"]')?.scrollIntoView({ behavior: 'smooth' }),
+            )
+          }}
+        />
         <CastSection campaign={campaign} />
         <section>
           <div className="mb-2 flex items-center gap-2">
@@ -255,7 +267,7 @@ export function CampaignPage() {
           )}
           <EncounterList encounters={encounters ?? []} empty="No encounters yet. Prepare the next fight here." />
         </section>
-        <RunLog campaign={campaign} runners={runners} />
+        <RunLog campaign={campaign} runners={runners} payout={payout} onPayoutDone={() => setPayout(null)} />
         <section>
           <h2 className="mb-2 flex items-center gap-2 font-display text-xl">
             <NotebookPen className="size-5 text-accent" /> Notes

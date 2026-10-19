@@ -89,6 +89,8 @@ export interface Campaign {
   runs?: CampaignRun[]
   /** Recurring NPCs: contacts, Johnsons, rivals, villains. */
   cast?: CastMember[]
+  /** Jobs the runners were offered or took. */
+  jobs?: CampaignJob[]
   /** What the GM may send to players' sheets; both on unless switched off. */
   gmSends?: { damage: boolean; rewards: boolean }
 }
@@ -134,6 +136,32 @@ export interface CastMember {
   updatedAt: string
 }
 
+/** A job (a run, a quest) in the GM's campaign: who's paying, what's needed, how it went. */
+export interface CampaignJob {
+  id: string
+  title: string
+  /** Heist, extraction, courier… free text. */
+  kind: string
+  status: 'offered' | 'legwork' | 'underway' | 'done' | 'failed'
+  /** Cast member paying for it. */
+  johnsonId?: string
+  /** Offered to each runner. */
+  nuyen: number
+  karma: number
+  /** Free text: "Friday midnight", "3 days". */
+  deadline: string
+  /** What the Johnson told them. */
+  brief: string
+  /** What the Johnson didn't: complications, double-crosses. */
+  twists: string
+  objectives: { id: string; text: string; done: boolean }[]
+  /** Other cast members in it: the target, a contact, the rival team. */
+  castIds: string[]
+  encounterIds: string[]
+  createdAt: string
+  updatedAt: string
+}
+
 /** One game night in the GM's run log. */
 export interface CampaignRun {
   id: string
@@ -148,6 +176,8 @@ export interface CampaignRun {
   runnerIds: string[]
   /** Their names then, in case a runner is no longer shared. */
   runnerNames: string[]
+  /** The job this paid out for. */
+  jobId?: string
 }
 
 /** A player's character as the GM received it: live from a campaign, or from a file. */

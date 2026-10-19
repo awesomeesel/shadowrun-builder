@@ -446,10 +446,10 @@ function ActiveSession({ character, update }: CharacterContext) {
 
       <QualityReminders character={character} />
 
-      <Section title="Session notes" icon={<NotebookPen className="size-4" />}>
+      <Section title="Session notes" icon={<NotebookPen className="size-4" />} className="lg:col-span-2">
         <textarea
           {...noAutofillField}
-          className="input min-h-32 w-full"
+          className="input min-h-64 w-full"
           placeholder="Who you met, what you found, who owes you…"
           value={session.notes}
           onChange={(e) => {

@@ -47,6 +47,7 @@ const CAMPAIGN_FIELDS = [
   'joinedAt',
   'gmSends',
   'cast',
+  'jobs',
 ] as const
 
 const campaignUpdatedAt = (c: Campaign) => c.updatedAt ?? c.joinedAt
@@ -161,7 +162,7 @@ async function resolveConflict(drive: Drive, folderId: string, local: Item, file
     return
   }
   if (local.kind === 'campaign') {
-    // Run log entries and cast members from both sides are kept; everything else follows the newer side.
+    // Run log entries, cast members and jobs from both sides are kept; everything else follows the newer side.
     const mine = local.data as Campaign
     const theirs = remote as Campaign
     const [newer, older] = local.updatedAt > remoteUpdatedAt ? [mine, theirs] : [theirs, mine]
@@ -172,10 +173,16 @@ async function resolveConflict(drive: Drive, folderId: string, local: Item, file
       const other = cast.get(m.id)
       if (!other || m.updatedAt >= other.updatedAt) cast.set(m.id, m)
     }
+    const jobs = new Map((older.jobs ?? []).map((j) => [j.id, j]))
+    for (const j of newer.jobs ?? []) {
+      const other = jobs.get(j.id)
+      if (!other || j.updatedAt >= other.updatedAt) jobs.set(j.id, j)
+    }
     const merged = {
       ...newer,
       runs: [...runs.values()].sort((a, b) => a.date.localeCompare(b.date)),
       cast: [...cast.values()],
+      jobs: [...jobs.values()],
     }
     const updatedAt = new Date().toISOString()
     await store('campaign', merged, updatedAt)

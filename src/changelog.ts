@@ -11,6 +11,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 18,
+    date: '2026-10-19',
+    title: 'Jobs for the GM',
+    items: [
+      'Campaigns have a Jobs list: the Johnson (from your cast), the pay, the deadline, the brief, the twists only you know, and objectives to tick off as the runners go.',
+      'Start an encounter from a job, or link ones you already have. “Done, pay out” opens the run log with the pay filled in, ready to send to the runners.',
+      'Jobs are backed up to Google Drive with the rest of the campaign.',
+      'Play tab: Session notes take the full width and start taller.',
+    ],
+  },
+  {
     id: 17,
     date: '2026-10-19',
     title: 'Bone lacing sets unarmed damage',

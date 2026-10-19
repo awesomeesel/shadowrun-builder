@@ -10,6 +10,7 @@ import { timeAgo } from '../share/timeAgo'
 import { NewCampaignDialog } from './Campaigns'
 import { BackupStatus } from './BackupStatus'
 import { EncounterList } from './EncounterList'
+import { isFinished } from './jobRules'
 import { SampleEncounterDialog } from './SampleEncounter'
 
 /** The GM's start page: campaigns (with their runners and encounters), loose encounters, and the rules. */
@@ -66,6 +67,7 @@ export function GmHome() {
               {campaigns?.map((c) => {
                 const runners = latestSheets((sheets ?? []).filter((s) => s.roomId === c.id))
                 const fights = (encounters ?? []).filter((e) => e.campaignId === c.id)
+                const openJobs = (c.jobs ?? []).filter((j) => !isFinished(j)).length
                 const last = fights
                   .map((e) => e.updatedAt)
                   .sort()
@@ -79,6 +81,7 @@ export function GmHome() {
                       <div className="mt-1 text-xs text-muted">
                         {runners.length} {runners.length === 1 ? 'runner' : 'runners'} · {fights.length}{' '}
                         {fights.length === 1 ? 'encounter' : 'encounters'}
+                        {openJobs > 0 && ` · ${openJobs} open ${openJobs === 1 ? 'job' : 'jobs'}`}
                         {last && ` · played ${timeAgo(last)}`}
                       </div>
                       <div className="mt-1 truncate text-sm">

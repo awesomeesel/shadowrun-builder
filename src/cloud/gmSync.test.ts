@@ -6,6 +6,7 @@ import { newEncounter } from '../rules/sr6/encounter'
 import { importSharedFile } from '../share/campaigns'
 import { syncGmData } from './gmSync'
 import { MemoryDrive } from './memoryDrive'
+import { newJob } from '../gm/jobRules'
 
 let drive: MemoryDrive
 let folder: string
@@ -123,6 +124,7 @@ describe('GM data backup', () => {
       ...campaign(),
       runs: [run('r1', 'First run'), run('r2', 'Logged on the tablet')],
       cast: [{ id: 'c1', name: 'Tablet NPC', role: '', attitude: 'ally' as const, notes: '', updatedAt: otherAt }],
+      jobs: [{ ...newJob(), id: 'j1', title: 'Tablet job', updatedAt: otherAt }],
     }
     const write = (kind: string, id: string, item: unknown, file: (typeof files)[number]) =>
       drive.update(
@@ -151,6 +153,7 @@ describe('GM data backup', () => {
       cast: [
         { id: 'c2', name: 'Laptop NPC', role: '', attitude: 'enemy', notes: '', updatedAt: new Date().toISOString() },
       ],
+      jobs: [{ ...newJob(), id: 'j2', title: 'Laptop job' }],
     })
     await db.encounters.put({ ...encounter, round: 5, updatedAt: new Date().toISOString() })
 
@@ -158,6 +161,7 @@ describe('GM data backup', () => {
     expect(report.conflicts.sort()).toEqual(['Docks ambush', 'Seattle Nights'])
     expect((await db.campaigns.get('room1'))?.runs?.map((r) => r.id).sort()).toEqual(['r1', 'r2', 'r3'])
     expect((await db.campaigns.get('room1'))?.cast?.map((m) => m.name).sort()).toEqual(['Laptop NPC', 'Tablet NPC'])
+    expect((await db.campaigns.get('room1'))?.jobs?.map((j) => j.title).sort()).toEqual(['Laptop job', 'Tablet job'])
     const rounds = (await db.encounters.toArray())
       .map((e) => [e.name, e.round])
       .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
