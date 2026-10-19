@@ -332,7 +332,8 @@ export function EssenceInput({ character, update }: { character: Character; upda
   )
 }
 
-function bonusField<T extends { bonuses: Bonuses }>(span: 2 | 3 | 4): FieldDef<T> {
+/** The bonus list takes a whole row: its rows need the width. */
+function bonusField<T extends { bonuses: Bonuses }>(span: 12 = 12): FieldDef<T> {
   return {
     kind: 'custom',
     label: 'Bonuses',
@@ -371,8 +372,8 @@ const augmentationFields: FieldDef<Augmentation>[] = [
   { kind: 'number', key: 'rating', label: 'Rating', span: 1, min: 0 },
   decimalField<Augmentation>('essence', 'Essence', 1),
   { kind: 'number', key: 'cost', label: 'Cost ¥', span: 2, min: 0 },
-  bonusField<Augmentation>(4),
-  { kind: 'text', key: 'notes', label: 'Notes', span: 4, wide: true },
+  bonusField<Augmentation>(),
+  { kind: 'text', key: 'notes', label: 'Notes', span: 8, wide: true },
   sourceField<Augmentation>(),
 ]
 
@@ -397,11 +398,11 @@ const spellFields: FieldDef<Spell>[] = [
 ]
 
 const adeptPowerFields: FieldDef<AdeptPower>[] = [
-  { kind: 'text', key: 'name', label: 'Power', span: 4, wide: true },
+  { kind: 'text', key: 'name', label: 'Power', span: 5, wide: true },
   { kind: 'number', key: 'level', label: 'Level', span: 1, min: 0 },
-  decimalField<AdeptPower>('powerPoints', 'PP', 1),
-  bonusField<AdeptPower>(3),
-  sourceField<AdeptPower>(3),
+  decimalField<AdeptPower>('powerPoints', 'PP', 2),
+  sourceField<AdeptPower>(4),
+  bonusField<AdeptPower>(),
   { kind: 'text', key: 'notes', label: 'Notes', span: 12, wide: true },
 ]
 

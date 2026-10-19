@@ -57,7 +57,7 @@ export function BonusEditor({ value, onChange }: { value: Bonuses; onChange: (va
   const current = rows(value)
   const unused = CHOICES.filter((c) => !current.some((r) => r.id === c.id))
   return (
-    <div className="grid gap-1.5">
+    <div className="grid min-w-0 grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
       {current.map((r) => (
         <div key={r.id} className="flex items-center gap-2 rounded-lg border border-line bg-bg/40 px-2 py-1 text-sm">
           <span className="min-w-0 flex-1 truncate">{labelOf(r.id)}</span>
@@ -97,7 +97,7 @@ export function BonusEditor({ value, onChange }: { value: Bonuses; onChange: (va
       ))}
       <select
         {...noAutofillField}
-        className="input py-1.5 text-sm text-muted"
+        className="input min-w-0 py-1.5 text-sm text-muted"
         value=""
         onChange={(e) => {
           const id = e.target.value
