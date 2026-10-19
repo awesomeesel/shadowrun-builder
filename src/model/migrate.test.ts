@@ -20,4 +20,19 @@ describe('migrateCharacter', () => {
     const raw = { ...createCharacter(), augmentations: [{ name: 'Dermal Plating', rating: 2, essence: 0.6 }] }
     expect(migrateCharacter(raw)).toBe(raw)
   })
+
+  it('swaps bone lacing’s added unarmed damage for the table’s DV', () => {
+    const raw = {
+      ...createCharacter(),
+      augmentations: [
+        { name: 'Bone Lacing (Titanium)', bonuses: { unarmedDamage: 2, unarmedPhysical: true, defenseRating: 2 } },
+        { name: 'Bone lacing (plastic)', bonuses: { unarmedDamage: 1 } },
+      ],
+    }
+    type Aug = { bonuses: Record<string, unknown> }
+    const fixed = migrateCharacter(raw) as { augmentations: Aug[] }
+    expect(fixed.augmentations[0].bonuses).toMatchObject({ unarmedDamage: 0, unarmedDamageSet: 4, defenseRating: 2 })
+    expect(fixed.augmentations[1].bonuses).toMatchObject({ unarmedDamageSet: 3, unarmedPhysical: true })
+    expect(migrateCharacter(fixed)).toBe(fixed)
+  })
 })

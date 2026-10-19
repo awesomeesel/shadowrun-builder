@@ -124,6 +124,8 @@ export const BonusesSchema = z
     unarmedDamage: int(0),
     /** Unarmed attacks deal Physical instead of Stun damage. */
     unarmedPhysical: z.boolean().default(false),
+    /** Unarmed DV becomes this instead of Strength ÷ 2 (bone lacing's table); 0 = not set. */
+    unarmedDamageSet: int(0),
     /** Extra boxes on the Physical and Stun condition monitors. */
     physicalBoxes: int(0),
     stunBoxes: int(0),
@@ -544,7 +546,40 @@ export function createCharacter(overrides: Partial<Character> = {}): Character {
 /** Upgrade raw data from an older schema version so it can be parsed by `CharacterSchema`. */
 export function migrateCharacter(raw: unknown): unknown {
   // Only version 1 exists so far; future migrations go here, keyed on raw.schemaVersion.
-  return repairDermalPlating(repairSpellDrain(raw))
+  return repairBoneLacing(repairDermalPlating(repairSpellDrain(raw)))
+}
+
+/** Bone lacing's unarmed DV from its table (p. 288): plastic 3P, aluminum and titanium 4P. */
+const BONE_LACING_DV: [RegExp, number][] = [
+  [/plastic/i, 3],
+  [/alumin/i, 4],
+  [/titanium/i, 4],
+]
+
+/**
+ * Before this, bone lacing added +1 or +2 to unarmed damage. Its table sets the
+ * unarmed DV instead, so swap the added damage for the set value.
+ */
+function repairBoneLacing(raw: unknown): unknown {
+  if (typeof raw !== 'object' || raw === null) return raw
+  const augmentations = (raw as { augmentations?: unknown }).augmentations
+  if (!Array.isArray(augmentations)) return raw
+  type Aug = { name: string; bonuses?: { unarmedDamage?: number; unarmedDamageSet?: number } }
+  const dv = (a: Aug) => BONE_LACING_DV.find(([re]) => re.test(a.name))?.[1]
+  const broken = (a: unknown): a is Aug => {
+    if (typeof a !== 'object' || a === null || typeof (a as Aug).name !== 'string') return false
+    const aug = a as Aug
+    return /bone lacing/i.test(aug.name) && dv(aug) !== undefined && !aug.bonuses?.unarmedDamageSet
+  }
+  if (!augmentations.some(broken)) return raw
+  return {
+    ...raw,
+    augmentations: augmentations.map((a) =>
+      broken(a)
+        ? { ...a, bonuses: { ...a.bonuses, unarmedDamage: 0, unarmedDamageSet: dv(a), unarmedPhysical: true } }
+        : a,
+    ),
+  }
 }
 
 /**

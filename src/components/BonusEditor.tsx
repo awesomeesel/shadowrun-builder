@@ -4,13 +4,14 @@ import type { Bonuses } from '../model/character'
 import { ATTRIBUTE_IDS, ATTRIBUTE_LABELS, type AttributeId } from '../rules/sr6/attributes'
 import { BONUS_KINDS } from '../rules/sr6/bonuses'
 
-type NumberKey = (typeof BONUS_KINDS)[number]['key'] | 'initiativeDice'
+type NumberKey = (typeof BONUS_KINDS)[number]['key'] | 'initiativeDice' | 'unarmedDamageSet'
 
 /** Every kind of bonus, as it reads in the list. */
 const CHOICES: { id: string; label: string }[] = [
   { id: 'defenseRating', label: 'Defense Rating' },
   { id: 'unarmedAttackRating', label: 'Unarmed Attack Rating' },
-  { id: 'unarmedDamage', label: 'Unarmed damage' },
+  { id: 'unarmedDamage', label: 'Unarmed damage (added)' },
+  { id: 'unarmedDamageSet', label: 'Unarmed DV becomes (bone lacing)' },
   { id: 'unarmedPhysical', label: 'Unarmed damage is Physical' },
   { id: 'physicalBoxes', label: 'Physical boxes (condition monitor)' },
   { id: 'stunBoxes', label: 'Stun boxes (condition monitor)' },
@@ -66,13 +67,17 @@ export function BonusEditor({ value, onChange }: { value: Bonuses; onChange: (va
               <button
                 type="button"
                 className="btn size-7 p-0"
-                onClick={() => onChange(set(value, r.id, r.amount! - 1 || -1))}
+                onClick={() =>
+                  onChange(
+                    set(value, r.id, r.id === 'unarmedDamageSet' ? Math.max(1, r.amount! - 1) : r.amount! - 1 || -1),
+                  )
+                }
                 aria-label={`Lower ${labelOf(r.id)}`}
               >
                 <Minus className="size-3.5" />
               </button>
               <span className="w-8 text-center font-semibold text-accent tabular-nums">
-                {r.amount > 0 ? '+' : ''}
+                {r.amount > 0 && r.id !== 'unarmedDamageSet' ? '+' : ''}
                 {r.amount}
               </span>
               <button

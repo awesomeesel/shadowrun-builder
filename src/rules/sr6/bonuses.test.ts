@@ -50,11 +50,21 @@ describe('known implants', () => {
       ...none,
       physicalResistance: 2,
       defenseRating: 1,
-      unarmedDamage: 1,
+      unarmedDamageSet: 4,
       unarmedAttackRating: 2,
       unarmedPhysical: true,
     })
-    expect(knownBonuses('Bone Lacing (Titanium)', 0)).toMatchObject({ defenseRating: 2, unarmedAttackRating: 3 })
+    expect(knownBonuses('Bone Lacing (Titanium)', 0)).toMatchObject({
+      defenseRating: 2,
+      unarmedAttackRating: 3,
+      unarmedDamageSet: 4,
+      unarmedDamage: 0,
+    })
+  })
+
+  it('reads and writes a set unarmed DV', () => {
+    expect(parseBonuses('Unarmed DV 4P')).toMatchObject({ unarmedDamageSet: 4, unarmedPhysical: true })
+    expect(formatBonuses({ ...none, unarmedDamageSet: 3, unarmedPhysical: true })).toBe('Unarmed DV 3P')
   })
 
   it('gives dermal plating Defense Rating equal to its rating', () => {

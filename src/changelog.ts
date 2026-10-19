@@ -11,6 +11,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 17,
+    date: '2026-10-19',
+    title: 'Bone lacing sets unarmed damage',
+    items: [
+      'Bone lacing now replaces your unarmed DV with the one in its table (plastic 3P, aluminum and titanium 4P) instead of adding to it. Saved characters are fixed when they load.',
+    ],
+  },
+  {
     id: 16,
     date: '2026-10-19',
     title: 'Bonuses for heavily augmented runners',

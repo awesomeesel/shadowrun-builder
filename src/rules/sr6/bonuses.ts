@@ -53,6 +53,13 @@ export function parseBonuses(text: string): Bonuses | undefined {
       result.initiativeDice += parseInt(dice[1], 10)
       continue
     }
+    // "Unarmed DV 4P": the DV becomes 4 and Physical (no sign, unlike "Unarmed DV +1").
+    const setDv = part.match(/^UNARMED (?:DV|DAMAGE) (\d+)\s*P?$/)
+    if (setDv) {
+      result.unarmedDamageSet = parseInt(setDv[1], 10)
+      if (part.endsWith('P')) result.unarmedPhysical = true
+      continue
+    }
     if (/^UNARMED (PHYSICAL|DAMAGE IS PHYSICAL|P)$/.test(part)) {
       result.unarmedPhysical = true
       continue
@@ -81,7 +88,9 @@ export function formatBonuses(bonuses: Bonuses): string {
   for (const { key, label } of OTHER_BONUSES) {
     if (bonuses[key]) parts.push(`${label} ${bonuses[key] > 0 ? '+' : ''}${bonuses[key]}`)
   }
-  if (bonuses.unarmedPhysical) parts.push('Unarmed physical')
+  if (bonuses.unarmedDamageSet)
+    parts.push(`Unarmed DV ${bonuses.unarmedDamageSet}${bonuses.unarmedPhysical ? 'P' : ''}`)
+  else if (bonuses.unarmedPhysical) parts.push('Unarmed physical')
   return parts.join(', ')
 }
 
@@ -105,15 +114,15 @@ const FIXED_BONUSES: { pattern: RegExp; bonuses: (rating: number) => Partial<Bon
   // Bone Lacing table: physical resistance, Defense Rating, unarmed DV, unarmed AR.
   {
     pattern: /^bone lacing\s*\(?plastic/i,
-    bonuses: () => ({ physicalResistance: 1, defenseRating: 1, unarmedDamage: 1, unarmedAttackRating: 1 }),
+    bonuses: () => ({ physicalResistance: 1, defenseRating: 1, unarmedDamageSet: 3, unarmedAttackRating: 1 }),
   },
   {
     pattern: /^bone lacing\s*\(?alumin/i,
-    bonuses: () => ({ physicalResistance: 2, defenseRating: 1, unarmedDamage: 1, unarmedAttackRating: 2 }),
+    bonuses: () => ({ physicalResistance: 2, defenseRating: 1, unarmedDamageSet: 4, unarmedAttackRating: 2 }),
   },
   {
     pattern: /^bone lacing\s*\(?titanium/i,
-    bonuses: () => ({ physicalResistance: 2, defenseRating: 2, unarmedDamage: 2, unarmedAttackRating: 3 }),
+    bonuses: () => ({ physicalResistance: 2, defenseRating: 2, unarmedDamageSet: 4, unarmedAttackRating: 3 }),
   },
   // Dermal plating: Defense Rating equal to its rating.
   { pattern: /^dermal plating/i, bonuses: (r) => ({ defenseRating: r }) },

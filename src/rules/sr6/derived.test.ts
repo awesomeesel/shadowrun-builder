@@ -285,7 +285,7 @@ describe('augmentations and special attributes', () => {
         defenseRating: 1,
         physicalResistance: 2,
         unarmedAttackRating: 2,
-        unarmedDamage: 1,
+        unarmedDamageSet: 4,
         unarmedPhysical: true,
       },
     })
@@ -296,7 +296,11 @@ describe('augmentations and special attributes', () => {
     expect(laced.pools.physicalDamageResistance).toBe(7)
     expect(laced.unarmedAttackRating).toBe(plain.unarmedAttackRating + 2)
     expect(plain.unarmedDamage).toEqual({ value: 2, type: 'S' })
-    expect(laced.unarmedDamage).toEqual({ value: 3, type: 'P' })
+    expect(laced.unarmedDamage).toEqual({ value: 4, type: 'P' })
+    // The table's DV replaces Strength ÷ 2, even when that is higher.
+    const strong = runner({ augmentations: [lacing] })
+    strong.attributes.strength = 12
+    expect(computeDerived(strong).unarmedDamage).toEqual({ value: 4, type: 'P' })
     expect(laced.physicalMonitor.boxes).toBe(plain.physicalMonitor.boxes)
   })
 

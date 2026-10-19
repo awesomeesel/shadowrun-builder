@@ -302,7 +302,9 @@ export function computeDerived(character: Character): DerivedStats {
     unarmedAttackRating: a.reaction + a.strength + total('unarmedAttackRating'),
     // Strength / 2 rounded up, Stun unless something (like bone lacing) makes it Physical.
     unarmedDamage: {
-      value: Math.ceil(a.strength / 2) + total('unarmedDamage'),
+      // Bone lacing's table sets the DV (p. 288); otherwise Strength ÷ 2 rounded up (p. 110), plus bonuses.
+      value:
+        Math.max(0, ...bonuses.map((b) => b.unarmedDamageSet)) || Math.ceil(a.strength / 2) + total('unarmedDamage'),
       type: bonuses.some((b) => b.unarmedPhysical) ? 'P' : 'S',
     },
     magic: character.attributes.magic > 0 ? magicStats(character, a) : null,
