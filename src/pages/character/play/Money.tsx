@@ -3,21 +3,47 @@ import { useState } from 'react'
 import { noAutofill } from '../../../components/noAutofill'
 import { Stat } from '../../../components/sheetParts'
 import { NumberInput, Section } from '../../../components/ui'
-import type { Character } from '../../../model/character'
+import { GearSchema, type Character } from '../../../model/character'
 import { addLedgerEntry, removeLedgerEntry, sessionEntries } from '../../../rules/sr6/play'
 import type { CharacterContext } from '../CharacterPage'
 
+/** Everyday costs at the table, as a starting note. */
+const PAY_FOR = ['Bribe', 'Taxi', 'Food and drink', 'Info from a contact', 'Medkit refill', 'Gear', 'Fixer’s cut']
+const QUICK_AMOUNTS = [50, 100, 500, 1000, 5000]
+
 export function MoneySection({ character, update }: CharacterContext) {
-  const [nuyen, setNuyen] = useState(0)
-  const [karma, setKarma] = useState(0)
+  const [amount, setAmount] = useState(0)
   const [note, setNote] = useState('')
-  const record = () => {
-    if (!nuyen && !karma) return
-    update((c) => addLedgerEntry(c, { nuyen, karma, note: note.trim() }))
-    setNuyen(0)
-    setKarma(0)
+  const [toGear, setToGear] = useState(false)
+  const [karma, setKarma] = useState(0)
+  const [karmaNote, setKarmaNote] = useState('')
+  const reset = () => {
+    setAmount(0)
     setNote('')
+    setToGear(false)
   }
+  const pay = () => {
+    if (amount <= 0) return
+    const what = note.trim()
+    update((c) => {
+      const paid = addLedgerEntry(c, { nuyen: -amount, note: what || 'Paid' })
+      // Bought something to keep: it goes on the gear list with what it cost.
+      return toGear && what ? { ...paid, gear: [...paid.gear, GearSchema.parse({ name: what, cost: amount })] } : paid
+    })
+    reset()
+  }
+  const receive = () => {
+    if (amount <= 0) return
+    update((c) => addLedgerEntry(c, { nuyen: amount, note: note.trim() || 'Got paid' }))
+    reset()
+  }
+  const recordKarma = () => {
+    if (!karma) return
+    update((c) => addLedgerEntry(c, { karma, note: karmaNote.trim() }))
+    setKarma(0)
+    setKarmaNote('')
+  }
+  const short = amount > character.nuyen
   return (
     <Section title="Nuyen & karma" icon={<Coins className="size-4" />}>
       <div className="mb-3 grid grid-cols-2 gap-2">
@@ -29,30 +55,88 @@ export function MoneySection({ character, update }: CharacterContext) {
           hint={`Career karma ${character.karma.career}`}
         />
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_2fr]">
+      <div className="grid gap-2 sm:grid-cols-[10rem_1fr]">
         <label className="block">
-          <span className="mb-1 block text-[11px] text-muted">Nuyen (− to spend)</span>
-          <NumberInput value={nuyen} onChange={setNuyen} />
+          <span className="mb-1 block text-[11px] text-muted">Nuyen</span>
+          <NumberInput value={amount} min={0} onChange={setAmount} />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[11px] text-muted">Karma (− to spend)</span>
-          <NumberInput value={karma} onChange={setKarma} />
-        </label>
-        <label className="col-span-2 block sm:col-span-1">
           <span className="mb-1 block text-[11px] text-muted">What for?</span>
           <input
             {...noAutofill}
             className="input w-full"
-            placeholder="Paid by Mr. Johnson"
+            placeholder="Bribe for the bouncer, the Johnson’s pay…"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && record()}
+            onKeyDown={(e) => e.key === 'Enter' && pay()}
           />
         </label>
       </div>
-      <button className="btn btn-primary mt-2 w-full" onClick={record} disabled={!nuyen && !karma}>
-        Record
-      </button>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {QUICK_AMOUNTS.map((n) => (
+          <button
+            key={n}
+            className="chip cursor-pointer text-muted hover:text-fg"
+            onClick={() => setAmount(amount + n)}
+          >
+            +{n.toLocaleString()}¥
+          </button>
+        ))}
+        {PAY_FOR.map((p) => (
+          <button
+            key={p}
+            className={`chip cursor-pointer ${note === p ? 'border-accent text-accent' : 'text-muted hover:text-fg'}`}
+            onClick={() => setNote(p)}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+      <label className="mt-2 flex items-center gap-2 text-xs">
+        <input
+          type="checkbox"
+          className="size-4 accent-accent"
+          checked={toGear}
+          onChange={(e) => setToGear(e.target.checked)}
+        />
+        It’s something to keep: add it to my gear
+      </label>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <button
+          className="btn btn-primary"
+          onClick={pay}
+          disabled={amount <= 0}
+          title={short ? 'More than you have; you’d go into the red' : undefined}
+        >
+          Pay {amount > 0 && `${amount.toLocaleString()}¥`}
+        </button>
+        <button className="btn" onClick={receive} disabled={amount <= 0}>
+          Got paid {amount > 0 && `${amount.toLocaleString()}¥`}
+        </button>
+      </div>
+      {short && amount > 0 && (
+        <p className="mt-1 text-xs text-amber">That’s more than the {character.nuyen.toLocaleString()}¥ you have.</p>
+      )}
+      <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-line pt-3">
+        <label className="w-28">
+          <span className="mb-1 block text-[11px] text-muted">Karma (− to spend)</span>
+          <NumberInput value={karma} onChange={setKarma} />
+        </label>
+        <label className="min-w-40 flex-1">
+          <span className="mb-1 block text-[11px] text-muted">What for?</span>
+          <input
+            {...noAutofill}
+            className="input w-full"
+            placeholder="Awarded by the GM"
+            value={karmaNote}
+            onChange={(e) => setKarmaNote(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && recordKarma()}
+          />
+        </label>
+        <button className="btn" onClick={recordKarma} disabled={!karma}>
+          Record karma
+        </button>
+      </div>
       <div className="mt-4">
         <LedgerList update={update} entries={sessionEntries(character)} title="This session" />
       </div>

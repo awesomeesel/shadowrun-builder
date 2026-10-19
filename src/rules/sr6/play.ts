@@ -147,6 +147,7 @@ export function recordRoll(
     glitch: roll.glitch,
     criticalGlitch: roll.criticalGlitch,
     edge: roll.edge,
+    at: new Date().toISOString(),
     ...(total !== null ? { glitch: false, criticalGlitch: false } : {}),
   })
   const rolls = replace && session.rolls.length ? session.rolls.slice(0, -1) : session.rolls
@@ -399,7 +400,12 @@ export function startCombat(character: Character, initiative: number): Character
     ...character,
     play: {
       ...character.play,
-      combat: CombatSchema.parse({ initiative, majorLeft: 1, minorLeft: minorActions(dice) }),
+      combat: CombatSchema.parse({
+        initiative,
+        majorLeft: 1,
+        minorLeft: minorActions(dice),
+        rolledAt: new Date().toISOString(),
+      }),
     },
   }
 }

@@ -40,7 +40,7 @@ service cloud.firestore {
           && (resource.data.owner == request.auth.uid || isGm());
       }
 
-      // Damage, statuses, Edge and rewards the GM sends to one runner. Only the GM writes;
+      // Damage, statuses, Edge, rewards and handouts the GM sends to one runner. Only the GM writes;
       // the player it's for reads it and removes it once accepted or declined.
       match /inbox/{message} {
         function isGm() {
@@ -53,7 +53,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['to', 'data', 'createdAt'])
           && request.resource.data.to is string
           && request.resource.data.data is string
-          && request.resource.data.data.size() < 20000
+          && request.resource.data.data.size() < 900000
           && request.resource.data.createdAt is string;
         allow update: if false;
         allow read, delete: if request.auth != null && (forMe() || isGm());

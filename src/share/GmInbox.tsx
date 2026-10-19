@@ -6,7 +6,8 @@ import { db, type InboxItem } from '../db/db'
 import type { Character } from '../model/character'
 import type { Update } from '../pages/character/CharacterPage'
 import { DamageDialog } from '../pages/character/play/DamageDialog'
-import { applyMessage, describeMessage, dismissMessage } from './messages'
+import { HandoutViewer } from './Handouts'
+import { applyMessage, describeMessage, dismissMessage, keepHandout } from './messages'
 import { timeAgo } from './timeAgo'
 
 /**
@@ -24,6 +25,7 @@ export function GmInbox({ character, update }: { character: Character; update: U
     [character.id],
   )
   const [resisting, setResisting] = useState<InboxItem | null>(null)
+  const [viewing, setViewing] = useState<InboxItem | null>(null)
   if (!items?.length) return null
 
   const accept = (item: InboxItem) => {
@@ -44,6 +46,33 @@ export function GmInbox({ character, update }: { character: Character; update: U
       <ul className="grid gap-2">
         {items.map((item) => {
           const m = item.message
+          if (m.kind === 'handout') {
+            return (
+              <li key={item.id} className="flex flex-wrap items-center gap-3 rounded-lg bg-bg/50 p-2.5 text-sm">
+                <button
+                  className="flex min-w-0 flex-1 basis-52 items-center gap-3 text-left"
+                  onClick={() => setViewing(item)}
+                >
+                  {m.image && <img src={m.image} alt="" className="size-14 shrink-0 rounded object-cover" />}
+                  <span className="min-w-0">
+                    <span className="block font-semibold">{describeMessage(m)}</span>
+                    {m.text && <span className="line-clamp-2 block text-xs">{m.text}</span>}
+                    <span className="block text-xs text-muted">
+                      {item.campaignName} · {timeAgo(item.sentAt)} · tap to open
+                    </span>
+                  </span>
+                </button>
+                <div className="flex gap-1.5">
+                  <button className="btn btn-primary px-2.5 py-1 text-xs" onClick={() => void keepHandout(item)}>
+                    <Check className="size-3.5" /> Keep
+                  </button>
+                  <button className="btn px-2.5 py-1 text-xs" onClick={() => void dismissMessage(item)}>
+                    <X className="size-3.5" /> Dismiss
+                  </button>
+                </div>
+              </li>
+            )
+          }
           const resist = m.kind === 'damage' && m.resist
           return (
             <li key={item.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-bg/50 p-2.5 text-sm">
@@ -70,6 +99,12 @@ export function GmInbox({ character, update }: { character: Character; update: U
           )
         })}
       </ul>
+      {viewing && viewing.message.kind === 'handout' && (
+        <HandoutViewer
+          handout={{ ...viewing.message, campaignName: viewing.campaignName, receivedAt: viewing.sentAt }}
+          onClose={() => setViewing(null)}
+        />
+      )}
       {resisting &&
         resisting.message.kind === 'damage' &&
         createPortal(

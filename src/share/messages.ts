@@ -19,6 +19,8 @@ export type GmMessage =
   | { kind: 'status'; name: string; value: number; rounds: number | null; note: string }
   | { kind: 'edge'; amount: number; note: string }
   | { kind: 'reward'; karma: number; nuyen: number; note: string }
+  /** A map, a message, a picture: shown to the player, kept if they like. Never changes the sheet. */
+  | { kind: 'handout'; title: string; text: string; image?: string; note: string }
 
 interface MessagePayload {
   message: GmMessage
@@ -36,6 +38,7 @@ export function gmSends(campaign: Pick<Campaign, 'gmSends'>): { damage: boolean;
 
 /** Whether this kind of message is switched on for the campaign. */
 export function allowed(campaign: Pick<Campaign, 'gmSends'>, kind: GmMessage['kind']): boolean {
+  if (kind === 'handout') return true
   const sends = gmSends(campaign)
   return kind === 'reward' ? sends.rewards : sends.damage
 }
@@ -51,6 +54,8 @@ export function describeMessage(m: GmMessage): string {
       return `${m.amount > 0 ? '+' : ''}${m.amount} Edge`
     case 'reward':
       return [m.karma && `${m.karma} karma`, m.nuyen && `${m.nuyen.toLocaleString()}¥`].filter(Boolean).join(' and ')
+    case 'handout':
+      return `Handout: ${m.title || 'from the GM'}`
   }
 }
 
@@ -78,6 +83,9 @@ export function applyMessage(character: Character, m: GmMessage, now = new Date(
         { karma: m.karma, nuyen: m.nuyen, note: m.note ? `From the GM: ${m.note}` : 'From the GM' },
         now,
       )
+    case 'handout':
+      // Kept in its own table (see keepHandout), so pictures don't make the sheet heavy.
+      return character
   }
 }
 
@@ -227,6 +235,22 @@ function watch(
     stopped = true
     stop?.()
   }
+}
+
+/** Player: keep a handout on this device, then clear it from the inbox. */
+export async function keepHandout(item: InboxItem): Promise<void> {
+  const m = item.message
+  if (m.kind !== 'handout') return
+  await db.handouts.put({
+    id: item.id,
+    characterId: item.characterId,
+    campaignName: item.campaignName,
+    title: m.title,
+    text: m.text,
+    image: m.image,
+    receivedAt: item.sentAt,
+  })
+  await dismissMessage(item)
 }
 
 /** Player: done with a message (accepted or declined); remove it everywhere. */

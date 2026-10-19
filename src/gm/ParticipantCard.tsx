@@ -1,3 +1,5 @@
+import { playerInitiative } from './feedRules'
+import { timeAgo } from '../share/timeAgo'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ChevronDown, Dices, Plus, Send, Skull, Sparkles, Trash2, Undo2, X } from 'lucide-react'
 import { useState } from 'react'
@@ -62,6 +64,9 @@ export function ParticipantCard({
   const playerStatuses = stats.sheetStatuses
   const initiative = effectiveInitiative(p, stats)
   const statusShift = initiative !== null && p.initiative !== null ? initiative - p.initiative : 0
+  // What the player rolled on their own sheet, when it isn't what's here.
+  const rolled = fromSheet ? playerInitiative(character) : null
+  const offerRolled = rolled !== null && rolled.value !== p.initiative
   // Grunts and spirits have one track; the Stun boxes go on it too.
   const single = stats.monitor.stun === null
   const filled = damage.physical + damage.stun
@@ -101,6 +106,19 @@ export function ParticipantCard({
             }}
             aria-label={`${p.name} initiative`}
           />
+          {offerRolled && (
+            <button
+              type="button"
+              className="mt-0.5 rounded bg-accent/15 px-1 text-[10px] whitespace-nowrap text-accent hover:bg-accent/25"
+              onClick={(e) => {
+                e.preventDefault()
+                change((x) => ({ ...x, initiative: rolled.value }))
+              }}
+              title={`The player rolled ${rolled.value} on their sheet${rolled.at ? ` ${timeAgo(rolled.at)}` : ''}. Use it.`}
+            >
+              Rolled {rolled.value}
+            </button>
+          )}
           {statusShift !== 0 && (
             <span className="text-[10px] text-amber" title="Changed by statuses">
               {statusShift > 0 ? '+' : ''}

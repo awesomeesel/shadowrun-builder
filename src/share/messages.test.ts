@@ -9,6 +9,7 @@ import {
   cancelMessage,
   describeMessage,
   dismissMessage,
+  keepHandout,
   sendToRunner,
   watchInbox,
   watchOutbox,
@@ -73,6 +74,7 @@ describe('sending to players', () => {
       db.sharedSheets.clear(),
       db.inbox.clear(),
       db.outbox.clear(),
+      db.handouts.clear(),
     ])
   })
 
@@ -141,5 +143,24 @@ describe('sending to players', () => {
 
     await asDevice('player', playerDevice)
     await expect(sendToRunner(playerDevice[0], sheet, { kind: 'edge', amount: 1, note: '' })).rejects.toThrow(/refused/)
+  })
+
+  it('delivers a handout the player keeps, even with sending switched off', async () => {
+    const { campaign, playerDevice, runner, sheet } = await setup()
+    const off = { ...campaign, gmSends: { damage: false, rewards: false } }
+    const image = 'data:image/jpeg;base64,' + 'A'.repeat(1000)
+    await sendToRunner(off, sheet, { kind: 'handout', title: 'Floor plan', text: 'Skybar, 7th floor', image, note: '' })
+
+    await asDevice('player', playerDevice)
+    const stop = watchInbox(playerDevice[0], runner.id)
+    await until(async () => (await db.inbox.count()) === 1)
+    const [item] = await db.inbox.toArray()
+    expect(applyMessage(runner, item.message)).toBe(runner)
+    await keepHandout(item)
+    await until(async () => (await db.inbox.count()) === 0)
+    expect(await db.handouts.toArray()).toMatchObject([
+      { characterId: runner.id, title: 'Floor plan', text: 'Skybar, 7th floor', image, campaignName: 'Seattle Nights' },
+    ])
+    stop()
   })
 })

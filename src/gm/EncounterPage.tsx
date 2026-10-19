@@ -1,3 +1,6 @@
+import { latestSheets } from '../share/campaigns'
+import { TableFeed } from './TableFeed'
+import { playerInitiative } from './feedRules'
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
   ArrowLeft,
@@ -93,6 +96,14 @@ export function EncounterPage() {
   const order = turnOrder(encounter, stats)
   const active = order.find((p) => p.id === encounter.activeId)
   const missingInitiative = encounter.participants.filter((p) => !p.out && p.initiative === null)
+  // Live runners whose players rolled initiative on their own sheets.
+  const playerRolls = missingInitiative.flatMap((p) => {
+    const rolled = p.characterId?.startsWith('shared:') ? playerInitiative(characterById.get(p.characterId)) : null
+    return rolled ? [{ id: p.id, name: p.name, value: rolled.value }] : []
+  })
+  const campaignRunners = encounter.campaignId
+    ? latestSheets((shared ?? []).filter((s) => s.roomId === encounter.campaignId))
+    : []
 
   const advance = (
     fn: (e: Encounter, s: Map<string, CombatantStats>) => { encounter: Encounter; messages: string[] },
@@ -255,6 +266,22 @@ export function EncounterPage() {
         {missingInitiative.length > 0 && encounter.participants.length > 0 && (
           <p className="mt-1 text-xs text-amber">
             No initiative yet: {missingInitiative.map((p) => p.name).join(', ')}.
+            {playerRolls.length > 0 && (
+              <button
+                className="ml-2 text-accent underline"
+                onClick={() =>
+                  void update((e) => ({
+                    ...e,
+                    participants: e.participants.map((x) => {
+                      const r = playerRolls.find((pr) => pr.id === x.id)
+                      return r && x.initiative === null ? { ...x, initiative: r.value } : x
+                    }),
+                  }))
+                }
+              >
+                Use what the players rolled ({playerRolls.map((r) => `${r.name} ${r.value}`).join(', ')})
+              </button>
+            )}
           </p>
         )}
       </header>
@@ -314,6 +341,12 @@ export function EncounterPage() {
             />
           ))}
         </ol>
+      )}
+
+      {campaignRunners.length > 0 && (
+        <div className="mt-6">
+          <TableFeed runners={campaignRunners} limit={8} />
+        </div>
       )}
 
       <details className="mt-6 text-sm">

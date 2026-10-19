@@ -6,6 +6,7 @@ import {
   Copy,
   Eye,
   FileInput,
+  Image as ImageIcon,
   Minimize2,
   NotebookPen,
   Plus,
@@ -49,7 +50,9 @@ import { updateCampaign } from './store'
 import { CastSection } from './Cast'
 import { SampleEncounterDialog } from './SampleEncounter'
 import { PartyOverview } from './PartyOverview'
+import { HandoutDialog } from './HandoutDialog'
 import { JobsSection } from './Jobs'
+import { TableFeed } from './TableFeed'
 import { RunLog } from './RunLog'
 
 export function NewCampaignDialog({ onClose }: { onClose: () => void }) {
@@ -131,6 +134,7 @@ export function CampaignPage() {
   const [showJoin, setShowJoin] = useState(false)
   const [sampling, setSampling] = useState(false)
   const [payout, setPayout] = useState<CampaignJob | null>(null)
+  const [handout, setHandout] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   if (campaign === undefined) return null
   if (campaign === null) {
@@ -201,6 +205,15 @@ export function CampaignPage() {
                 )}
               </span>
             </h2>
+            {runners.some((s) => !isFileSheet(s)) && (
+              <button
+                className="btn text-sm"
+                onClick={() => setHandout(true)}
+                title="A map, a picture or a message, to the players’ phones"
+              >
+                <ImageIcon className="size-4" /> Handout
+              </button>
+            )}
             <button
               className="btn text-sm"
               onClick={() => fileInput.current?.click()}
@@ -221,6 +234,7 @@ export function CampaignPage() {
             />
           </div>
           {notice && <p className="mb-2 text-sm text-accent">{notice}</p>}
+          {handout && <HandoutDialog campaign={campaign} runners={runners} onClose={() => setHandout(false)} />}
           <SendSettings campaign={campaign} />
           {runners.length === 0 ? (
             <div className="card p-6 text-sm text-muted">
@@ -235,6 +249,7 @@ export function CampaignPage() {
           )}
         </section>
         {runners.length > 0 && <PartyOverview runners={runners} />}
+        <TableFeed runners={runners} />
         <JobsSection
           campaign={campaign}
           encounters={encounters ?? []}

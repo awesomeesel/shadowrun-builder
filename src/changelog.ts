@@ -11,6 +11,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 19,
+    date: '2026-10-19',
+    title: 'Live at the table, ammo and paying for things',
+    items: [
+      'Initiative you roll on the Play tab shows on the GM’s encounter card, ready to use with one tap.',
+      'The GM sees a live table feed of your rolls: hits, glitches and Edge spent.',
+      'Handouts: the GM can send a map, a picture or a message to your phone. Keep it, and it’s under Handouts on the Play tab.',
+      'Ammo: tap “Ammo…” under a gun to load APDS, explosive, gel and more (Attack Rating and damage change to match), count spare rounds, and buy more at the book’s prices.',
+      'Nuyen: clear Pay and Got paid buttons with quick amounts. Bought something to keep? Tick the box and it goes on your gear list.',
+    ],
+  },
+  {
     id: 18,
     date: '2026-10-19',
     title: 'Jobs for the GM',

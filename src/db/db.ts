@@ -109,6 +109,19 @@ export interface InboxItem {
   handled?: boolean
 }
 
+/** A handout from the GM the player kept: a map, a picture, a message. */
+export interface Handout {
+  /** The inbox item's id. */
+  id: string
+  characterId: string
+  campaignName: string
+  title: string
+  text: string
+  /** JPEG data URL. */
+  image?: string
+  receivedAt: string
+}
+
 /** A message the GM sent that the player hasn't handled yet. */
 export interface OutboxItem {
   /** `${roomId}/${messageId}` */
@@ -208,6 +221,7 @@ export const db = new Dexie('shadowrun-builder') as Dexie & {
   deletedGmItems: EntityTable<DeletedGmItem, 'id'>
   inbox: EntityTable<InboxItem, 'id'>
   outbox: EntityTable<OutboxItem, 'id'>
+  handouts: EntityTable<Handout, 'id'>
 }
 
 /** GM data deleted on this device, so the next Drive sync trashes it there too. */
@@ -271,4 +285,9 @@ db.version(7).stores({
 db.version(8).stores({
   inbox: 'id, characterId, roomId',
   outbox: 'id, roomId',
+})
+
+// Version 9 keeps handouts from the GM on the player's device.
+db.version(9).stores({
+  handouts: 'id, characterId',
 })

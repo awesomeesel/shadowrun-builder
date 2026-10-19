@@ -26,6 +26,13 @@ Ideas and plans for Shadowrun Builder. Add your own anywhere; tick them off with
       prompt once boxes exceed the rating.
 - [x] **Matrix participant in encounters** – a host with IC that can join an encounter, for deckers to fight.
 - [x] **Edge for grunts in encounters** – Edge actions from the card; once-per-round use for grunt groups.
+- [x] **Jobs for the GM** – per campaign: Johnson, pay, deadline, brief, twists, objectives, linked encounters;
+      pay out to the run log.
+- [x] **Live at the table** – players' initiative on the GM's encounter cards, a live table feed of rolls, and
+      handouts (pictures by drag, paste or file) to players' phones.
+- [x] **Ammo and paying in play** – ammo types with AR/DV changes, spare rounds, buying at the book's prices; Pay /
+      Got paid buttons with quick amounts.
+- [ ] **Jobs for players** – show a job's title, objectives and status on their Play tab (not the twists).
 - [x] **Karma shop** – spend karma between runs at the book's prices (attributes, skills, specializations,
       qualities, spells), logged in the karma history.
 - [x] **Initiation and submersion** – 10 + grade karma; raises the Magic/Resonance limit above 6 and gives

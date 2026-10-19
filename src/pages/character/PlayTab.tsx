@@ -1,3 +1,4 @@
+import { HandoutsSection } from '../../share/Handouts'
 import { Clock, Dices, Flag, HeartPulse, Minus, NotebookPen, Play, Plus, ShieldAlert, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useOutletContext } from 'react-router'
@@ -445,6 +446,8 @@ function ActiveSession({ character, update }: CharacterContext) {
       <MoneySection character={character} update={update} />
 
       <QualityReminders character={character} />
+
+      <HandoutsSection characterId={character.id} />
 
       <Section title="Session notes" icon={<NotebookPen className="size-4" />} className="lg:col-span-2">
         <textarea

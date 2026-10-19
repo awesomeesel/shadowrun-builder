@@ -1,7 +1,8 @@
-import { Crosshair, RotateCcw } from 'lucide-react'
+import { Crosshair, Package, RotateCcw } from 'lucide-react'
 import { useState } from 'react'
 import { NumberInput, Section } from '../../../components/ui'
 import { WeaponSchema, type Character, type Weapon } from '../../../model/character'
+import { damageWith, loadedType, reload, spareRounds } from '../../../rules/sr6/ammo'
 import { computeDerived, weaponPool } from '../../../rules/sr6/derived'
 import { formatPool } from '../../../rules/sr6/format'
 import {
@@ -14,6 +15,7 @@ import {
   type FiringMode,
 } from '../../../rules/sr6/play'
 import type { Update } from '../CharacterPage'
+import { AmmoDialog } from './AmmoDialog'
 import type { QuickPool } from './types'
 
 const RANGES = ['Close', 'Near', 'Medium', 'Far', 'Extreme'] as const
@@ -32,6 +34,7 @@ export function AttackSection({
 }) {
   const [range, setRange] = useState(1)
   const [targetDefense, setTargetDefense] = useState(0)
+  const [ammoFor, setAmmoFor] = useState<Weapon | null>(null)
   const derived = computeDerived(character)
   // Sustained spells are −2 dice each on action tests, on top of wounds.
   const penalty = wounds + sustainPenalty(character)
@@ -54,12 +57,16 @@ export function AttackSection({
   }
 
   const attack = (weapon: Weapon, pool: number, attackRating: number | null, mode?: FiringMode) => {
-    const damage = parseDamage(weapon.damage)
+    // Only guns with a magazine have ammo types.
+    const ammo = ammoCapacity(weapon) > 0 ? loadedType(character, weapon) : null
+    const printed = parseDamage(weapon.damage)
+    const damage = printed && ammo ? damageWith(printed, ammo) : printed
     const extra = mode?.damage ?? 0
     const dv = damage ? `DV ${damage.value + extra}${damage.type} + net hits` : 'DV + net hits'
     const modeText = mode && mode.id !== 'SS' ? ` · ${mode.label}, ${mode.rounds} rounds` : ''
+    const ammoText = ammo && ammo.id !== 'regular' ? ` · ${ammo.name}` : ''
     const rating = attackRating === null ? null : attackRating + (mode?.attackRating ?? 0)
-    onRoll({ label: `${weapon.name || 'Weapon'}${modeText}`, pool, info: `${dv} · ${ratingText(rating)}` })
+    onRoll({ label: `${weapon.name || 'Weapon'}${modeText}${ammoText}`, pool, info: `${dv} · ${ratingText(rating)}` })
     if (mode) setAmmo(weapon, (character.play.ammo[weapon.id] ?? ammoCapacity(weapon)) - mode.rounds)
   }
 
@@ -98,13 +105,21 @@ export function AttackSection({
           const capacity = ammoCapacity(weapon)
           const loaded = character.play.ammo[weapon.id] ?? capacity
           const modes = capacity > 0 ? firingModes(weapon) : []
-          const attackRating = weapon.attackRatings[range] ?? null
+          const ammo = capacity > 0 ? loadedType(character, weapon) : null
+          const printedRating = weapon.attackRatings[range] ?? null
+          const attackRating = printedRating === null ? null : printedRating + (ammo?.attackRating ?? 0)
+          const printed = parseDamage(weapon.damage)
+          const damage = printed && ammo ? damageWith(printed, ammo) : printed
+          const spares = spareRounds(character, weapon)
+          const spareTotal = spares ? Object.values(spares).reduce((a, b) => a + b, 0) : null
+          const canReload = spares === undefined || (spares[ammo?.id ?? 'regular'] ?? 0) > 0
           return (
             <li key={weapon.id} className="rounded-lg border border-line bg-bg/40 p-2.5 text-sm">
               <div className="flex flex-wrap items-baseline gap-x-2">
                 <span className="font-semibold">{weapon.name || 'Weapon'}</span>
                 <span className="text-xs text-muted">
-                  {formatPool(pool, penalty)} dice · {weapon.damage || '—'} · {ratingText(attackRating)}
+                  {formatPool(pool, penalty)} dice · {damage ? `${damage.value}${damage.type}` : weapon.damage || '—'} ·{' '}
+                  {ratingText(attackRating)}
                 </span>
               </div>
               {capacity > 0 && (
@@ -121,13 +136,26 @@ export function AttackSection({
                   </span>
                   <button
                     className="btn px-2 py-1"
-                    onClick={() => setAmmo(weapon, capacity)}
+                    onClick={() => update((c) => reload(c, weapon, capacity))}
+                    disabled={!canReload || loaded === capacity}
                     aria-label={`Reload ${weapon.name}`}
-                    title="Reload"
+                    title={canReload ? 'Reload' : `No spare ${ammo?.name ?? ''} rounds`}
                   >
                     <RotateCcw className="size-4" />
                   </button>
                 </div>
+              )}
+              {capacity > 0 && (
+                <button
+                  className="mt-1 flex items-center gap-1.5 text-xs text-muted hover:text-fg"
+                  onClick={() => setAmmoFor(weapon)}
+                  title="Change ammo type, count spare rounds, buy more"
+                >
+                  <Package className="size-3.5" />
+                  <span className={ammo && ammo.id !== 'regular' ? 'text-accent' : ''}>{ammo?.name}</span>
+                  {spareTotal !== null ? ` · ${spareTotal} spare` : ' · spare rounds not counted'}
+                  <span className="underline">Ammo…</span>
+                </button>
               )}
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {modes.length > 0 ? (
@@ -161,7 +189,13 @@ export function AttackSection({
                   </button>
                 )}
               </div>
-              {capacity > 0 && loaded === 0 && <p className="mt-1 text-xs text-danger">Empty. Reload first.</p>}
+              {capacity > 0 && loaded === 0 && (
+                <p className="mt-1 text-xs text-danger">
+                  {canReload
+                    ? 'Empty. Reload first.'
+                    : 'Empty, and no spare rounds of this type. Ammo… to load or buy.'}
+                </p>
+              )}
             </li>
           )
         })}
@@ -187,6 +221,15 @@ export function AttackSection({
           </li>
         )}
       </ul>
+      {ammoFor && (
+        <AmmoDialog
+          character={character}
+          weapon={ammoFor}
+          capacity={ammoCapacity(ammoFor)}
+          update={update}
+          onClose={() => setAmmoFor(null)}
+        />
+      )}
       <p className="mt-3 text-xs text-muted">
         Damage is the DV plus your net hits; the target soaks some of it. Attack Rating 4 or more above the target's
         Defense Rating gives you 1 Edge (4 or more below gives it to them).

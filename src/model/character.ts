@@ -321,6 +321,8 @@ export const RollRecordSchema = z.object({
   total: z.number().int().nullable().default(null),
   /** Edge spent on boosts for this roll. */
   edge: int(0),
+  /** When it was rolled, so the GM's table feed can show it; missing on older rolls. */
+  at: z.string().optional(),
 })
 
 /** A finished play session, kept as a log on the character. */
@@ -374,6 +376,8 @@ export const CombatSchema = z.object({
   round: int(1),
   /** Initiative total rolled at the start (score + dice), changed by Edge or damage. */
   initiative: int(0),
+  /** When initiative was rolled, so the GM's encounter can pick it up. */
+  rolledAt: z.string().optional(),
   majorLeft: int(1),
   minorLeft: int(1),
   /** Edge gained this round; at most 2 per round. */
@@ -397,6 +401,10 @@ export const PlaySchema = z
     edge: z.number().int().nullable().default(null),
     /** Rounds loaded per weapon id. */
     ammo: z.record(z.string(), z.number().int()).default({}),
+    /** Ammo type loaded per weapon id (regular when missing). */
+    ammoType: z.record(z.string(), z.string()).default({}),
+    /** Spare rounds per weapon id and ammo type; a weapon missing here doesn't keep count. */
+    spareAmmo: z.record(z.string(), z.record(z.string(), z.number().int())).default({}),
     combat: CombatSchema.nullable().default(null),
     /** Boxes filled on the Matrix condition monitor. */
     matrixDamage: int(0),
