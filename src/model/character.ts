@@ -124,6 +124,9 @@ export const BonusesSchema = z
     unarmedDamage: int(0),
     /** Unarmed attacks deal Physical instead of Stun damage. */
     unarmedPhysical: z.boolean().default(false),
+    /** Extra boxes on the Physical and Stun condition monitors. */
+    physicalBoxes: int(0),
+    stunBoxes: int(0),
   })
   .prefault({})
 
@@ -439,6 +442,11 @@ export const CharacterSchema = z.object({
   reputation: int(0),
 
   attributes: AttributesSchema,
+  /**
+   * Bonuses that don't belong to one augmentation or power: gear, a quality the
+   * app doesn't know, a GM ruling. Counted like augmentation bonuses.
+   */
+  adjustments: BonusesSchema,
   /** Essence lost to things not listed as augmentations, in hundredths (150 = 1.5) to avoid float drift. */
   essenceLoss: int(0),
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   AdeptPowerSchema,
   AugmentationSchema,
+  BonusesSchema,
   GearSchema,
   MatrixDeviceSchema,
   ProgramSchema,
@@ -10,7 +11,15 @@ import {
   createCharacter,
   type Character,
 } from '../../model/character'
-import { computeDerived, ownedSkillPools, specializationCovers, untrainedSkillPools, weaponPool } from './derived'
+import {
+  computeDerived,
+  explainDerived,
+  formatParts,
+  ownedSkillPools,
+  specializationCovers,
+  untrainedSkillPools,
+  weaponPool,
+} from './derived'
 
 function runner(overrides: Partial<Character> = {}): Character {
   return createCharacter({
@@ -338,5 +347,27 @@ describe('specializationCovers', () => {
     ['', 'Rifles', false],
   ])('%s covers %s: %s', (spec, category, expected) => {
     expect(specializationCovers(spec, category)).toBe(expected)
+  })
+})
+
+describe('bonuses for heavily augmented runners', () => {
+  it('adds condition monitor boxes, Defense Rating and unarmed AR from augmentations and adjustments', () => {
+    const c = createCharacter({
+      attributes: { ...createCharacter().attributes, body: 6, willpower: 4, reaction: 5, strength: 5 },
+    })
+    c.augmentations = [
+      AugmentationSchema.parse({ name: 'Platelet factories', bonuses: { physicalBoxes: 2 } }),
+      AugmentationSchema.parse({ name: 'Dermal Plating', rating: 3, bonuses: { defenseRating: 3 } }),
+    ]
+    c.adjustments = BonusesSchema.parse({ stunBoxes: 1, unarmedAttackRating: 2 })
+    const d = computeDerived(c)
+    expect(d.physicalMonitor.boxes).toBe(8 + 3 + 2)
+    expect(d.stunMonitor.boxes).toBe(8 + 2 + 1)
+    expect(d.defenseRating).toBe(6 + 3)
+    expect(d.unarmedAttackRating).toBe(5 + 5 + 2)
+    const e = explainDerived(c)
+    expect(formatParts(e.defenseRating)).toBe('Body 6 + Dermal Plating 3')
+    expect(formatParts(e.physicalBoxes)).toBe('Base 8 + half Body 3 + Platelet factories 2')
+    expect(formatParts(e.unarmedAttackRating)).toBe('Reaction 5 + Strength 5 + Adjustments 2')
   })
 })

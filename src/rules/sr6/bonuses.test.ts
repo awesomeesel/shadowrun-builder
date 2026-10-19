@@ -61,3 +61,11 @@ describe('known implants', () => {
     expect(knownBonuses('Dermal Plating', 3)).toEqual({ ...none, defenseRating: 3 })
   })
 })
+
+describe('box bonuses in text', () => {
+  it('reads and writes Physical and Stun boxes', () => {
+    const b = parseBonuses('Physical boxes +2, Stun monitor +1')!
+    expect(b).toMatchObject({ physicalBoxes: 2, stunBoxes: 1 })
+    expect(formatBonuses(b)).toBe('Physical boxes +2, Stun boxes +1')
+  })
+})

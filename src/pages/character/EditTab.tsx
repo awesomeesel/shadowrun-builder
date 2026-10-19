@@ -1,4 +1,6 @@
-import { BarChart3, Coins, NotebookPen, Target, UserRound } from 'lucide-react'
+import { BarChart3, Coins, NotebookPen, SlidersHorizontal, Target, UserRound } from 'lucide-react'
+import { BonusEditor } from '../../components/BonusEditor'
+import { computeDerived, explainDerived, formatParts } from '../../rules/sr6/derived'
 import { noAutofill, noAutofillField } from '../../components/noAutofill'
 import { useRef, useState } from 'react'
 import { Link, useOutletContext } from 'react-router'
@@ -60,6 +62,7 @@ export function EditTab() {
         <KnowledgeSection character={character} update={update} />
         <IdentitySection character={character} update={update} />
         <AugmentationsSection character={character} update={update} />
+        <AdjustmentsSection character={character} update={update} />
         {(character.attributes.magic > 0 || character.spells.length > 0 || character.adeptPowers.length > 0) && (
           <MagicSection character={character} update={update} />
         )}
@@ -300,6 +303,39 @@ function ResourcesSection({ character, update }: { character: Character; update:
           <NumberInput value={character.reputation} onChange={(reputation) => update((c) => ({ ...c, reputation }))} />
         </Field>
       </div>
+    </Section>
+  )
+}
+
+/**
+ * The numbers augmented runners ask about most, with where each comes from,
+ * and a place for bonuses that don't belong to one augmentation or power.
+ */
+function AdjustmentsSection({ character, update }: { character: Character; update: Update }) {
+  const d = computeDerived(character)
+  const parts = explainDerived(character)
+  const rows: [string, number, string][] = [
+    ['Defense Rating', d.defenseRating, formatParts(parts.defenseRating)],
+    ['Unarmed Attack Rating', d.unarmedAttackRating, formatParts(parts.unarmedAttackRating)],
+    ['Physical boxes', d.physicalMonitor.boxes, formatParts(parts.physicalBoxes)],
+    ['Stun boxes', d.stunMonitor.boxes, formatParts(parts.stunBoxes)],
+  ]
+  return (
+    <Section title="Combat numbers & adjustments" icon={<SlidersHorizontal className="size-4" />}>
+      <dl className="mb-4 grid gap-1.5 text-sm">
+        {rows.map(([label, value, how]) => (
+          <div key={label} className="flex flex-wrap items-baseline gap-x-2">
+            <dt className="w-44 shrink-0 text-muted">{label}</dt>
+            <dd className="font-display text-lg text-accent tabular-nums">{value}</dd>
+            <dd className="min-w-0 basis-full text-xs text-muted sm:basis-auto">= {how}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mb-2 text-xs text-muted">
+        Bonuses from an augmentation or adept power belong on that item (Augmentations above), so they come and go with
+        it. Use this for anything else: gear, a quality, a GM ruling.
+      </p>
+      <BonusEditor value={character.adjustments} onChange={(adjustments) => update((c) => ({ ...c, adjustments }))} />
     </Section>
   )
 }

@@ -28,6 +28,8 @@ import type { Character } from '../../model/character'
 import { ATTRIBUTE_IDS, ATTRIBUTE_LABELS } from '../../rules/sr6/attributes'
 import {
   computeDerived,
+  explainDerived,
+  formatParts,
   ownedSkillPools,
   untrainedSkillPools,
   type SkillPool,
@@ -45,6 +47,7 @@ type DamageTrack = keyof Character['damage']
 export function SheetTab() {
   const { character, update } = useOutletContext<CharacterContext>()
   const derived = computeDerived(character)
+  const explained = explainDerived(character)
   // Free racial qualities, unless the character lists the same quality itself (e.g. from a Commlink import).
   const racialQualities = METATYPES[character.metatype].qualities.filter(
     (r) => !character.qualities.some((q) => q.name.trim().toLowerCase() === r.name.toLowerCase()),
@@ -129,6 +132,10 @@ export function SheetTab() {
               tone={wounds < 0 ? 'danger' : undefined}
             />
           </div>
+          <p className="mt-2 text-xs text-muted">
+            Defense Rating = {formatParts(explained.defenseRating)} · Unarmed Attack Rating ={' '}
+            {formatParts(explained.unarmedAttackRating)}
+          </p>
           <dl className="mt-4 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
             <PoolRow label="Defense (Reaction + Intuition)" pool={derived.pools.defense} wounds={wounds} />
             <PoolRow label="Damage resistance (Body)" pool={derived.pools.damageResistance} />

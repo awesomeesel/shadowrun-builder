@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 16,
+    date: '2026-10-19',
+    title: 'Bonuses for heavily augmented runners',
+    items: [
+      'Augmentations and adept powers have a clear bonus list: pick Defense Rating, Unarmed Attack Rating, Physical or Stun boxes, soak dice, initiative dice or an attribute, and set the number.',
+      'Edit tab → Combat numbers & adjustments shows how Defense Rating, Unarmed Attack Rating and both damage tracks are made up, with room for bonuses from anything else (gear, a quality, a GM ruling).',
+      'The Sheet shows what your Defense Rating and Unarmed Attack Rating are made of.',
+    ],
+  },
+  {
     id: 15,
     date: '2026-10-18',
     title: 'IC in encounters, and Edge for the opposition',

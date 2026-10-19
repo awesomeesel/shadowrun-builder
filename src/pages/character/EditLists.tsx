@@ -1,3 +1,4 @@
+import { BonusEditor } from '../../components/BonusEditor'
 import {
   AppWindow,
   Backpack,
@@ -58,7 +59,6 @@ import {
   type Weapon,
 } from '../../model/character'
 import { SourceInput } from '../../components/SourceLink'
-import { formatBonuses, parseBonuses } from '../../rules/sr6/bonuses'
 import { computeDerived } from '../../rules/sr6/derived'
 import {
   PROGRAM_COST,
@@ -332,41 +332,13 @@ export function EssenceInput({ character, update }: { character: Character; upda
   )
 }
 
-/** Text field for bonuses like "Reaction +2, +2D6, Defense Rating +1"; turns red while the text can't be parsed. */
-function BonusInput({ value, onChange }: { value: Bonuses; onChange: (value: Bonuses) => void }) {
-  const [draft, setDraft] = useState<string | null>(null)
-  const invalid = draft !== null && parseBonuses(draft) === undefined
-  return (
-    <>
-      <input
-        {...noAutofill}
-        className={`input w-full ${invalid ? 'border-danger' : ''}`}
-        placeholder="Reaction +2, +2D6"
-        title={BONUS_HELP}
-        value={draft ?? formatBonuses(value)}
-        onChange={(e) => {
-          setDraft(e.target.value)
-          const parsed = parseBonuses(e.target.value)
-          if (parsed) onChange(parsed)
-        }}
-        onBlur={() => setDraft(null)}
-      />
-      {invalid && <span className="mt-0.5 block text-[11px] text-danger">{BONUS_HELP}</span>}
-    </>
-  )
-}
-
-const BONUS_HELP =
-  'Separate with commas. Understood: attributes (Body +1), initiative dice (+1D6), Defense Rating +1, ' +
-  'Physical damage resistance +2, Unarmed attack rating +2, Unarmed damage +1, Unarmed physical.'
-
 function bonusField<T extends { bonuses: Bonuses }>(span: 2 | 3 | 4): FieldDef<T> {
   return {
     kind: 'custom',
     label: 'Bonuses',
     span,
     wide: true,
-    render: (item, set) => <BonusInput value={item.bonuses} onChange={(bonuses) => set({ bonuses } as Partial<T>)} />,
+    render: (item, set) => <BonusEditor value={item.bonuses} onChange={(bonuses) => set({ bonuses } as Partial<T>)} />,
   }
 }
 

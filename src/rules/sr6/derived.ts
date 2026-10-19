@@ -155,7 +155,70 @@ function allBonuses(character: Character): Bonuses[] {
     ...character.augmentations.map((a) => a.bonuses),
     ...character.adeptPowers.map((p) => p.bonuses),
     ...fromQualities,
+    character.adjustments,
   ]
+}
+
+/** Each bonus with where it came from, for showing how a number is made up. */
+function namedBonuses(character: Character): { name: string; bonuses: Bonuses }[] {
+  return [
+    ...character.augmentations.map((a) => ({ name: a.name || 'Augmentation', bonuses: a.bonuses })),
+    ...character.adeptPowers.map((p) => ({ name: p.name || 'Adept power', bonuses: p.bonuses })),
+    ...(hasQuality(character, /^dermal deposits/i)
+      ? [{ name: 'Dermal Deposits', bonuses: BonusesSchema.parse({ defenseRating: 1, unarmedDamage: 1 }) }]
+      : []),
+    { name: 'Adjustments', bonuses: character.adjustments },
+  ]
+}
+
+export interface Part {
+  label: string
+  value: number
+}
+
+/**
+ * How the numbers players ask about are made up, e.g. Defense Rating =
+ * Body 5 + Armor jacket 4 + Dermal Plating 2.
+ */
+export function explainDerived(character: Character): {
+  defenseRating: Part[]
+  unarmedAttackRating: Part[]
+  physicalBoxes: Part[]
+  stunBoxes: Part[]
+} {
+  const a = effectiveAttributes(character)
+  const named = namedBonuses(character)
+  const from = (key: 'defenseRating' | 'unarmedAttackRating' | 'physicalBoxes' | 'stunBoxes') =>
+    named.filter((n) => n.bonuses[key]).map((n) => ({ label: n.name, value: n.bonuses[key] }))
+  const builtTough = builtToughBoxes(character)
+  return {
+    defenseRating: [
+      { label: 'Body', value: a.body },
+      ...character.gear.filter((g) => g.equipped && g.armor).map((g) => ({ label: g.name || 'Armor', value: g.armor })),
+      ...from('defenseRating'),
+    ],
+    unarmedAttackRating: [
+      { label: 'Reaction', value: a.reaction },
+      { label: 'Strength', value: a.strength },
+      ...from('unarmedAttackRating'),
+    ],
+    physicalBoxes: [
+      { label: 'Base', value: 8 },
+      { label: 'half Body', value: Math.ceil(a.body / 2) },
+      ...(builtTough ? [{ label: 'Built Tough', value: builtTough }] : []),
+      ...from('physicalBoxes'),
+    ],
+    stunBoxes: [
+      { label: 'Base', value: 8 },
+      { label: 'half Willpower', value: Math.ceil(a.willpower / 2) },
+      ...from('stunBoxes'),
+    ],
+  }
+}
+
+/** "Body 5 + Armor jacket 4 + Dermal Plating 2" */
+export function formatParts(parts: Part[]): string {
+  return parts.map((p, i) => `${i && p.value < 0 ? '− ' : i ? '+ ' : ''}${p.label} ${Math.abs(p.value)}`).join(' ')
 }
 
 /** Built Tough (p. 70) adds its rank in Physical boxes. */
@@ -195,13 +258,17 @@ function magicLoss(character: Character): number {
 
 export function computeDerived(character: Character): DerivedStats {
   const a = effectiveAttributes(character)
+  const bonuses = allBonuses(character)
   const physicalMonitor = {
-    boxes: 8 + Math.ceil(a.body / 2) + builtToughBoxes(character),
+    boxes:
+      8 + Math.ceil(a.body / 2) + builtToughBoxes(character) + bonuses.reduce((sum, b) => sum + b.physicalBoxes, 0),
     filled: character.damage.physical,
   }
-  const stunMonitor = { boxes: 8 + Math.ceil(a.willpower / 2), filled: character.damage.stun }
+  const stunMonitor = {
+    boxes: 8 + Math.ceil(a.willpower / 2) + bonuses.reduce((sum, b) => sum + b.stunBoxes, 0),
+    filled: character.damage.stun,
+  }
   const armor = character.gear.filter((item) => item.equipped).reduce((sum, item) => sum + item.armor, 0)
-  const bonuses = allBonuses(character)
   const total = (
     key: 'initiativeDice' | 'defenseRating' | 'physicalResistance' | 'unarmedAttackRating' | 'unarmedDamage',
   ) => bonuses.reduce((sum, b) => sum + b[key], 0)

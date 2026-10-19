@@ -25,7 +25,16 @@ const OTHER_BONUSES = [
     names: ['UNARMED ATTACK RATING', 'UNARMED AR'],
   },
   { key: 'unarmedDamage', label: 'Unarmed damage', names: ['UNARMED DAMAGE', 'UNARMED DV'] },
+  {
+    key: 'physicalBoxes',
+    label: 'Physical boxes',
+    names: ['PHYSICAL BOXES', 'PHYSICAL CONDITION MONITOR', 'PHYSICAL MONITOR', 'PHYSICAL CM'],
+  },
+  { key: 'stunBoxes', label: 'Stun boxes', names: ['STUN BOXES', 'STUN CONDITION MONITOR', 'STUN MONITOR', 'STUN CM'] },
 ] as const
+
+/** The non-attribute bonuses with their labels, for editors. */
+export const BONUS_KINDS = OTHER_BONUSES.map(({ key, label }) => ({ key, label }))
 
 /**
  * Parse bonus text like "Reaction +2, Agility +1, +2D6, Defense Rating +1,
