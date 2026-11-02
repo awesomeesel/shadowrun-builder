@@ -124,7 +124,8 @@ export function extractNpcs(pages: PageLayout[]): ExtractedEntry[] {
     for (let j = i - 1; j >= Math.max(0, i - 2); j--) {
       const above = flat[j].line
       // Titles are set clearly smaller than body text (body size is rounded to whole points).
-      if (above.h <= statSize || above.h >= flat[j].body - 1 || /[.,;:]$/.test(above.text)) break
+      // A line starting ">" is shadowtalk's signature ("> Lyran"), not part of the title.
+      if (above.h <= statSize || above.h >= flat[j].body - 1 || /[.,;:]$|^>/.test(above.text)) break
       const meta = above.text.match(/^metatype:\s*(.+)$/i)
       if (meta) metatype = meta[1].trim()
       else title.unshift(above.text)

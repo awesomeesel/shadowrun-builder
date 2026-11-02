@@ -1,4 +1,4 @@
-import { contentItems, groupLines, type Line, type PageLayout, type PdfItem } from '../layout'
+import { contentItems, groupLines, makeLine, type Line, type PageLayout, type PdfItem } from '../layout'
 import type { ExtractedEntry, RatingRange } from './types'
 import { cleanName, parseAttackRatings, parseInt0, parseRatingRange, parseScaled } from './values'
 
@@ -96,6 +96,8 @@ export function extractTables(page: PageLayout, pageNumber: number): ExtractedEn
     const header = lines[h]
     if (!isTableHeader(header)) continue
     const columns = mergeStackedHeaders(header, lines[h - 1], lines[h + 1])
+    // Single-vehicle stat blocks are read by vehicleBlocks below.
+    if (/^HAND/.test(columns[0].header)) continue
     const firstRow = isStackedHeader(lines[h + 1], header) ? h + 2 : h + 1
     const left = columns[0].x - 40
     const right = columns[columns.length - 1].x + 120
@@ -144,6 +146,88 @@ export function extractTables(page: PageLayout, pageNumber: number): ExtractedEn
       const entry = toEntry(columns, row.cells, pageNumber, category)
       if (entry) entries.push(entry)
     }
+  }
+  return [...entries, ...vehicleBlocks(lines, pageNumber)]
+}
+
+/** Labels of a single-vehicle stat block. */
+const VEHICLE_LABEL = /^(HAND|ACC|ACCEL|SPD|INT|TOP|BODY?|ARM|ARMOR|PILOT|SENS|SENSOR|SEATS?|AVAIL|COST)$/
+
+/** Some books set several labels as one piece of text ("BODY ARM PILOT SENS"); split it where each word would sit. */
+function splitMergedLabels(items: PdfItem[]): PdfItem[] {
+  return items.flatMap((item): PdfItem[] => {
+    const words = item[3].trim().split(/\s+/)
+    if (words.length < 2 || !words.every((w) => VEHICLE_LABEL.test(w))) return [item]
+    const perChar = item[4] / item[3].length
+    let x = item[0]
+    return words.map((word) => {
+      const piece: PdfItem = [x, item[1], item[2], word, word.length * perChar]
+      x += (word.length + 1) * perChar
+      return piece
+    })
+  })
+}
+
+/**
+ * Single vehicles' stat blocks (Double Clutch): the name and "(medium wheeled
+ * drone)" above a HAND / ACC / SPD INT / … / COST header, one row of numbers
+ * below. Blocks often sit beside a column of text, so only the strip of page
+ * under the header is read.
+ */
+function vehicleBlocks(lines: Line[], page: number): ExtractedEntry[] {
+  const entries: ExtractedEntry[] = []
+  for (let h = 0; h < lines.length; h++) {
+    const hand = lines[h].items.find((it) => /^HAND\b/.test(it[3].trim()))
+    if (!hand) continue
+    // The header's own labels, left to right from HAND, stopping at the first thing that isn't one.
+    const labels: PdfItem[] = []
+    for (const it of splitMergedLabels(lines[h].items.filter((i) => i[0] >= hand[0] - 2).sort((a, b) => a[0] - b[0]))) {
+      if (!VEHICLE_LABEL.test(it[3].trim())) break
+      labels.push(it)
+    }
+    if (!labels.some((l) => /^COST$/.test(l[3].trim())) || labels.length < 6) continue
+    const last = labels[labels.length - 1]
+    const left = hand[0] - 15
+    const right = last[0] + last[4] + 20
+    const strip = (line: Line | undefined) => {
+      const items = line?.items.filter((it) => it[0] >= left && it[0] <= right) ?? []
+      return items.length ? makeLine(splitMergedLabels(items)) : undefined
+    }
+    const header = makeLine(labels)
+    const statColumns = mergeStackedHeaders(header, strip(lines[h - 1]), strip(lines[h + 1]))
+    // A blank name column in front, so the numbers line up under their labels.
+    const columns = [{ header: '', x: left - 100, end: left - 100 }, ...statColumns]
+
+    let values: string[] | null = null
+    for (let i = h + 1; i < lines.length && lines[i].y > header.y - 30; i++) {
+      const line = strip(lines[i])
+      if (!line || line.items.every((it) => HEADER_WORD.test(it[3].trim()))) continue
+      const c = cells(columns, line)
+      if (c.slice(1).filter(Boolean).length >= 4) values = c
+      break
+    }
+    if (!values) continue
+
+    // The name: up to four short lines straight above, ending at shadowtalk ("> Kane") or a sentence.
+    const parts: string[] = []
+    let y = header.y
+    for (let i = h - 1; i >= 0 && parts.length < 4; i--) {
+      const line = strip(lines[i])
+      if (!line) continue
+      if (line.y - y > 30 || line.text.length > 60 || /^>|>\s|[.!?:]$/.test(line.text)) break
+      y = line.y
+      // Stacked labels like "SPD TOP" belong to the header.
+      if (line.items.every((it) => VEHICLE_LABEL.test(it[3].trim()))) continue
+      parts.unshift(line.text)
+    }
+    const text = parts.join(' ').replace(/\s+/g, ' ').trim()
+    const type = text.match(/\(([^)]+)\)\s*$/)
+    const name = type ? text.slice(0, type.index).trim() : text
+    if (!/[A-Za-z]{2}/.test(name)) continue
+    values[0] = name
+    const entry = toEntry(columns, values, page, titleCase(type?.[1] ?? 'Vehicles'))
+    // Two blocks set side by side can leave one without its numbers; skip it rather than list it empty.
+    if (entry?.kind === 'vehicle' && (entry.handling || entry.body)) entries.push(entry)
   }
   return entries
 }
@@ -202,19 +286,21 @@ function toEntry(columns: Column[], c: string[], page: number, category: string)
       ammo: col(/^AMMO$/),
     }
   }
-  if (has(/^ACCEL$/)) {
+  // Double Clutch shortens the labels: ACC, SPD INT, TOP SPD, BOD, ARM, SENS.
+  // Without Body it's an upgrade table (e.g. secondary propulsion), not vehicles.
+  if (has(/^ACC(EL)?$/) && has(/^BODY?$/)) {
     return {
       ...base,
       kind: 'vehicle',
       drone: /DRONE/.test(first) || /drone/i.test(category),
       handling: col(/^HAND/),
-      acceleration: col(/^ACCEL$/),
-      speedInterval: col(/^SPEED/),
-      topSpeed: col(/^TOP SPEED$/),
-      body: parseInt0(col(/^BODY$/)),
-      armor: parseInt0(col(/^ARMOR$/)),
+      acceleration: col(/^ACC(EL)?$/),
+      speedInterval: col(/^(SPEED|SPD)/),
+      topSpeed: col(/^TOP (SPEED|SPD)$/),
+      body: parseInt0(col(/^BODY?$/)),
+      armor: parseInt0(col(/^ARM(OR)?$/)),
       pilot: parseInt0(col(/^PILOT$/)),
-      sensor: parseInt0(col(/^SENSOR$/)),
+      sensor: parseInt0(col(/^SENS(OR)?$/)),
       seats: col(/^SEAT/),
     }
   }

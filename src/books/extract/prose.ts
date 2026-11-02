@@ -25,11 +25,29 @@ function isHeading(line: Line, body: number): boolean {
 function blocks(pages: PageLayout[]): Block[] {
   const result: Block[] = []
   let current: Block | null = null
+  let heading: { line: Line; page: number } | null = null
+  const wrapsOnto = (prev: typeof heading, line: Line, page: number) =>
+    !!prev &&
+    prev.page === page &&
+    Math.abs(prev.line.h - line.h) < 0.5 &&
+    prev.line.y - line.y > 0 &&
+    prev.line.y - line.y <= line.h * 1.6 &&
+    Math.abs(prev.line.items[0][0] - line.items[0][0]) < 4
   pages.forEach((page, index) => {
     const body = bodyHeight(contentItems(page))
     for (const line of readingOrder(page)) {
       if (isHeading(line, body)) {
+        // A long name wrapped onto a second line straight below, in the same size:
+        // "Loki’s Musical Num-" + "ber", "Stim Patch Allergy" + "(specify toxin)".
+        if (current && current.lines.length === 0 && wrapsOnto(heading, line, index + 1)) {
+          current.name = current.name.endsWith('-')
+            ? current.name.slice(0, -1) + line.text
+            : `${current.name} ${line.text}`
+          heading = { line, page: index + 1 }
+          continue
+        }
         current = { name: line.text, page: index + 1, lines: [] }
+        heading = { line, page: index + 1 }
         result.push(current)
       } else if (current) {
         current.lines.push(line)
@@ -45,8 +63,9 @@ export function extractProse(pages: PageLayout[]): ExtractedEntry[] {
   // Spell chapters group spells under headings like "Detection Spells".
   let spellSection = ''
   for (const block of blocks(pages)) {
-    const section = block.name.match(SPELL_CATEGORIES)
-    if (section && /spells/i.test(block.name)) spellSection = section[1].toLowerCase()
+    // "Detection Spells" (Core Rulebook) or just "Detection" (Street Wyrd).
+    const section = block.name.match(/^(combat|detection|health|illusion|manipulation)(?: spells)?$/i)
+    if (section) spellSection = section[1].toLowerCase()
     const entry = quality(block) ?? adeptPower(block) ?? spell(block, spellSection) ?? complexForm(block)
     if (entry) entries.push(entry)
   }

@@ -11,6 +11,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 20,
+    date: '2026-11-02',
+    title: 'More from your books',
+    items: [
+      'Library: Smooth Operations (SO), Wild Life (WL) and The Kechibi Code (KC) are recognised and get their short codes, like the other core books.',
+      'Double Clutch’s vehicles and drones (about 170) can now be picked from the book, with all their stats.',
+      'Wild Life’s critters (about 180) are now read, ready to add to GM encounters.',
+      'Street Wyrd: all its spells are found now, not just the combat ones.',
+      'Long quality and spell names that wrap onto two lines come out whole.',
+      'Books you’ve already added are re-read automatically; no need to add them again.',
+      'Play tab: Session notes open at the newest line and follow along as you add notes.',
+    ],
+  },
+  {
     id: 19,
     date: '2026-10-19',
     title: 'Live at the table, ammo and paying for things',

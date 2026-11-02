@@ -1,6 +1,6 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { db } from '../db/db'
-import type { PageLayout, PdfItem } from './layout'
+import { withoutDuplicates, type PageLayout, type PdfItem } from './layout'
 
 type PdfJs = typeof import('pdfjs-dist')
 
@@ -67,5 +67,5 @@ export async function pageLayout(doc: PDFDocumentProxy, pageNumber: number): Pro
     if (!('str' in item) || !item.str.trim()) continue
     items.push([round(item.transform[4]), round(item.transform[5]), round(item.height), item.str, round(item.width)])
   }
-  return { width, items }
+  return { width, items: withoutDuplicates(items) }
 }

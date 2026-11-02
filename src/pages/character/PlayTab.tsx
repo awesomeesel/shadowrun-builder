@@ -1,10 +1,10 @@
 import { HandoutsSection } from '../../share/Handouts'
-import { Clock, Dices, Flag, HeartPulse, Minus, NotebookPen, Play, Plus, ShieldAlert, Sparkles } from 'lucide-react'
+import { Dices, Flag, HeartPulse, Minus, NotebookPen, Play, Plus, ShieldAlert, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useOutletContext } from 'react-router'
 import { keepDriveSignedIn } from '../../cloud/cloud'
 import { RollResult } from '../../components/Dice'
-import { noAutofill, noAutofillField } from '../../components/noAutofill'
+import { noAutofill } from '../../components/noAutofill'
 import { MonitorTrack, Stat } from '../../components/sheetParts'
 import { Section } from '../../components/ui'
 import { computeDerived, ownedSkillPools } from '../../rules/sr6/derived'
@@ -38,6 +38,7 @@ import type { QuickPool } from './play/types'
 import { VehiclesSection } from './play/VehiclesSection'
 import { StatusList } from './play/StatusList'
 import { QuickNote } from './play/QuickNote'
+import { SessionNotes } from './play/SessionNotes'
 import { EdgeActions } from './play/EdgeActions'
 import { NewPlayerTips, QualityReminders } from './play/Guidance'
 import { HelpButton } from '../../components/Help'
@@ -450,19 +451,13 @@ function ActiveSession({ character, update }: CharacterContext) {
       <HandoutsSection characterId={character.id} />
 
       <Section title="Session notes" icon={<NotebookPen className="size-4" />} className="lg:col-span-2">
-        <textarea
-          {...noAutofillField}
-          className="input min-h-64 w-full"
-          placeholder="Who you met, what you found, who owes you…"
-          value={session.notes}
-          onChange={(e) => {
-            const notes = e.target.value
+        <SessionNotes
+          notes={session.notes}
+          onChange={(notes) =>
             update((c) => ({ ...c, play: { ...c.play, session: c.play.session && { ...c.play.session, notes } } }))
-          }}
+          }
+          onAddTime={addTimestamp}
         />
-        <button className="btn mt-2 text-xs" onClick={addTimestamp}>
-          <Clock className="size-3.5" /> Add the time
-        </button>
       </Section>
 
       {roll && (

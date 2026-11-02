@@ -103,8 +103,11 @@ export async function buildCatalog(id: string) {
   if (!book || book.indexedPages < book.pageCount || book.extractedVersion === EXTRACTOR_VERSION) return
   const pages = await db.bookPages.where('bookId').equals(id).sortBy('page')
   const entries: CatalogEntry[] = extractBook(pages).map((entry, i) => ({ ...entry, id: `${id}:${i}`, bookId: id }))
-  await db.transaction('rw', db.books, db.catalog, async () => {
+  // Search text too, as reading improves (e.g. doubled text dropped), without reading the PDF again.
+  const texts: BookPageText[] = pages.map((p) => ({ bookId: id, page: p.page, text: pageText(p) }))
+  await db.transaction('rw', [db.books, db.catalog, db.bookText], async () => {
     if (!(await db.books.get(id))) return
+    await db.bookText.bulkPut(texts)
     await db.catalog.where('bookId').equals(id).delete()
     await db.catalog.bulkPut(entries)
     await db.books.update(id, { extractedVersion: EXTRACTOR_VERSION })
@@ -114,6 +117,11 @@ export async function buildCatalog(id: string) {
 /** Finish indexing or rebuild catalogs for books left incomplete or built by an older extractor. */
 export async function resumeIndexing() {
   const books = await db.books.toArray()
+  // Books added before the app knew their code get it now (the user can still change it).
+  for (const book of books) {
+    const known = book.code ? undefined : guessBook(book.fileName, book.title)
+    if (known) await db.books.update(book.id, { code: known.code })
+  }
   for (const book of books) {
     if (book.indexedPages < book.pageCount || book.extractedVersion !== EXTRACTOR_VERSION) await indexBook(book.id)
   }

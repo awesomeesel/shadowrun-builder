@@ -23,6 +23,17 @@ export const KNOWN_BOOKS: KnownBook[] = [
   { code: 'BS', title: 'Body Shop', match: ['body shop', 'body-shop', 'bodyshop', 'body_shop'] },
   { code: 'SWC', title: 'Sixth World Companion', match: ['companion'] },
   { code: 'PP', title: 'Power Plays', match: ['power plays', 'power-plays', 'powerplays', 'power_plays'] },
+  {
+    code: 'SO',
+    title: 'Smooth Operations',
+    match: ['smooth operations', 'smooth-operations', 'smoothoperations', 'smooth_operations'],
+  },
+  { code: 'WL', title: 'Wild Life', match: ['wild life', 'wild-life', 'wildlife', 'wild_life'] },
+  {
+    code: 'KC',
+    title: 'The Kechibi Code',
+    match: ['kechibi code', 'kechibi-code', 'kechibicode', 'kechibi_code'],
+  },
 ]
 
 /** Guess which book a PDF is from its file name and embedded title. */

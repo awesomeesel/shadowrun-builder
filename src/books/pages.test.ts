@@ -57,4 +57,19 @@ describe('guessBook', () => {
     expect(guessBook('download.pdf', 'Shadowrun Sixth World: Firing Squad')?.code).toBe('FS')
     expect(guessBook('random.pdf')).toBeUndefined()
   })
+
+  it('knows the core books, each by its own name', () => {
+    const files: [string, string][] = [
+      ['Shadowrun, Sixth World Core Rulebook (2019).pdf', 'CRB'],
+      ['Shadowrun Body Shop (Core Augmentation Book).pdf', 'BS'],
+      ['Shadowrun Double Clutch (Core Rigger Rulebook).pdf', 'DC'],
+      ['Shadowrun Firing Squad (Core Combat Rulebook) (2020).pdf', 'FS'],
+      ['Shadowrun Sixth World Companion (Core Character Rulebook) (2022).pdf', 'SWC'],
+      ['Shadowrun Smooth Operations (Core Face Rulebook) (2024).pdf', 'SO'],
+      ['Shadowrun Street Wyrd (Core Magic Rulebook) (2020).pdf', 'SW'],
+      ['Shadowrun The Kechibi Code (A Plot Sourcebook) (2021).pdf', 'KC'],
+      ['Shadowrun Wild Life (Core Critter Rulebook) (2023).pdf', 'WL'],
+    ]
+    for (const [file, code] of files) expect(guessBook(file)?.code, file).toBe(code)
+  })
 })

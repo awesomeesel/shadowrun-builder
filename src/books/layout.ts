@@ -29,9 +29,25 @@ export const FOOTER_Y = 30
 /** Page margins hold page numbers and the vertical book title. */
 const MARGIN = 45
 
-/** Fragments in the page body: no footer, no margin decorations. */
+/**
+ * Some PDFs draw their text twice at the same spot (an outline or shadow under
+ * the fill), which would read as "MOVEMOVE". Keep one copy of each.
+ */
+export function withoutDuplicates(items: PdfItem[]): PdfItem[] {
+  // Copies sit on top of each other or a point or so apart.
+  const byText = new Map<string, PdfItem[]>()
+  return items.filter((i) => {
+    const kept = byText.get(i[3]) ?? []
+    if (kept.some((k) => Math.abs(k[0] - i[0]) <= 1.5 && Math.abs(k[1] - i[1]) <= 1.5)) return false
+    kept.push(i)
+    byText.set(i[3], kept)
+    return true
+  })
+}
+
+/** Fragments in the page body: no footer, no margin decorations, no doubled text. */
 export function contentItems(page: PageLayout): PdfItem[] {
-  return page.items.filter((i) => i[1] > FOOTER_Y && i[0] > MARGIN && i[0] < page.width - MARGIN)
+  return withoutDuplicates(page.items.filter((i) => i[1] > FOOTER_Y && i[0] > MARGIN && i[0] < page.width - MARGIN))
 }
 
 export function makeLine(items: PdfItem[]): Line {

@@ -198,3 +198,115 @@ describe('Matrix device tables', () => {
     expect(entries[0]).toMatchObject({ kind: 'gear', name: 'Test gloves' })
   })
 })
+
+describe('books laid out differently', () => {
+  it('ignores text the PDF draws twice', () => {
+    const items = [
+      t(54, 700, 'Lucky Socks', 13),
+      t(68, 685, 'Cost:'),
+      t(95, 685, '5 Karma'),
+      t(68, 670, 'Game Effect:'),
+      t(133, 670, 'Nothing measurable.'),
+    ]
+    // Every fragment twice, the copies a fraction of a point apart.
+    const doubled = items.flatMap((i): PdfItem[] => [i, [i[0] + 0.3, i[1] - 0.2, i[2], i[3], i[4]]])
+    expect(extractBook([page(doubled)])).toMatchObject([{ kind: 'quality', name: 'Lucky Socks', karma: 5 }])
+  })
+
+  it('joins a heading wrapped onto a second line', () => {
+    const wrapped = page([
+      t(54, 700, 'Remarkably Lucky Pair of Odd', 13),
+      t(54, 687, 'Socks (pick a color)', 13),
+      t(68, 672, 'Cost:'),
+      t(95, 672, '5 Karma'),
+      t(68, 658, 'Game Effect:'),
+      t(133, 658, 'Nothing measurable, though you feel better about it.'),
+      t(68, 644, 'Wear them to every run and never wash them, ever.'),
+      t(295, 700, 'Supercalifragilistic Sock Bal-', 13),
+      t(295, 687, 'ance', 13),
+      t(309, 672, 'Bonus:'),
+      t(340, 672, '3 Karma'),
+      t(309, 658, 'Game Effect:'),
+      t(374, 658, 'You trip over your own feet when it matters most.'),
+      t(309, 644, 'Everyone saw it, and everyone will remember it.'),
+    ])
+    expect(extractBook([wrapped]).map((e) => e.name)).toEqual([
+      'Remarkably Lucky Pair of Odd Socks (pick a color)',
+      'Supercalifragilistic Sock Balance',
+    ])
+  })
+
+  it('takes the spell category from a bare section heading', () => {
+    const health = page([
+      t(54, 720, 'Health', 21),
+      t(54, 700, 'Sniffle Cure', 13),
+      t(66, 688, 'RANGE', 7),
+      t(114, 688, 'TYPE', 7),
+      t(151, 688, 'DURATION', 7),
+      t(209, 688, 'DV', 7),
+      t(71, 678, 'T'),
+      t(120, 678, 'M'),
+      t(167, 678, 'P'),
+      t(211, 678, '3'),
+      t(68, 660, 'Clears a stuffy nose.'),
+    ])
+    expect(extractBook([health])).toMatchObject([{ kind: 'spell', name: 'Sniffle Cure', spellCategory: 'health' }])
+  })
+
+  it('reads a single vehicle’s stat block beside a column of text', () => {
+    // Labels are small type, about 3.6 points a letter.
+    const label = (x: number, y: number, s: string): PdfItem => [x, y, 7, s, s.length * 3.6]
+    const prose = (y: number) => t(54, y, 'Words in the other column, running on and on.')
+    // As in the books: the stacked labels and the header share their lines with the other column's text.
+    const garage = page([
+      prose(720),
+      t(304, 716, 'Testco Roadhog 3000'),
+      prose(708),
+      t(304, 704, '(imaginary racing bike)'),
+      prose(691),
+      label(345, 691, 'SPD'),
+      label(364, 691, 'TOP'),
+      label(306, 687, 'HAND ACCEL'),
+      label(382, 687, 'BOD ARM'),
+      label(417, 687, 'PILOT'),
+      label(437, 687, 'SENS'),
+      label(456, 687, 'SEAT'),
+      label(473, 687, 'AVAIL'),
+      label(495, 687, 'COST'),
+      label(346, 684, 'INT'),
+      label(364, 684, 'SPD'),
+      prose(679),
+      t(309, 675, '3/4'),
+      t(329, 675, '12'),
+      t(348, 675, '20'),
+      t(366, 675, '150'),
+      t(386, 675, '6'),
+      t(405, 675, '4'),
+      t(423, 675, '2'),
+      t(442, 675, '1'),
+      t(460, 675, '2'),
+      t(479, 675, '3'),
+      t(493, 675, '9,000¥'),
+      prose(668),
+    ])
+    expect(extractBook([garage])).toMatchObject([
+      {
+        kind: 'vehicle',
+        name: 'Testco Roadhog 3000',
+        category: 'Imaginary racing bike',
+        drone: false,
+        handling: '3/4',
+        acceleration: '12',
+        speedInterval: '20',
+        topSpeed: '150',
+        body: 6,
+        armor: 4,
+        pilot: 2,
+        sensor: 1,
+        seats: '2',
+        availability: '3',
+        cost: { base: 9000 },
+      },
+    ])
+  })
+})
