@@ -1,6 +1,7 @@
 import { RulesButton } from '../components/RulesPanel'
 import { openRules, RULES_SHORTCUT } from '../components/rulesStore'
-import { latestSheets } from '../share/campaigns'
+import { isFileSheet, latestSheets } from '../share/campaigns'
+import { LootDialog } from './LootDialog'
 import { TableFeed } from './TableFeed'
 import { playerInitiative } from './feedRules'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -14,6 +15,7 @@ import {
   Square,
   SkipBack,
   SkipForward,
+  Package,
   UserPlus,
   X,
 } from 'lucide-react'
@@ -61,11 +63,18 @@ export function EncounterPage() {
     }),
   )
   const [adding, setAdding] = useState(false)
+  const [looting, setLooting] = useState(false)
   const [messages, setMessages] = useState<string[]>([])
   const [roll, setRoll] = useState<GmRoll | null>(null)
   const [edgeNote, setEdgeNote] = useState('')
 
   const shared = useLiveQuery(() => db.sharedSheets.toArray())
+  // The campaign the fight belongs to: loot goes to its runners.
+  const campaignId = encounter?.campaignId
+  const lootCampaign = useLiveQuery(
+    async () => (campaignId ? ((await db.campaigns.get(campaignId)) ?? null) : null),
+    [campaignId],
+  )
   // Runners shared by players are linked as "shared:<sheet id>".
   const characterById = useMemo(
     () =>
@@ -103,6 +112,17 @@ export function EncounterPage() {
     const rolled = p.characterId?.startsWith('shared:') ? playerInitiative(characterById.get(p.characterId)) : null
     return rolled ? [{ id: p.id, name: p.name, value: rolled.value }] : []
   })
+  const liveRunners = (
+    encounter.campaignId ? latestSheets((shared ?? []).filter((s) => s.roomId === encounter.campaignId)) : []
+  ).filter((s) => !isFileSheet(s))
+  /** Down: a full Physical track, or one full track for those with only one. */
+  const isDown = (p: Encounter['participants'][number]) => {
+    const st = stats.get(p.id)
+    if (!st) return false
+    return st.monitor.stun === null
+      ? p.damage.physical + p.damage.stun >= st.monitor.physical
+      : p.damage.physical >= st.monitor.physical || p.damage.stun >= st.monitor.stun
+  }
   const campaignRunners = encounter.campaignId
     ? latestSheets((shared ?? []).filter((s) => s.roomId === encounter.campaignId))
     : []
@@ -186,6 +206,11 @@ export function EncounterPage() {
           <button className="btn" onClick={openRules} title={`Search the rules (${RULES_SHORTCUT})`}>
             <BookOpen className="size-4" /> <span className="hidden sm:inline">Rules</span>
           </button>
+          {lootCampaign && liveRunners.length > 0 && (
+            <button className="btn" onClick={() => setLooting(true)} title="Send what the runners took to their sheets">
+              <Package className="size-4" /> <span className="hidden sm:inline">Loot</span>
+            </button>
+          )}
           <button className="btn" onClick={() => setAdding(true)}>
             <UserPlus className="size-4" /> Add
           </button>
@@ -386,6 +411,16 @@ export function EncounterPage() {
           participants={encounter.participants}
           update={(change) => void update(change)}
           onClose={() => setAdding(false)}
+        />
+      )}
+      {looting && lootCampaign && (
+        <LootDialog
+          campaign={lootCampaign}
+          runners={liveRunners}
+          participants={encounter.participants}
+          isDown={isDown}
+          title={encounter.name}
+          onClose={() => setLooting(false)}
         />
       )}
       <RulesButton />

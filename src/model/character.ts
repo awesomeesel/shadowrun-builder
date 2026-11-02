@@ -75,6 +75,8 @@ export const ContactSchema = z.object({
   connection: int(1),
   loyalty: int(1),
   notes: text(),
+  /** Favors between you: above 0 they owe you, below 0 you owe them. */
+  favors: z.number().int().default(0),
 })
 
 export const GearSchema = z.object({

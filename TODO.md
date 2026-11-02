@@ -32,7 +32,19 @@ Ideas and plans for Shadowrun Builder. Add your own anywhere; tick them off with
       handouts (pictures by drag, paste or file) to players' phones.
 - [x] **Ammo and paying in play** – ammo types with AR/DV changes, spare rounds, buying at the book's prices; Pay /
       Got paid buttons with quick amounts.
-- [ ] **Jobs for players** – show a job's title, objectives and status on their Play tab (not the twists).
+- [x] **Jobs for players** – the GM's jobs on players' Play tabs (title, Johnson, pay, deadline, brief, objectives;
+      never twists); the GM can hide a job.
+- [x] **Loot drops** – suggested from downed enemies' stat blocks; items to one runner, nuyen split; accepted onto
+      sheets.
+- [x] **Contacts in play** – Ask roll (Influence + Charisma + Loyalty), favors counter, quick notes.
+- [x] **Rules search** – ranked search over the app's summaries, book items and book sections, in a panel over any
+      page (⌘K / Ctrl+K), with full-screen pages.
+- [x] **Safer device switching** – warnings when changes aren't on Drive or may be stale; one-tap cleanup of
+      "(other version)" copies.
+- [ ] **Lifestyle and downtime** – monthly cost reminder and things to do between runs.
+- [ ] **"What changed" since last session** – karma, gear and damage at a glance.
+- [ ] **Job generator and NPC quick-maker** – one click for a Johnson, objective, location and twist; quick cast
+      members.
 - [x] **Karma shop** – spend karma between runs at the book's prices (attributes, skills, specializations,
       qualities, spells), logged in the karma history.
 - [x] **Initiation and submersion** – 10 + grade karma; raises the Magic/Resonance limit above 6 and gives

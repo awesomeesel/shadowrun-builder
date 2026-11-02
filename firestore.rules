@@ -40,6 +40,20 @@ service cloud.firestore {
           && (resource.data.owner == request.auth.uid || isGm());
       }
 
+      // What the GM shows every player in the campaign, such as the jobs on offer. Only the GM writes.
+      match /board/{item} {
+        function isGm() {
+          return get(/databases/$(database)/documents/rooms/$(room)).data.gm == request.auth.uid;
+        }
+        allow read: if request.auth != null && exists(/databases/$(database)/documents/rooms/$(room));
+        allow create, update: if request.auth != null && isGm()
+          && request.resource.data.keys().hasOnly(['data', 'updatedAt'])
+          && request.resource.data.data is string
+          && request.resource.data.data.size() < 300000
+          && request.resource.data.updatedAt is string;
+        allow delete: if request.auth != null && isGm();
+      }
+
       // Damage, statuses, Edge, rewards and handouts the GM sends to one runner. Only the GM writes;
       // the player it's for reads it and removes it once accepted or declined.
       match /inbox/{message} {

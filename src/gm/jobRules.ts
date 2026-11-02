@@ -22,7 +22,7 @@ export const JOB_KINDS = [
   'Recovery',
 ]
 
-export const isFinished = (job: CampaignJob) => job.status === 'done' || job.status === 'failed'
+export const isFinished = (job: Pick<CampaignJob, 'status'>) => job.status === 'done' || job.status === 'failed'
 
 /** Open jobs first (most urgent status first), then finished ones, newest first. */
 export function sortJobs(jobs: CampaignJob[]): CampaignJob[] {

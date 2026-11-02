@@ -26,7 +26,7 @@ export interface NpcWeapon {
 }
 
 /** Split on commas that aren't inside brackets or parentheses. */
-function splitTop(text: string, separator = ','): string[] {
+export function splitTop(text: string, separator = ','): string[] {
   const parts: string[] = []
   let depth = 0
   let current = ''

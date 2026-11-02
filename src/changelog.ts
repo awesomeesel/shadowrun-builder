@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 26,
+    date: '2026-11-02',
+    title: 'Contacts, loot and jobs at the table',
+    items: [
+      'Play tab: your contacts, with an Ask roll (Influence + Charisma + their Loyalty), a favors counter for who owes whom, and quick notes.',
+      'GM: a Loot button on campaign encounters suggests what the downed enemies carried. Pick what the runners take, add cash, and send it: items land on the gear list, nuyen is split between the runners you choose.',
+      'Players see the GM’s jobs on their Play tab: the Johnson, pay, deadline, brief and how far the objectives have come. Never the twists, and the GM can hide a job.',
+    ],
+  },
+  {
     id: 25,
     date: '2026-11-02',
     title: 'Read book pages full screen',

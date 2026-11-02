@@ -20,7 +20,7 @@ import {
   addDoc,
   writeBatch,
 } from 'firebase/firestore'
-import type { MessageDoc, RoomDoc, SheetDoc, Transport } from './transport'
+import type { BoardDoc, MessageDoc, RoomDoc, SheetDoc, Transport } from './transport'
 
 export function firebaseTransport(config: Record<string, string>): Transport {
   // Reuse the app if this module is loaded again (hot reload in development).
@@ -68,8 +68,10 @@ export function firebaseTransport(config: Record<string, string>): Transport {
       const sheets = await getDocs(collection(db, 'rooms', roomId, 'sheets'))
       const inbox = await getDocs(collection(db, 'rooms', roomId, 'inbox'))
       const batch = writeBatch(db)
+      const board = await getDocs(collection(db, 'rooms', roomId, 'board'))
       sheets.forEach((s) => batch.delete(s.ref))
       inbox.forEach((m) => batch.delete(m.ref))
+      board.forEach((b) => batch.delete(b.ref))
       await batch.commit()
       await deleteDoc(doc(db, 'rooms', roomId))
     },
@@ -100,6 +102,29 @@ export function firebaseTransport(config: Record<string, string>): Transport {
           stop = onSnapshot(
             to === null ? inbox : query(inbox, where('to', '==', to)),
             (snap) => onChange(new Map(snap.docs.map((d) => [d.id, d.data() as MessageDoc]))),
+            onError,
+          )
+        },
+        (error: Error) => onError(error),
+      )
+      return () => {
+        stopped = true
+        stop?.()
+      }
+    },
+    putBoard: async (roomId, board) => {
+      await user()
+      await setDoc(doc(db, 'rooms', roomId, 'board', 'jobs'), board)
+    },
+    watchBoard: (roomId, onChange, onError) => {
+      let stop: (() => void) | null = null
+      let stopped = false
+      user().then(
+        () => {
+          if (stopped) return
+          stop = onSnapshot(
+            doc(db, 'rooms', roomId, 'board', 'jobs'),
+            (snap) => onChange(snap.exists() ? (snap.data() as BoardDoc) : null),
             onError,
           )
         },

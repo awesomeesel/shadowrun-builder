@@ -55,6 +55,21 @@ describe('applying GM messages', () => {
     expect(c.ledger.at(-1)?.note).toBe('From the GM: Renraku heist')
   })
 
+  it('puts loot on the gear list and the nuyen in the ledger', () => {
+    const c = applyMessage(createCharacter(), {
+      kind: 'loot',
+      items: ['Armor vest', 'Testco Zapper'],
+      nuyen: 300,
+      note: 'Dock ambush',
+    })
+    expect(c.gear.map((g) => g.name)).toEqual(['Armor vest', 'Testco Zapper'])
+    expect(c.nuyen).toBe(createCharacter().nuyen + 300)
+    expect(c.ledger.at(-1)?.note).toBe('Loot: Dock ambush')
+    expect(describeMessage({ kind: 'loot', items: ['A', 'B', 'C'], nuyen: 300, note: '' })).toBe(
+      'Loot: 3 items and 300¥',
+    )
+  })
+
   it('describes messages for the player', () => {
     expect(describeMessage({ kind: 'damage', value: 6, type: 'P', resist: true, note: '' })).toBe('Resist 6P')
     expect(describeMessage({ kind: 'status', name: 'Burning', value: 3, rounds: 2, note: '' })).toBe(

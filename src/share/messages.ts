@@ -5,7 +5,7 @@
  * campaign, and nothing is sent without the GM choosing to.
  */
 import { db, type Campaign, type InboxItem, type OutboxItem, type SharedSheet } from '../db/db'
-import { PlayStatusSchema, type Character } from '../model/character'
+import { GearSchema, PlayStatusSchema, type Character } from '../model/character'
 import { computeDerived } from '../rules/sr6/derived'
 import { addLedgerEntry, applyDamage } from '../rules/sr6/play'
 import { statusLabel } from '../rules/sr6/statuses'
@@ -19,6 +19,8 @@ export type GmMessage =
   | { kind: 'status'; name: string; value: number; rounds: number | null; note: string }
   | { kind: 'edge'; amount: number; note: string }
   | { kind: 'reward'; karma: number; nuyen: number; note: string }
+  /** What the runner picked up after a fight: items for the gear list, and nuyen. */
+  | { kind: 'loot'; items: string[]; nuyen: number; note: string }
   /** A map, a message, a picture: shown to the player, kept if they like. Never changes the sheet. */
   | { kind: 'handout'; title: string; text: string; image?: string; note: string }
 
@@ -40,7 +42,7 @@ export function gmSends(campaign: Pick<Campaign, 'gmSends'>): { damage: boolean;
 export function allowed(campaign: Pick<Campaign, 'gmSends'>, kind: GmMessage['kind']): boolean {
   if (kind === 'handout') return true
   const sends = gmSends(campaign)
-  return kind === 'reward' ? sends.rewards : sends.damage
+  return kind === 'reward' || kind === 'loot' ? sends.rewards : sends.damage
 }
 
 /** "Resist 6P", "Burning 3 for 2 rounds", "+1 Edge", "5 karma and 4 000¥". */
@@ -56,6 +58,13 @@ export function describeMessage(m: GmMessage): string {
       return [m.karma && `${m.karma} karma`, m.nuyen && `${m.nuyen.toLocaleString()}¥`].filter(Boolean).join(' and ')
     case 'handout':
       return `Handout: ${m.title || 'from the GM'}`
+    case 'loot': {
+      const parts = [
+        m.items.length && (m.items.length <= 2 ? m.items.join(', ') : `${m.items.length} items`),
+        m.nuyen && `${m.nuyen.toLocaleString()}¥`,
+      ].filter(Boolean)
+      return `Loot: ${parts.join(' and ') || 'nothing'}`
+    }
   }
 }
 
@@ -86,6 +95,18 @@ export function applyMessage(character: Character, m: GmMessage, now = new Date(
     case 'handout':
       // Kept in its own table (see keepHandout), so pictures don't make the sheet heavy.
       return character
+    case 'loot': {
+      const withGear = {
+        ...character,
+        gear: [
+          ...character.gear,
+          ...m.items.map((name) => GearSchema.parse({ name, notes: m.note ? `Loot: ${m.note}` : 'Loot' })),
+        ],
+      }
+      return m.nuyen
+        ? addLedgerEntry(withGear, { nuyen: m.nuyen, note: m.note ? `Loot: ${m.note}` : 'Loot' }, now)
+        : withGear
+    }
   }
 }
 

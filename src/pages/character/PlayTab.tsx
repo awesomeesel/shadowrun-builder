@@ -25,6 +25,8 @@ import {
 import type { CharacterContext } from './CharacterPage'
 import { AttackSection } from './play/AttackSection'
 import { CombatSection } from './play/CombatSection'
+import { ContactsSection } from './play/ContactsSection'
+import { PlayerJobs } from './play/PlayerJobs'
 import { CompanionsSection } from './play/CompanionsSection'
 import { DamageDialog } from './play/DamageDialog'
 import { EndSessionDialog } from './play/EndSessionDialog'
@@ -447,8 +449,11 @@ function ActiveSession({ character, update }: CharacterContext) {
 
       <MoneySection character={character} update={update} />
 
+      <ContactsSection character={character} update={update} onRoll={doRoll} />
+
       <QualityReminders character={character} />
 
+      <PlayerJobs characterId={character.id} />
       <HandoutsSection characterId={character.id} />
 
       <Section title="Session notes" icon={<NotebookPen className="size-4" />} className="lg:col-span-2">

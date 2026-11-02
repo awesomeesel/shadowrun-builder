@@ -7,7 +7,7 @@ import { STATUSES, STATUS_BY_NAME } from '../rules/sr6/statuses'
 import { allowed, describeMessage, sendToRunner, type GmMessage } from '../share/messages'
 import { Counter } from '../pages/character/play/RollStep'
 
-type Kind = Exclude<GmMessage['kind'], 'handout'>
+type Kind = Exclude<GmMessage['kind'], 'handout' | 'loot'>
 
 const LABELS: Record<Kind, string> = { damage: 'Damage', status: 'Status', edge: 'Edge', reward: 'Karma & nuyen' }
 

@@ -132,6 +132,28 @@ export interface Handout {
   receivedAt: string
 }
 
+/** A job as the players see it: no twists, the Johnson by name. */
+export interface PlayerJob {
+  id: string
+  title: string
+  kind: string
+  status: CampaignJob['status']
+  johnson: string
+  nuyen: number
+  karma: number
+  deadline: string
+  brief: string
+  objectives: { text: string; done: boolean }[]
+}
+
+/** The jobs the GM of a joined campaign shows the players, as last received. */
+export interface JobBoard {
+  /** Campaign room id. */
+  roomId: string
+  jobs: PlayerJob[]
+  updatedAt: string
+}
+
 /** A message the GM sent that the player hasn't handled yet. */
 export interface OutboxItem {
   /** `${roomId}/${messageId}` */
@@ -181,6 +203,8 @@ export interface CampaignJob {
   /** Other cast members in it: the target, a contact, the rival team. */
   castIds: string[]
   encounterIds: string[]
+  /** Kept off the players' job list (e.g. a job they haven't heard of yet). */
+  hidden?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -224,6 +248,7 @@ export const db = new Dexie('shadowrun-builder') as Dexie & {
   bookPages: Dexie.Table<BookPageLayout, [string, number]>
   catalog: EntityTable<CatalogEntry, 'id'>
   bookSections: Dexie.Table<BookSectionRow, [string, number]>
+  jobBoards: EntityTable<JobBoard, 'roomId'>
   syncState: EntityTable<SyncState, 'id'>
   deletedCharacters: EntityTable<DeletedCharacter, 'id'>
   encounters: EntityTable<Encounter, 'id'>
@@ -306,4 +331,9 @@ db.version(9).stores({
 // Version 10 splits books into sections at their headings, for ranked rules search.
 db.version(10).stores({
   bookSections: '[bookId+index], bookId',
+})
+
+// Version 11 keeps the jobs the GM shows players in joined campaigns.
+db.version(11).stores({
+  jobBoards: 'roomId',
 })

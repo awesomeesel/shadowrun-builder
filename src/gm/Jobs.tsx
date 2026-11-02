@@ -1,4 +1,4 @@
-import { Briefcase, Check, Clock, Pencil, Plus, Swords, Trash2, X } from 'lucide-react'
+import { Briefcase, Check, Clock, EyeOff, Pencil, Plus, Swords, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router'
@@ -61,7 +61,7 @@ export function JobsSection({
       <div className="mb-2 flex items-center gap-2">
         <h2 className="mr-auto flex items-center gap-2 font-display text-xl">
           <Briefcase className="size-5 text-accent" /> Jobs
-          <span className="text-xs font-normal text-muted">players never see this</span>
+          <span className="text-xs font-normal text-muted">players in the campaign see them, never the twists</span>
         </h2>
         <button className="btn text-sm" onClick={() => setEditing(newJob())}>
           <Plus className="size-4" /> New job
@@ -141,6 +141,11 @@ function JobCard({
         <div className="min-w-0 flex-1">
           <div className="font-display text-lg leading-tight">{job.title || 'Untitled job'}</div>
           <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
+            {job.hidden && (
+              <span className="flex items-center gap-1 text-amber">
+                <EyeOff className="size-3" /> Hidden from players
+              </span>
+            )}
             {job.kind && <span>{job.kind}</span>}
             {johnson && <span>for {johnson.name}</span>}
             {(job.nuyen > 0 || job.karma > 0) && (
@@ -353,6 +358,21 @@ function JobDialog({
                 </button>
               ))}
             </div>
+            <label className="mt-2 flex items-start gap-2">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 accent-accent"
+                checked={!!draft.hidden}
+                onChange={(e) => setDraft({ ...draft, hidden: e.target.checked })}
+              />
+              <span>
+                Hide from players
+                <span className="block text-xs text-muted">
+                  Players in the campaign see the job, Johnson, pay, deadline, brief and objectives on their Play tab,
+                  never the twists. Hide one they haven’t heard of yet.
+                </span>
+              </span>
+            </label>
           </div>
           <div className="flex flex-wrap gap-3">
             <label className="min-w-48 flex-1">
