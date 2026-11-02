@@ -13,6 +13,10 @@ export interface QuickPool {
   ignoreWounds?: boolean
   /** A physical initiative roll that starts (or updates) the combat tracker. */
   startsCombat?: boolean
+  /** An attack's Attack Rating at the chosen range and firing mode; null when out of range. */
+  attackRating?: number | null
+  /** What's in the pool, e.g. "Firearms 6 + Agility 6". */
+  formula?: string
   /** What the pool is for, behind a help button. */
   help?: HelpEntry
 }

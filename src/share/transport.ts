@@ -53,10 +53,15 @@ export interface Transport {
   sendMessage(roomId: string, message: MessageDoc): Promise<string>
   /** The player it's for (after handling it) or the GM (taking it back). */
   deleteMessage(roomId: string, messageId: string): Promise<void>
-  /** GM only: publish the campaign's board for the players. */
-  putBoard(roomId: string, board: BoardDoc): Promise<void>
-  /** Live updates of the board; null while there is none. */
-  watchBoard(roomId: string, onChange: (board: BoardDoc | null) => void, onError: (error: Error) => void): () => void
+  /** GM only: publish something on the campaign's board for the players ('jobs', 'map'). */
+  putBoard(roomId: string, name: string, board: BoardDoc): Promise<void>
+  /** Live updates of one item on the board; null while there is none. */
+  watchBoard(
+    roomId: string,
+    name: string,
+    onChange: (board: BoardDoc | null) => void,
+    onError: (error: Error) => void,
+  ): () => void
   /** Live messages: for one sheet (players), or all of them when `to` is null (the GM). */
   watchMessages(
     roomId: string,
@@ -72,7 +77,7 @@ export function memoryServer() {
   const sheets = new Map<string, Map<string, SheetDoc>>()
   const messages = new Map<string, Map<string, MessageDoc>>()
   const boards = new Map<string, BoardDoc>()
-  const boardWatchers = new Set<{ roomId: string; fn: (b: BoardDoc | null) => void }>()
+  const boardWatchers = new Set<{ key: string; fn: (b: BoardDoc | null) => void }>()
   const watchers = new Set<{ roomId: string; fn: (s: Map<string, SheetDoc>) => void }>()
   const notify = (roomId: string) => {
     for (const w of watchers) if (w.roomId === roomId) w.fn(new Map(sheets.get(roomId) ?? []))
@@ -135,15 +140,16 @@ export function memoryServer() {
       messages.get(roomId)!.delete(messageId)
       notifyMessages(roomId)
     },
-    putBoard: async (roomId, board) => {
+    putBoard: async (roomId, name, board) => {
       if (rooms.get(roomId)?.gm !== uid) throw new Error('permission-denied')
-      boards.set(roomId, board)
-      for (const w of boardWatchers) if (w.roomId === roomId) w.fn(board)
+      const key = `${roomId}/${name}`
+      boards.set(key, board)
+      for (const w of boardWatchers) if (w.key === key) w.fn(board)
     },
-    watchBoard: (roomId, onChange) => {
-      const watcher = { roomId, fn: onChange }
+    watchBoard: (roomId, name, onChange) => {
+      const watcher = { key: `${roomId}/${name}`, fn: onChange }
       boardWatchers.add(watcher)
-      onChange(boards.get(roomId) ?? null)
+      onChange(boards.get(watcher.key) ?? null)
       return () => boardWatchers.delete(watcher)
     },
     watchMessages: (roomId, to, onChange) => {

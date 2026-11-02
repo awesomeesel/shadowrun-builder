@@ -10,7 +10,7 @@ import { ParticipantSchema, type Encounter, type Participant } from '../model/en
 import { IC_TYPES, hostAttributes, isStandardSpread, type HostAttributes } from '../rules/sr6/ic'
 import { SPIRIT_TYPES } from '../rules/sr6/companions'
 import { addNpcs } from '../rules/sr6/encounter'
-import { latestSheets } from '../share/campaigns'
+import { latestSheets, newestSheet } from '../share/campaigns'
 import type { CastMember } from '../db/db'
 import { addCastMember, castStatsSummary } from './castStats'
 import type { NpcEntry } from '../rules/sr6/npc'
@@ -84,7 +84,7 @@ export function AddCombatants({
         <div className="flex-1 overflow-y-auto p-4">
           {tab === 'books' && <FromBooks add={add} />}
           {tab === 'spirit' && <SpiritForm add={add} />}
-          {tab === 'runner' && <RunnerForm add={add} campaignId={campaignId} />}
+          {tab === 'runner' && <RunnerForm add={add} campaignId={campaignId} participants={participants} />}
           {tab === 'custom' && <CustomForm add={add} />}
           {tab === 'cast' && <CastForm add={add} cast={cast ?? []} />}
           {tab === 'matrix' && <HostForm add={add} participants={participants} />}
@@ -240,7 +240,7 @@ function SpiritForm({ add }: { add: Add }) {
   )
 }
 
-function RunnerForm({ add, campaignId }: { add: Add; campaignId?: string }) {
+function RunnerForm({ add, campaignId, participants }: { add: Add; campaignId?: string; participants: Participant[] }) {
   const characters = useLiveQuery(async () =>
     (await db.characters.toArray()).flatMap((raw) => {
       const parsed = CharacterSchema.safeParse(migrateCharacter(raw))
@@ -251,8 +251,19 @@ function RunnerForm({ add, campaignId }: { add: Add; campaignId?: string }) {
   const shared = useLiveQuery(async () => {
     const all = await db.sharedSheets.toArray()
     const own = all.filter((s) => s.roomId === campaignId)
-    return own.length ? latestSheets(own) : latestSheets(all)
-  }, [campaignId])
+    // Runners already in the fight, by character: also when their card links an older copy of the sheet.
+    const inFight = new Set(
+      participants.flatMap((p) =>
+        p.characterId?.startsWith('shared:')
+          ? [newestSheet(all, p.characterId.slice('shared:'.length))?.character.id ?? '']
+          : [],
+      ),
+    )
+    return (own.length ? latestSheets(own) : latestSheets(all)).map((s) => ({
+      ...s,
+      inFight: inFight.has(s.character.id),
+    }))
+  }, [campaignId, participants])
   const [name, setName] = useState('')
   const [done, setDone] = useState<string[]>([])
   const addRunner = (runnerName: string, characterId?: string) => {
@@ -272,15 +283,21 @@ function RunnerForm({ add, campaignId }: { add: Add; campaignId?: string }) {
         <div>
           <div className="mb-1 text-xs text-muted">Shared by players (live damage and Edge)</div>
           <div className="flex flex-wrap gap-1.5">
-            {shared.map((s) => (
-              <button
-                key={s.id}
-                className="chip cursor-pointer border-accent/40 hover:border-accent"
-                onClick={() => addRunner(s.character.name, `shared:${s.id}`)}
-              >
-                + {s.character.name}
-              </button>
-            ))}
+            {shared.map((s) =>
+              s.inFight ? (
+                <span key={s.id} className="chip text-muted" title="Already in this fight">
+                  ✓ {s.character.name}
+                </span>
+              ) : (
+                <button
+                  key={s.id}
+                  className="chip cursor-pointer border-accent/40 hover:border-accent"
+                  onClick={() => addRunner(s.character.name, `shared:${s.id}`)}
+                >
+                  + {s.character.name}
+                </button>
+              ),
+            )}
           </div>
         </div>
       )}

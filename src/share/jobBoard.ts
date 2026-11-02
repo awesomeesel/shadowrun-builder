@@ -33,7 +33,7 @@ export function playerJobs(campaign: Pick<Campaign, 'jobs' | 'cast'>): PlayerJob
 /** GM: publish the players' job list. */
 export async function publishJobs(campaign: Campaign, jobs = playerJobs(campaign)): Promise<void> {
   const t = await getTransport()
-  await t.putBoard(campaign.id, {
+  await t.putBoard(campaign.id, 'jobs', {
     data: await seal(await campaignKey(campaign), { jobs } satisfies BoardPayload),
     updatedAt: new Date().toISOString(),
   })
@@ -50,6 +50,7 @@ export function watchJobs(campaign: Campaign, onError?: (message: string) => voi
       if (stopped) return
       stop = t.watchBoard(
         campaign.id,
+        'jobs',
         (doc) =>
           void (async () => {
             if (!doc) {

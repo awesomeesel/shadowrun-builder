@@ -1,3 +1,4 @@
+import { newestSheet } from '../share/campaigns'
 import { playerInitiative } from './feedRules'
 import { timeAgo } from '../share/timeAgo'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -420,7 +421,9 @@ export function ParticipantCard({
 function LiveRunnerBar({ sheetId }: { sheetId: string }) {
   const [sending, setSending] = useState(false)
   const data = useLiveQuery(async () => {
-    const sheet = await db.sharedSheets.get(sheetId)
+    // Send to the newest copy: the device the player uses now, if they shared again from another.
+    const linked = await db.sharedSheets.get(sheetId)
+    const sheet = linked && newestSheet(await db.sharedSheets.where('roomId').equals(linked.roomId).toArray(), sheetId)
     const campaign = sheet && (await db.campaigns.get(sheet.roomId))
     const waiting = sheet
       ? await db.outbox

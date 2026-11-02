@@ -35,6 +35,7 @@ import {
   removeCampaignHere,
   createCampaign,
   importSharedFile,
+  newestSheet,
   isFileSheet,
   joinLink,
   latestSheets,
@@ -554,7 +555,12 @@ function Gauge({ label, value, max }: { label: string; value: number; max: numbe
 export function SharedSheetPage() {
   const { key = '' } = useParams()
   const id = decodeURIComponent(key)
-  const sheet = useLiveQuery(async () => (await db.sharedSheets.get(id)) ?? null, [id])
+  // Links to an older copy (the player shared again from another device) show the newest one.
+  const sheet = useLiveQuery(async () => {
+    const linked = await db.sharedSheets.get(id)
+    if (!linked) return null
+    return newestSheet(await db.sharedSheets.where('roomId').equals(linked.roomId).toArray(), id) ?? linked
+  }, [id])
   if (sheet === undefined) return null
   if (sheet === null) {
     return (

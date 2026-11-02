@@ -76,6 +76,7 @@ export function RollResult({
   bonus,
   info,
   edge,
+  extra,
   onClose,
   onReroll,
 }: {
@@ -86,6 +87,8 @@ export function RollResult({
   /** Extra line under the result, e.g. the weapon's damage and Attack Rating. */
   info?: string
   edge?: EdgeOptions
+  /** More under the result, e.g. comparing an attack's Attack Rating with the target's Defense Rating. */
+  extra?: React.ReactNode
   onClose: () => void
   onReroll: () => void
 }) {
@@ -125,6 +128,7 @@ export function RollResult({
             <X className="size-5" />
           </button>
         </div>
+        {extra}
         {picking && (
           <p className="mb-2 text-sm text-amber">
             Tap the die to {picking === 'rerollOne' ? 'reroll' : 'raise by 1'}.{' '}

@@ -1,7 +1,8 @@
 import { RulesButton } from '../components/RulesPanel'
 import { openRules, RULES_SHORTCUT } from '../components/rulesStore'
-import { isFileSheet, latestSheets } from '../share/campaigns'
+import { isFileSheet, latestSheets, newestSheet } from '../share/campaigns'
 import { LootDialog } from './LootDialog'
+import { MapEditor } from '../map/MapEditor'
 import { TableFeed } from './TableFeed'
 import { playerInitiative } from './feedRules'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -15,6 +16,7 @@ import {
   Square,
   SkipBack,
   SkipForward,
+  Map as MapIcon,
   Package,
   UserPlus,
   X,
@@ -64,6 +66,7 @@ export function EncounterPage() {
   )
   const [adding, setAdding] = useState(false)
   const [looting, setLooting] = useState(false)
+  const [mapOpen, setMapOpen] = useState(false)
   const [messages, setMessages] = useState<string[]>([])
   const [roll, setRoll] = useState<GmRoll | null>(null)
   const [edgeNote, setEdgeNote] = useState('')
@@ -75,12 +78,13 @@ export function EncounterPage() {
     async () => (campaignId ? ((await db.campaigns.get(campaignId)) ?? null) : null),
     [campaignId],
   )
-  // Runners shared by players are linked as "shared:<sheet id>".
+  // Runners shared by players are linked as "shared:<sheet id>". A link to an older copy of the
+  // sheet (the player shared again from another device) shows the newest copy of that character.
   const characterById = useMemo(
     () =>
       new Map([
         ...(characters ?? []).map((c) => [c.id, c] as const),
-        ...(shared ?? []).map((s) => [`shared:${s.id}`, s.character] as const),
+        ...(shared ?? []).map((s) => [`shared:${s.id}`, (newestSheet(shared ?? [], s.id) ?? s).character] as const),
       ]),
     [characters, shared],
   )
@@ -123,6 +127,17 @@ export function EncounterPage() {
       ? p.damage.physical + p.damage.stun >= st.monitor.physical
       : p.damage.physical >= st.monitor.physical || p.damage.stun >= st.monitor.stun
   }
+  // The same runner on two cards (e.g. one linked to an older copy of their sheet): keep the first.
+  const seenRunner = new Map<string, string>()
+  const extraCards = encounter.participants.flatMap((p) => {
+    const id = p.characterId ? characterById.get(p.characterId)?.id : undefined
+    if (!id) return []
+    if (!seenRunner.has(id)) {
+      seenRunner.set(id, p.id)
+      return []
+    }
+    return [p]
+  })
   const campaignRunners = encounter.campaignId
     ? latestSheets((shared ?? []).filter((s) => s.roomId === encounter.campaignId))
     : []
@@ -205,6 +220,9 @@ export function EncounterPage() {
           />
           <button className="btn" onClick={openRules} title={`Search the rules (${RULES_SHORTCUT})`}>
             <BookOpen className="size-4" /> <span className="hidden sm:inline">Rules</span>
+          </button>
+          <button className="btn" onClick={() => setMapOpen(true)} title="A battle mat to draw on and show the players">
+            <MapIcon className="size-4" /> <span className="hidden sm:inline">Map</span>
           </button>
           {lootCampaign && liveRunners.length > 0 && (
             <button className="btn" onClick={() => setLooting(true)} title="Send what the runners took to their sheets">
@@ -290,6 +308,22 @@ export function EncounterPage() {
             </>
           )}
         </div>
+        {extraCards.length > 0 && (
+          <p className="mt-1 text-xs text-amber">
+            {extraCards.map((p) => p.name).join(', ')} {extraCards.length === 1 ? 'is' : 'are'} in the fight twice.
+            <button
+              className="ml-2 text-accent underline"
+              onClick={() =>
+                void update((e) => ({
+                  ...e,
+                  participants: e.participants.filter((p) => !extraCards.some((x) => x.id === p.id)),
+                }))
+              }
+            >
+              Remove the extra {extraCards.length === 1 ? 'card' : 'cards'}
+            </button>
+          </p>
+        )}
         {missingInitiative.length > 0 && encounter.participants.length > 0 && (
           <p className="mt-1 text-xs text-amber">
             No initiative yet: {missingInitiative.map((p) => p.name).join(', ')}.
@@ -411,6 +445,15 @@ export function EncounterPage() {
           participants={encounter.participants}
           update={(change) => void update(change)}
           onClose={() => setAdding(false)}
+        />
+      )}
+      {mapOpen && (
+        <MapEditor
+          encounter={encounter}
+          update={(change) => void update(change)}
+          characterIdOf={(p) => (p.characterId ? characterById.get(p.characterId)?.id : undefined)}
+          canShow={!!encounter.campaignId}
+          onClose={() => setMapOpen(false)}
         />
       )}
       {looting && lootCampaign && (

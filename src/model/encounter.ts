@@ -1,3 +1,4 @@
+import { BattleMapSchema } from '../map/battleMap'
 import { z } from 'zod'
 import type { NpcEntry } from '../rules/sr6/npc'
 
@@ -100,6 +101,8 @@ export const EncounterSchema = z.object({
   groupEdgeUsed: z.record(z.string(), z.number().int()).default({}),
   /** Shared Edge per grunt group. */
   groupEdge: z.record(z.string(), z.number().int()).default({}),
+  /** A quick battle mat for the fight, if the GM drew one. */
+  map: BattleMapSchema.optional(),
   createdAt: z.string().default(() => new Date().toISOString()),
   updatedAt: z.string().default(() => new Date().toISOString()),
 })

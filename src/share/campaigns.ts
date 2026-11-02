@@ -4,6 +4,7 @@
  * which are then kept up to date for the GM while they play. Sheets are
  * sealed on the device (crypto.ts); the GM can read them, not change them.
  */
+import { isConflictCopy } from '../cloud/conflicts'
 import { FIREBASE_CONFIG } from '../config'
 import { markDeleted } from '../gm/store'
 import { db, type Campaign, type SharedSheet } from '../db/db'
@@ -280,7 +281,8 @@ async function syncOnce(campaignId: string): Promise<void> {
     const pushed = { ...campaign.pushed }
     for (const characterId of campaign.characterIds) {
       const character = await db.characters.get(characterId)
-      if (!character) {
+      // Gone, or an older version kept from a sync clash: the GM shouldn't see it as another runner.
+      if (!character || isConflictCopy(character)) {
         await removeSheet(campaign, characterId)
         continue
       }
@@ -388,6 +390,19 @@ export async function importSharedFile(roomId: string, character: Character): Pr
   }
   await db.sharedSheets.put(sheet)
   return sheet
+}
+
+/**
+ * The newest copy of the character a shared sheet holds, in the same campaign.
+ * A player who shares from a new device (or after clearing their browser)
+ * gets a new sheet id; links made to the old one should follow the new one.
+ */
+export function newestSheet(sheets: SharedSheet[], sheetId: string): SharedSheet | undefined {
+  const sheet = sheets.find((s) => s.id === sheetId)
+  if (!sheet) return undefined
+  return sheets
+    .filter((s) => s.roomId === sheet.roomId && s.character.id === sheet.character.id)
+    .reduce((best, s) => (s.updatedAt > best.updatedAt ? s : best), sheet)
 }
 
 /** Shared sheets in a URL: their ids contain a slash. */

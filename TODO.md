@@ -41,6 +41,8 @@ Ideas and plans for Shadowrun Builder. Add your own anywhere; tick them off with
       page (⌘K / Ctrl+K), with full-screen pages.
 - [x] **Safer device switching** – warnings when changes aren't on Drive or may be stale; one-tap cleanup of
       "(other version)" copies.
+- [x] **Battle map** – a grid per encounter with walls, areas, circles, labels and tokens; measuring with range
+      bands; shown live to players.
 - [ ] **Lifestyle and downtime** – monthly cost reminder and things to do between runs.
 - [ ] **"What changed" since last session** – karma, gear and damage at a glance.
 - [ ] **Job generator and NPC quick-maker** – one click for a Johnson, objective, location and twist; quick cast

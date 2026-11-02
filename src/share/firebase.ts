@@ -112,18 +112,18 @@ export function firebaseTransport(config: Record<string, string>): Transport {
         stop?.()
       }
     },
-    putBoard: async (roomId, board) => {
+    putBoard: async (roomId, name, board) => {
       await user()
-      await setDoc(doc(db, 'rooms', roomId, 'board', 'jobs'), board)
+      await setDoc(doc(db, 'rooms', roomId, 'board', name), board)
     },
-    watchBoard: (roomId, onChange, onError) => {
+    watchBoard: (roomId, name, onChange, onError) => {
       let stop: (() => void) | null = null
       let stopped = false
       user().then(
         () => {
           if (stopped) return
           stop = onSnapshot(
-            doc(db, 'rooms', roomId, 'board', 'jobs'),
+            doc(db, 'rooms', roomId, 'board', name),
             (snap) => onChange(snap.exists() ? (snap.data() as BoardDoc) : null),
             onError,
           )

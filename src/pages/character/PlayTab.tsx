@@ -1,10 +1,14 @@
+import type { Character } from '../../model/character'
+import { ATTRIBUTE_IDS, ATTRIBUTE_LABELS, type AttributeId } from '../../rules/sr6/attributes'
+import { combinePool, pairFormula, skillFormula, type FirstPart } from '../../rules/sr6/combine'
+import { SKILLS, SKILLS_BY_ID } from '../../rules/sr6/skills'
 import { HandoutsSection } from '../../share/Handouts'
 import { Dices, Flag, HeartPulse, Minus, NotebookPen, Play, Plus, ShieldAlert, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useOutletContext } from 'react-router'
 import { keepDriveSignedIn } from '../../cloud/cloud'
 import { RollResult } from '../../components/Dice'
-import { noAutofill } from '../../components/noAutofill'
+import { noAutofill, noAutofillField } from '../../components/noAutofill'
 import { MonitorTrack, Stat } from '../../components/sheetParts'
 import { Section } from '../../components/ui'
 import { computeDerived, ownedSkillPools } from '../../rules/sr6/derived'
@@ -24,7 +28,9 @@ import {
 } from '../../rules/sr6/play'
 import type { CharacterContext } from './CharacterPage'
 import { AttackSection } from './play/AttackSection'
+import { AttackVsDefense } from './play/AttackVsDefense'
 import { CombatSection } from './play/CombatSection'
+import { BattleMapView } from './play/BattleMapView'
 import { ContactsSection } from './play/ContactsSection'
 import { PlayerJobs } from './play/PlayerJobs'
 import { CompanionsSection } from './play/CompanionsSection'
@@ -191,13 +197,22 @@ function ActiveSession({ character, update }: CharacterContext) {
     }))
   const edgeCapped = !!combat && combat.edgeGained >= MAX_EDGE_GAIN_PER_ROUND
 
+  const [showSums, setShowSums] = useRememberedFlag('shadowrun-builder:show-sums')
+  // The target's Defense Rating, if the GM gave it: kept for the next attack on the same target.
+  const [targetDefense, setTargetDefense] = useState<number | null>(null)
   const pools: QuickPool[] = [
-    { label: 'Defense', pool: derived.pools.defense, help: PLAY_HELP.defense },
+    {
+      label: 'Defense',
+      pool: derived.pools.defense,
+      help: PLAY_HELP.defense,
+      formula: pairFormula(character, 'reaction', 'intuition'),
+    },
     {
       label: 'Damage resistance',
       pool: derived.pools.damageResistance,
       ignoreWounds: true,
       help: PLAY_HELP.damageResistance,
+      formula: `Body ${derived.pools.damageResistance}`,
     },
     ...(derived.pools.physicalDamageResistance !== derived.pools.damageResistance
       ? [
@@ -206,6 +221,7 @@ function ActiveSession({ character, update }: CharacterContext) {
             pool: derived.pools.physicalDamageResistance,
             ignoreWounds: true,
             help: PLAY_HELP.damageResistance,
+            formula: `Body ${derived.pools.damageResistance} + ${derived.pools.physicalDamageResistance - derived.pools.damageResistance} extra against Physical`,
           },
         ]
       : []),
@@ -214,19 +230,47 @@ function ActiveSession({ character, update }: CharacterContext) {
       if (s.pool === null) return []
       const help = SKILL_HELP[s.skill.id]
       const spec = s.owned?.specialization.trim()
+      const formula = skillFormula(s)
       return [
-        { label: s.skill.name, pool: s.pool, help },
+        { label: s.skill.name, pool: s.pool, help, formula },
         ...(spec && s.specializationPool !== null
-          ? [{ label: `↳ ${spec}`, pool: s.specializationPool, help: PLAY_HELP.specialization }]
+          ? [
+              {
+                label: `↳ ${spec}`,
+                pool: s.specializationPool,
+                help: PLAY_HELP.specialization,
+                formula: `${formula} + 2 (${spec})`,
+              },
+            ]
           : []),
       ]
     }),
     ...(derived.magic?.spellcasting ? [{ label: 'Spellcasting', pool: derived.magic.spellcasting }] : []),
     ...(derived.resonance?.tasking ? [{ label: 'Tasking', pool: derived.resonance.tasking }] : []),
-    { label: 'Composure', pool: derived.pools.composure, help: PLAY_HELP.composure },
-    { label: 'Judge Intentions', pool: derived.pools.judgeIntentions, help: PLAY_HELP.judgeIntentions },
-    { label: 'Memory', pool: derived.pools.memory, help: PLAY_HELP.memory },
-    { label: 'Lift / Carry', pool: derived.pools.liftCarry, help: PLAY_HELP.liftCarry },
+    {
+      label: 'Composure',
+      pool: derived.pools.composure,
+      help: PLAY_HELP.composure,
+      formula: pairFormula(character, 'willpower', 'charisma'),
+    },
+    {
+      label: 'Judge Intentions',
+      pool: derived.pools.judgeIntentions,
+      help: PLAY_HELP.judgeIntentions,
+      formula: pairFormula(character, 'willpower', 'intuition'),
+    },
+    {
+      label: 'Memory',
+      pool: derived.pools.memory,
+      help: PLAY_HELP.memory,
+      formula: pairFormula(character, 'logic', 'intuition'),
+    },
+    {
+      label: 'Lift / Carry',
+      pool: derived.pools.liftCarry,
+      help: PLAY_HELP.liftCarry,
+      formula: pairFormula(character, 'body', 'willpower'),
+    },
   ]
 
   const addTimestamp = () => {
@@ -266,6 +310,8 @@ function ActiveSession({ character, update }: CharacterContext) {
           }}
         />
       </section>
+
+      <BattleMapView characterId={character.id} />
 
       <NewPlayerTips />
 
@@ -382,7 +428,10 @@ function ActiveSession({ character, update }: CharacterContext) {
           {wounds < 0 && ` Your wound modifier (${wounds}) is included, except when soaking.`}
           {character.play.sustained.length > 0 &&
             ` Sustained spells: −${-sustainPenalty(character)} dice (included).`}{' '}
-          After the roll you can spend Edge to change it.
+          After the roll you can spend Edge to change it.{' '}
+          <button className="text-accent hover:underline" onClick={() => setShowSums(!showSums)}>
+            {showSums ? 'Hide sums' : 'Show what’s in each pool'}
+          </button>
         </p>
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-bg/40 p-2 text-sm">
           <span className="text-muted">Next roll</span>
@@ -415,11 +464,17 @@ function ActiveSession({ character, update }: CharacterContext) {
               className="flex items-center rounded-lg border border-line bg-bg/60 hover:border-accent/60"
             >
               <button
-                onClick={() => doRoll(p)}
+                onClick={() => doRoll({ ...p, info: p.info ?? p.formula })}
                 className="flex min-w-0 flex-1 items-center justify-between gap-2 py-2 pl-2.5 text-left text-sm"
+                title={p.formula}
               >
                 {/* Whole names, wrapping onto a second line if they must ("Damage resistance"). */}
-                <span className="min-w-0 leading-tight break-words">{p.label}</span>
+                <span className="min-w-0 leading-tight break-words">
+                  {p.label}
+                  {showSums && p.formula && (
+                    <span className="block text-[11px] leading-tight text-muted">{p.formula}</span>
+                  )}
+                </span>
                 <span className="shrink-0 font-display text-base font-semibold text-accent tabular-nums">
                   {p.ignoreWounds ? p.pool : formatPool(p.pool, wounds + sustainPenalty(character))}
                 </span>
@@ -429,7 +484,7 @@ function ActiveSession({ character, update }: CharacterContext) {
             </div>
           ))}
         </div>
-        <CustomRoll onRoll={(pool) => doRoll({ label: 'Custom roll', pool, ignoreWounds: true })} />
+        <CombineRoll character={character} penalty={wounds + sustainPenalty(character)} onRoll={doRoll} />
       </Section>
 
       {(derived.magic?.spellcasting || character.spells.length > 0 || character.play.sustained.length > 0) && (
@@ -473,6 +528,18 @@ function ActiveSession({ character, update }: CharacterContext) {
           bonus={roll.bonus}
           info={roll.quick.info}
           edge={{ available: edge, onBoost: boost, onInitiativeBoost: boostInitiative }}
+          extra={
+            typeof roll.quick.attackRating === 'number' ? (
+              <AttackVsDefense
+                key={roll.result.dice.join(',') + roll.quick.label}
+                attackRating={roll.quick.attackRating}
+                defense={targetDefense}
+                setDefense={setTargetDefense}
+                canGain={!edgeCapped && edge < MAX_EDGE}
+                onGain={gainEdge}
+              />
+            ) : undefined
+          }
           onClose={() => setRoll(null)}
           onReroll={() => doRoll(roll.quick)}
         />
@@ -485,21 +552,201 @@ function ActiveSession({ character, update }: CharacterContext) {
 }
 
 /** Roll any number of dice, e.g. for a test the app doesn't know. Wound modifiers aren't added. */
-function CustomRoll({ onRoll }: { onRoll: (pool: number) => void }) {
-  const [pool, setPool] = useState(6)
+/** A flag kept in this browser (e.g. a view preference), safe where storage is blocked. */
+function useRememberedFlag(key: string): [boolean, (on: boolean) => void] {
+  const [on, setOn] = useState(() => {
+    try {
+      return localStorage.getItem(key) === '1'
+    } catch {
+      return false
+    }
+  })
+  const set = (value: boolean) => {
+    setOn(value)
+    try {
+      localStorage.setItem(key, value ? '1' : '0')
+    } catch {
+      // storage blocked: it just isn't remembered
+    }
+  }
+  return [on, set]
+}
+
+/**
+ * Put a pool together the way the GM calls for it: a skill with any attribute
+ * ("Athletics + Strength"), or two attributes ("Logic + Willpower"). With
+ * nothing picked it's a plain number of dice, as before.
+ */
+function CombineRoll({
+  character,
+  penalty,
+  onRoll,
+}: {
+  character: Character
+  /** Wounds and sustained spells, taken off when rolled, so shown taken off too. */
+  penalty: number
+  onRoll: (quick: QuickPool) => void
+}) {
+  const [first, setFirst] = useState('')
+  const [second, setSecond] = useState<AttributeId | ''>('')
+  const [bonus, setBonus] = useState<'' | 'specialization' | 'expertise'>('')
+  const [dice, setDice] = useState(6)
+  const [extra, setExtra] = useState(0)
+  const attributes = ATTRIBUTE_IDS.filter(
+    (a) =>
+      (a !== 'magic' || character.attributes.magic > 0) && (a !== 'resonance' || character.attributes.resonance > 0),
+  )
+  const owned = new Set(character.skills.map((s) => s.skillId))
+  const firstPart: FirstPart | null = first.startsWith('skill:')
+    ? { kind: 'skill', id: first.slice(6) }
+    : first.startsWith('attr:')
+      ? { kind: 'attribute', id: first.slice(5) as AttributeId }
+      : null
+  const ownedSkill = firstPart?.kind === 'skill' ? character.skills.find((s) => s.skillId === firstPart.id) : undefined
+  const combined = firstPart
+    ? combinePool(character, firstPart, second || null, {
+        specialization: bonus === 'specialization',
+        expertise: bonus === 'expertise',
+      })
+    : null
+  const total = combined ? (combined.pool === null ? null : combined.pool + extra) : dice
+  const formula = combined ? `${combined.formula}${extra ? ` ${extra > 0 ? '+' : '−'} ${Math.abs(extra)}` : ''}` : ''
+  const label = firstPart
+    ? [
+        firstPart.kind === 'skill' ? (SKILLS_BY_ID.get(firstPart.id)?.name ?? '') : ATTRIBUTE_LABELS[firstPart.id].name,
+        second && ATTRIBUTE_LABELS[second].name,
+      ]
+        .filter(Boolean)
+        .join(' + ')
+    : 'Custom roll'
+
   return (
-    <div className="mt-3 flex items-center gap-2 border-t border-line pt-3 text-sm">
-      <span className="mr-auto text-muted">Any pool</span>
-      <button className="btn size-9 p-0" onClick={() => setPool(Math.max(1, pool - 1))} aria-label="Fewer dice">
-        <Minus className="size-4" />
-      </button>
-      <span className="w-6 text-center font-display text-lg tabular-nums">{pool}</span>
-      <button className="btn size-9 p-0" onClick={() => setPool(pool + 1)} aria-label="More dice">
-        <Plus className="size-4" />
-      </button>
-      <button className="btn btn-primary" onClick={() => onRoll(pool)}>
-        <Dices className="size-4" /> Roll
-      </button>
+    <div className="mt-3 grid gap-2 border-t border-line pt-3 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-muted">Combine</span>
+        <select
+          {...noAutofillField}
+          className="input min-w-0 flex-1 py-1.5"
+          value={first}
+          onChange={(e) => {
+            setFirst(e.target.value)
+            setBonus('')
+            setExtra(0)
+          }}
+          aria-label="Skill or attribute"
+        >
+          <option value="">Skill or attribute…</option>
+          <optgroup label="Your skills">
+            {SKILLS.filter((s) => owned.has(s.id)).map((s) => (
+              <option key={s.id} value={`skill:${s.id}`}>
+                {s.name}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Attributes">
+            {attributes.map((a) => (
+              <option key={a} value={`attr:${a}`}>
+                {ATTRIBUTE_LABELS[a].name}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Other skills (untrained)">
+            {SKILLS.filter((s) => !owned.has(s.id)).map((s) => (
+              <option key={s.id} value={`skill:${s.id}`}>
+                {s.name}
+              </option>
+            ))}
+          </optgroup>
+        </select>
+        <span className="text-muted">+</span>
+        <select
+          {...noAutofillField}
+          className="input min-w-0 flex-1 py-1.5"
+          value={second}
+          onChange={(e) => setSecond(e.target.value as AttributeId | '')}
+          disabled={!firstPart}
+          aria-label="Attribute"
+        >
+          <option value="">
+            {firstPart?.kind === 'skill'
+              ? `${ATTRIBUTE_LABELS[SKILLS_BY_ID.get(firstPart.id)?.attribute ?? 'agility'].name} (usual)`
+              : 'Attribute…'}
+          </option>
+          {attributes.map((a) => (
+            <option key={a} value={a}>
+              {ATTRIBUTE_LABELS[a].name}
+            </option>
+          ))}
+        </select>
+      </div>
+      {ownedSkill && (ownedSkill.specialization.trim() || ownedSkill.expertise.trim()) && (
+        <div className="flex flex-wrap gap-3 text-xs">
+          {ownedSkill.specialization.trim() && (
+            <label className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                className="size-4 accent-accent"
+                checked={bonus === 'specialization'}
+                onChange={(e) => setBonus(e.target.checked ? 'specialization' : '')}
+              />
+              {ownedSkill.specialization.trim()} (+2)
+            </label>
+          )}
+          {ownedSkill.expertise.trim() && (
+            <label className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                className="size-4 accent-accent"
+                checked={bonus === 'expertise'}
+                onChange={(e) => setBonus(e.target.checked ? 'expertise' : '')}
+              />
+              {ownedSkill.expertise.trim()} (+3)
+            </label>
+          )}
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <span className="mr-auto min-w-0 text-xs text-muted">
+          {combined ? (
+            combined.pool === null ? (
+              <span className="text-amber">{combined.reason}.</span>
+            ) : (
+              formula
+            )
+          ) : (
+            'Any pool'
+          )}
+        </span>
+        <button
+          className="btn size-9 p-0"
+          onClick={() => (combined ? setExtra(extra - 1) : setDice(Math.max(1, dice - 1)))}
+          aria-label="One die fewer"
+        >
+          <Minus className="size-4" />
+        </button>
+        <span className="min-w-6 text-center font-display text-lg tabular-nums">
+          {total === null ? '–' : combined ? formatPool(total, penalty) : total}
+        </span>
+        <button
+          className="btn size-9 p-0"
+          onClick={() => (combined ? setExtra(extra + 1) : setDice(dice + 1))}
+          aria-label="One die more"
+        >
+          <Plus className="size-4" />
+        </button>
+        <button
+          className="btn btn-primary"
+          disabled={total === null || total < 1}
+          onClick={() =>
+            total !== null &&
+            onRoll(
+              combined ? { label, pool: total, formula, info: formula } : { label, pool: total, ignoreWounds: true },
+            )
+          }
+        >
+          <Dices className="size-4" /> Roll
+        </button>
+      </div>
     </div>
   )
 }

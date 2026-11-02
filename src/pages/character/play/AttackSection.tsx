@@ -1,13 +1,12 @@
 import { Crosshair, Package, RotateCcw } from 'lucide-react'
 import { useState } from 'react'
-import { NumberInput, Section } from '../../../components/ui'
+import { Section } from '../../../components/ui'
 import { WeaponSchema, type Character, type Weapon } from '../../../model/character'
 import { damageWith, loadedType, reload, spareRounds } from '../../../rules/sr6/ammo'
 import { computeDerived, weaponPool } from '../../../rules/sr6/derived'
 import { formatPool } from '../../../rules/sr6/format'
 import {
   ammoCapacity,
-  edgeFromRatings,
   firingModes,
   parseDamage,
   shotWith,
@@ -33,7 +32,6 @@ export function AttackSection({
   onRoll: (quick: QuickPool) => void
 }) {
   const [range, setRange] = useState(1)
-  const [targetDefense, setTargetDefense] = useState(0)
   const [ammoFor, setAmmoFor] = useState<Weapon | null>(null)
   const derived = computeDerived(character)
   // Sustained spells are −2 dice each on action tests, on top of wounds.
@@ -47,14 +45,9 @@ export function AttackSection({
       play: { ...c.play, ammo: { ...c.play.ammo, [weapon.id]: Math.max(0, Math.min(ammoCapacity(weapon), rounds)) } },
     }))
 
-  /** Attack Rating line, with who gains Edge against the target's Defense Rating. */
-  const ratingText = (attackRating: number | null) => {
-    if (attackRating === null) return `out of range at ${RANGES[range]}`
-    const edge = targetDefense > 0 ? edgeFromRatings(attackRating, targetDefense) : null
-    const versus = targetDefense > 0 ? ` vs DR ${targetDefense}` : ''
-    const gain = edge === 'attacker' ? ': you gain 1 Edge' : edge === 'defender' ? ': the target gains 1 Edge' : ''
-    return `AR ${attackRating}${versus}${gain}`
-  }
+  /** Attack Rating line; the comparison with the target's Defense Rating comes with the roll. */
+  const ratingText = (attackRating: number | null) =>
+    attackRating === null ? `out of range at ${RANGES[range]}` : `AR ${attackRating}`
 
   const attack = (weapon: Weapon, pool: number, attackRating: number | null, mode?: FiringMode) => {
     // Only guns with a magazine have ammo types.
@@ -66,7 +59,12 @@ export function AttackSection({
     const modeText = mode && mode.id !== 'SS' ? ` · ${mode.label}, ${mode.rounds} rounds` : ''
     const ammoText = ammo && ammo.id !== 'regular' ? ` · ${ammo.name}` : ''
     const rating = attackRating === null ? null : attackRating + (mode?.attackRating ?? 0)
-    onRoll({ label: `${weapon.name || 'Weapon'}${modeText}${ammoText}`, pool, info: `${dv} · ${ratingText(rating)}` })
+    onRoll({
+      label: `${weapon.name || 'Weapon'}${modeText}${ammoText}`,
+      pool,
+      info: `${dv} · ${ratingText(rating)}`,
+      attackRating: rating,
+    })
     if (mode) setAmmo(weapon, (character.play.ammo[weapon.id] ?? ammoCapacity(weapon)) - mode.rounds)
   }
 
@@ -92,12 +90,6 @@ export function AttackSection({
             ))}
           </div>
         </div>
-        <label className="w-28">
-          <span className="mb-1 block text-[11px] text-muted" title="The target's Defense Rating, if the GM tells you">
-            Target's DR
-          </span>
-          <NumberInput value={targetDefense} min={0} onChange={setTargetDefense} />
-        </label>
       </div>
 
       <ul className="grid gap-3">
@@ -231,8 +223,8 @@ export function AttackSection({
         />
       )}
       <p className="mt-3 text-xs text-muted">
-        Damage is the DV plus your net hits; the target soaks some of it. Attack Rating 4 or more above the target's
-        Defense Rating gives you 1 Edge (4 or more below gives it to them).
+        Damage is the DV plus your net hits; the target soaks some of it. After the roll you can compare your Attack
+        Rating with the target’s Defense Rating: 4 or more above gives you 1 Edge.
       </p>
     </Section>
   )

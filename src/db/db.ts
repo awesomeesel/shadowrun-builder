@@ -1,3 +1,4 @@
+import type { BattleMap, TokenView } from '../map/battleMap'
 import type { Encounter } from '../model/encounter'
 import Dexie, { type EntityTable } from 'dexie'
 import type { ExtractedEntry } from '../books/extract'
@@ -154,6 +155,17 @@ export interface JobBoard {
   updatedAt: string
 }
 
+/** The battle map the GM of a joined campaign is showing, as last received. */
+export interface MapBoard {
+  /** Campaign room id. */
+  roomId: string
+  /** The encounter's name. */
+  title: string
+  map: BattleMap
+  tokens: TokenView[]
+  updatedAt: string
+}
+
 /** A message the GM sent that the player hasn't handled yet. */
 export interface OutboxItem {
   /** `${roomId}/${messageId}` */
@@ -249,6 +261,7 @@ export const db = new Dexie('shadowrun-builder') as Dexie & {
   catalog: EntityTable<CatalogEntry, 'id'>
   bookSections: Dexie.Table<BookSectionRow, [string, number]>
   jobBoards: EntityTable<JobBoard, 'roomId'>
+  mapBoards: EntityTable<MapBoard, 'roomId'>
   syncState: EntityTable<SyncState, 'id'>
   deletedCharacters: EntityTable<DeletedCharacter, 'id'>
   encounters: EntityTable<Encounter, 'id'>
@@ -336,4 +349,9 @@ db.version(10).stores({
 // Version 11 keeps the jobs the GM shows players in joined campaigns.
 db.version(11).stores({
   jobBoards: 'roomId',
+})
+
+// Version 12 keeps the battle map the GM shows players in joined campaigns.
+db.version(12).stores({
+  mapBoards: 'roomId',
 })

@@ -67,3 +67,43 @@ describe('jobs for players', () => {
     await expect(publishJobs(joined)).rejects.toThrow(/permission/)
   })
 })
+
+describe('battle map for players', () => {
+  it('publishes the shown map with tokens, and takes it down when hidden', async () => {
+    const { EncounterSchema, ParticipantSchema } = await import('../model/encounter')
+    const { newMap, placeToken } = await import('../map/battleMap')
+    const { mapPayloads, publishMap, watchMap } = await import('./mapBoard')
+    const server = memoryServer()
+    await Promise.all([db.characters.clear(), db.campaigns.clear(), db.mapBoards.clear()])
+    setTransport(server.client('gm'))
+    const campaign = await createCampaign('Seattle Nights', '')
+    const map = placeToken({ ...newMap(), shown: true }, 'p1', 2, 3)
+    const encounter = EncounterSchema.parse({
+      name: 'Dock ambush',
+      campaignId: campaign.id,
+      map,
+      participants: [
+        ParticipantSchema.parse({ id: 'p1', kind: 'runner', name: 'Sly', characterId: 'shared:room/u_sly' }),
+      ],
+    })
+    const payloads = mapPayloads([encounter], [{ id: 'room/u_sly', character: { ...createCharacter(), id: 'sly' } }])
+    const payload = payloads.get(campaign.id)!
+    expect(payload.tokens).toMatchObject([{ name: 'Sly', side: 'runner', characterId: 'sly', x: 2.5, y: 3.5 }])
+    await publishMap(campaign, payload)
+
+    setTransport(server.client('player'))
+    await db.campaigns.clear()
+    const found = await lookupCampaign(campaign.code, '')
+    if (!found.ok) throw new Error('not found')
+    const runner = await addCharacter({ ...createCharacter(), name: 'Sly' })
+    const joined = await joinCampaign(found, '', [runner.id])
+    const stop = watchMap(joined)
+    await until(async () => (await db.mapBoards.count()) === 1)
+    expect((await db.mapBoards.get(campaign.id))?.title).toBe('Dock ambush')
+
+    setTransport(server.client('gm'))
+    await publishMap(campaign, null)
+    await until(async () => (await db.mapBoards.count()) === 0)
+    stop()
+  })
+})

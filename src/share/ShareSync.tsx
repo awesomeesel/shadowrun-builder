@@ -4,9 +4,15 @@ import { db, type PlayerJob } from '../db/db'
 import { isSharingConfigured, syncCampaign, watchCampaign } from './campaigns'
 import { watchInbox, watchOutbox } from './messages'
 import { playerJobs, publishJobs, watchJobs } from './jobBoard'
+import { mapPayloads, publishMap, watchMap, type MapPayload } from './mapBoard'
+import { EncounterSchema } from '../model/encounter'
 
 /** The job list last published per campaign on this device, so unchanged lists aren't sent again. */
 const published = new Map<string, string>()
+/** The same for the battle map. */
+const publishedMaps = new Map<string, string>()
+/** Campaigns that showed a map during this visit, so hiding it is noticed. */
+const mapShownBefore = new Set<string>()
 
 /** Wait this long after the last change before sending, so a burst of clicks is one upload. */
 const DEBOUNCE_MS = 2500
@@ -92,6 +98,43 @@ export function ShareSync() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobsKey])
 
+  // GM side: publish the battle map each campaign shows its players, or take it down.
+  const mapEncounters = useLiveQuery(async () =>
+    (await db.encounters.toArray()).filter((e) => e.campaignId && (e.map?.shown || mapShownBefore.has(e.campaignId))),
+  )
+  const mapSheets = useLiveQuery(() => db.sharedSheets.toArray())
+  const gmCampaignIds = (campaigns ?? []).filter((c) => c.role === 'gm' && !c.closed).map((c) => c.id)
+  const mapKey =
+    mapEncounters && mapSheets
+      ? JSON.stringify(
+          gmCampaignIds.map((id) => [
+            id,
+            mapPayloads(
+              mapEncounters.map((e) => EncounterSchema.parse(e)),
+              mapSheets,
+            ).get(id) ?? null,
+          ]),
+        )
+      : ''
+  useEffect(() => {
+    if (!isSharingConfigured() || !mapKey) return
+    const timer = setTimeout(() => {
+      for (const [id, payload] of JSON.parse(mapKey) as [string, MapPayload | null][]) {
+        const text = JSON.stringify(payload)
+        // Nothing shown and nothing published yet: no need to write.
+        if ((publishedMaps.get(id) ?? 'null') === text) continue
+        const campaign = campaigns?.find((c) => c.id === id)
+        if (!campaign) continue
+        publishedMaps.set(id, text)
+        if (payload) mapShownBefore.add(id)
+        publishMap(campaign, payload).catch(() => publishedMaps.delete(id))
+      }
+    }, 800)
+    return () => clearTimeout(timer)
+    // campaigns is read for the latest copy; mapKey decides when to run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapKey])
+
   // Player side: the GM's job list for each joined campaign.
   const joinedKey = (campaigns ?? [])
     .filter((c) => c.role === 'player' && !c.closed)
@@ -103,7 +146,7 @@ export function ShareSync() {
     let cancelled = false
     void db.campaigns.bulkGet(joinedKey.split('|')).then((list) => {
       if (cancelled) return
-      for (const campaign of list) if (campaign) stops.push(watchJobs(campaign))
+      for (const campaign of list) if (campaign) stops.push(watchJobs(campaign), watchMap(campaign))
     })
     return () => {
       cancelled = true

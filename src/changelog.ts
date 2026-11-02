@@ -11,6 +11,29 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 28,
+    date: '2026-11-02',
+    title: 'Combined rolls',
+    items: [
+      'Play tab: “Combine” rolls any skill with any attribute (Athletics + Strength) or two attributes (Logic + Willpower), as the GM calls for. Untrained skills count as the attribute − 1; your specialization can be added.',
+      'Every pool shows what it adds up, e.g. Firearms 6 + Agility 6: hover a button, or tap “Show what’s in each pool”. The sum also shows under the roll result.',
+      'Attack Rating vs Defense Rating moved to the attack’s result: type the DR the GM gives you and see who gains Edge; “Take 1 Edge” adds it (2 a round at most). The DR is kept for the next shot at the same target.',
+    ],
+  },
+  {
+    id: 27,
+    date: '2026-11-02',
+    title: 'Battle map',
+    items: [
+      'GM: a Map button on every encounter opens a battle mat. Draw walls, areas, circles and labels on a grid in a few colors, with undo.',
+      'Tap a combatant, then a square, to put them on the map; drag them as they move. The token shows whose turn it is and who is out.',
+      'Measure distances in meters with the SR6 range band (Close, Near, Medium…); set how many meters a square is.',
+      '“Show to players” puts the map, live, at the top of their Play tab, with their own token ringed and a full-screen view.',
+      'GM: a runner whose player shared again from another device no longer turns up twice or stuck on an old version. Encounter cards follow the newest copy, a runner already in the fight isn’t offered again, and duplicate cards can be removed with one click.',
+      'Players: an “(other version)” copy kept from a sync clash is never shared with the GM.',
+    ],
+  },
+  {
     id: 26,
     date: '2026-11-02',
     title: 'Contacts, loot and jobs at the table',

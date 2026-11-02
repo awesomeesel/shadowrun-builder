@@ -172,3 +172,47 @@ describe('sharing with the GM', () => {
     stop()
   })
 })
+
+describe('newest copy of a shared runner', () => {
+  it('follows a runner who shared again from another device', async () => {
+    const { newestSheet } = await import('./campaigns')
+    const sly = { ...createCharacter(), id: 'sly', name: 'Sly' }
+    const sheet = (id: string, updatedAt: string, roomId = 'room') => ({
+      id: `${roomId}/${id}`,
+      roomId,
+      sheetId: id,
+      character: sly,
+      updatedAt,
+      receivedAt: updatedAt,
+    })
+    const sheets = [
+      sheet('old_sly', '2026-01-01'),
+      sheet('new_sly', '2026-02-01'),
+      sheet('x_sly', '2026-03-01', 'other'),
+    ]
+    expect(newestSheet(sheets, 'room/old_sly')?.id).toBe('room/new_sly')
+    expect(newestSheet(sheets, 'room/new_sly')?.id).toBe('room/new_sly')
+    expect(newestSheet(sheets, 'gone')).toBeUndefined()
+  })
+})
+
+describe('older versions', () => {
+  it('stops sharing an "(other version)" copy, so the GM doesn’t see the runner twice', async () => {
+    const { setShared, syncCampaign } = await import('./campaigns')
+    const server = memoryServer()
+    await Promise.all([db.characters.clear(), db.campaigns.clear(), db.sharedSheets.clear()])
+    setTransport(server.client('gm'))
+    const campaign = await createCampaign('Seattle Nights', '')
+    setTransport(server.client('player'))
+    await db.campaigns.clear()
+    const found = await lookupCampaign(campaign.code, '')
+    if (!found.ok) throw new Error('not found')
+    const sly = await addCharacter({ ...createCharacter(), name: 'Sly' })
+    const copy = await addCharacter({ ...createCharacter(), name: 'Sly (other version)', conflictOf: sly.id })
+    await joinCampaign(found, '', [sly.id])
+    await setShared(campaign.id, copy.id, true)
+    await syncCampaign(campaign.id)
+    const shared = [...(server.sheets.get(campaign.id)?.keys() ?? [])]
+    expect(shared).toEqual([`player_${sly.id}`])
+  })
+})
