@@ -13,7 +13,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { pdfPageToPrinted } from '../books/pages'
 import { PdfPage } from '../books/PdfPage'
@@ -576,7 +576,8 @@ function FullPage({
   const scroller = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight })
   const [aspect, setAspect] = useState(1.3)
-  // Where to scroll after the next zoom, so the clicked spot stays under the pointer.
+  const pageBox = useRef<HTMLButtonElement>(null)
+  // After the next zoom: the spot clicked, as a fraction of the page, and where it was on screen.
   const anchor = useRef<{ fx: number; fy: number; x: number; y: number } | null>(null)
   const close = () => set({ full: 0 })
 
@@ -604,13 +605,20 @@ function FullPage({
   const zoom = FULL_LEVELS[Math.min(level, FULL_LEVELS.length) - 1]
   const width = Math.round(fitWidth * zoom)
 
-  useEffect(() => {
+  // The page box takes its new size at once (from the page's proportions), before the
+  // page is redrawn, so the clicked spot can be scrolled back under the pointer right away.
+  useLayoutEffect(() => {
     const el = scroller.current
+    const box = pageBox.current
     const a = anchor.current
-    if (!el || !a) return
+    if (!el || !box || !a) return
     anchor.current = null
-    el.scrollLeft = a.fx * el.scrollWidth - a.x
-    el.scrollTop = a.fy * el.scrollHeight - a.y
+    const area = el.getBoundingClientRect()
+    const page = box.getBoundingClientRect()
+    const left = page.left - area.left + el.scrollLeft
+    const top = page.top - area.top + el.scrollTop
+    el.scrollLeft = left + a.fx * page.width - a.x
+    el.scrollTop = top + a.fy * page.height - a.y
   }, [width])
 
   const onPageClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -620,8 +628,8 @@ function FullPage({
     const box = e.currentTarget.getBoundingClientRect()
     const area = el.getBoundingClientRect()
     anchor.current = {
-      fx: (e.clientX - box.left + (box.left - area.left + el.scrollLeft)) / el.scrollWidth,
-      fy: (e.clientY - box.top + (box.top - area.top + el.scrollTop)) / el.scrollHeight,
+      fx: (e.clientX - box.left) / box.width,
+      fy: (e.clientY - box.top) / box.height,
       x: e.clientX - area.left,
       y: e.clientY - area.top,
     }
@@ -662,7 +670,9 @@ function FullPage({
       <div ref={scroller} className="flex-1 overflow-auto" onClick={close}>
         <div className="flex min-h-full min-w-full items-center justify-center p-3" style={{ width: width + 24 }}>
           <button
-            className={level >= FULL_LEVELS.length ? 'cursor-zoom-out' : 'cursor-zoom-in'}
+            ref={pageBox}
+            className={`block shrink-0 overflow-hidden ${level >= FULL_LEVELS.length ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
+            style={{ width, height: Math.round(width * aspect) }}
             onClick={onPageClick}
             aria-label={level >= FULL_LEVELS.length ? 'Fit the page to the screen' : 'Zoom in'}
           >
