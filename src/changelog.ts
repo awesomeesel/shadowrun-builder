@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 21,
+    date: '2026-11-02',
+    title: 'Safer syncing between devices',
+    items: [
+      'If the Google sign-in runs out (they last an hour) while you have changes that aren’t on Drive yet, the character page tells you, with a Reconnect button.',
+      'Opening a character on a device that hasn’t checked Drive yet warns you it may not be the newest version.',
+      '“(other version)” copies, kept when a character was changed on two devices, now show how they differ and let you delete the copy or keep it instead, in one tap.',
+    ],
+  },
+  {
     id: 20,
     date: '2026-11-02',
     title: 'More from your books',

@@ -46,7 +46,12 @@ async function download(drive: Drive, file: DriveFile): Promise<Character> {
 
 /** Keep the losing side of a conflict as its own character, so nothing is lost. */
 async function keepAsCopy(character: Character) {
-  const copy = { ...character, id: crypto.randomUUID(), name: `${character.name} (other version)` }
+  const copy = {
+    ...character,
+    id: crypto.randomUUID(),
+    name: `${character.name} (other version)`,
+    conflictOf: character.id,
+  }
   await db.characters.put(copy)
   return copy
 }

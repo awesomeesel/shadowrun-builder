@@ -1,3 +1,5 @@
+import { SyncNotice } from '../../components/SyncNotice'
+import { ConflictCopy } from './ConflictCopy'
 import { ArrowLeft, Dices, Download, ListChecks, Pencil, ScrollText, TrendingUp, Wand2 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router'
@@ -22,7 +24,7 @@ export interface CharacterContext {
 
 export function CharacterPage() {
   const { id = '' } = useParams()
-  const { character, update, saveState } = useCharacterDraft(id)
+  const { character, update, saveState, flush } = useCharacterDraft(id)
   const header = useRef<HTMLElement>(null)
   const loaded = !!character
 
@@ -123,6 +125,8 @@ export function CharacterPage() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-8 print:max-w-none print:p-0">
+        <SyncNotice characterId={character.id} name={character.name} />
+        <ConflictCopy character={character} flush={flush} />
         <GmInbox character={character} update={update} />
         <Outlet context={{ character, update } satisfies CharacterContext} />
       </main>

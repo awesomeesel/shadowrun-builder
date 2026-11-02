@@ -436,6 +436,8 @@ export const CharacterSchema = z.object({
   mode: z.enum(['build', 'free']).default('free'),
 
   name: z.string().default('Unnamed runner'),
+  /** Set on the older version kept when the character was changed on two devices: the main character's id. */
+  conflictOf: z.string().optional(),
   realName: text(),
   playerName: text(),
   concept: text(),

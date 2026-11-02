@@ -77,6 +77,9 @@ describe('syncCharacters', () => {
     expect((await db.characters.get(c.id))?.nuyen).toBe(900)
     expect(await names()).toEqual(['Sly', 'Sly (other version)'])
     expect(await remoteNames()).toEqual(['Sly', 'Sly (other version)'])
+    // The copy knows which character it belongs to, so it can be sorted out later.
+    const copy = (await db.characters.toArray()).find((x) => x.id !== c.id)
+    expect(copy).toMatchObject({ conflictOf: c.id, nuyen: 100 })
   })
 
   it('moves characters deleted here to the Drive trash', async () => {
