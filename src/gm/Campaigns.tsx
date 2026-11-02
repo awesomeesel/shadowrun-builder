@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
   Minimize2,
   NotebookPen,
+  PenLine,
   Plus,
   QrCode,
   Shuffle,
@@ -53,6 +54,7 @@ import { CastSection } from './Cast'
 import { SampleEncounterDialog } from './SampleEncounter'
 import { PartyOverview } from './PartyOverview'
 import { HandoutDialog } from './HandoutDialog'
+import { SketchPad } from '../map/SketchPad'
 import { JobsSection } from './Jobs'
 import { TableFeed } from './TableFeed'
 import { RunLog } from './RunLog'
@@ -137,6 +139,7 @@ export function CampaignPage() {
   const [sampling, setSampling] = useState(false)
   const [payout, setPayout] = useState<CampaignJob | null>(null)
   const [handout, setHandout] = useState(false)
+  const [sketching, setSketching] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   if (campaign === undefined) return null
   if (campaign === null) {
@@ -181,6 +184,14 @@ export function CampaignPage() {
           <ArrowLeft className="size-5" />
         </Link>
         <h1 className="mr-auto font-display text-3xl font-semibold">{campaign.name}</h1>
+        <button
+          className={`btn ${campaign.sketch?.shown ? 'border-accent text-accent' : ''}`}
+          onClick={() => setSketching(true)}
+          title="Scribble a rough layout and show it to the players"
+        >
+          <PenLine className="size-4" /> Sketch
+          {campaign.sketch?.shown && <span className="text-[10px]">shown</span>}
+        </button>
         {campaign.joinHidden && (
           <button className="btn" onClick={() => setShowJoin(true)} title="QR code, code and password for players">
             <QrCode className="size-4" /> Join info
@@ -237,6 +248,7 @@ export function CampaignPage() {
           </div>
           {notice && <p className="mb-2 text-sm text-accent">{notice}</p>}
           {handout && <HandoutDialog campaign={campaign} runners={runners} onClose={() => setHandout(false)} />}
+          {sketching && <SketchPad campaign={campaign} onClose={() => setSketching(false)} />}
           <SendSettings campaign={campaign} />
           {runners.length === 0 ? (
             <div className="card p-6 text-sm text-muted">

@@ -11,6 +11,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 29,
+    date: '2026-11-02',
+    title: 'Sketch pad',
+    items: [
+      'GM: a Sketch button on each campaign page opens a pad to scribble a rough layout: pen, straight lines, boxes, short labels, eraser, a few colors and undo.',
+      'Players see nothing until you press Show to players; after more drawing, Update players sends it again, and Hide takes it down. It shows at the top of their Play tab, with a full-screen view.',
+    ],
+  },
+  {
     id: 28,
     date: '2026-11-02',
     title: 'Combined rolls',

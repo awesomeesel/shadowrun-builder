@@ -31,6 +31,7 @@ import { AttackSection } from './play/AttackSection'
 import { AttackVsDefense } from './play/AttackVsDefense'
 import { CombatSection } from './play/CombatSection'
 import { BattleMapView } from './play/BattleMapView'
+import { SketchView } from './play/SketchView'
 import { ContactsSection } from './play/ContactsSection'
 import { PlayerJobs } from './play/PlayerJobs'
 import { CompanionsSection } from './play/CompanionsSection'
@@ -312,6 +313,7 @@ function ActiveSession({ character, update }: CharacterContext) {
       </section>
 
       <BattleMapView characterId={character.id} />
+      <SketchView characterId={character.id} />
 
       <NewPlayerTips />
 

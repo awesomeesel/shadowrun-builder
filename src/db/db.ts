@@ -1,3 +1,4 @@
+import type { Sketch, SketchStroke } from '../map/sketch'
 import type { BattleMap, TokenView } from '../map/battleMap'
 import type { Encounter } from '../model/encounter'
 import Dexie, { type EntityTable } from 'dexie'
@@ -102,6 +103,8 @@ export interface Campaign {
   cast?: CastMember[]
   /** Jobs the runners were offered or took. */
   jobs?: CampaignJob[]
+  /** The GM's sketch pad, for showing the players a rough layout. */
+  sketch?: Sketch
   /** What the GM may send to players' sheets; both on unless switched off. */
   gmSends?: { damage: boolean; rewards: boolean }
 }
@@ -163,6 +166,14 @@ export interface MapBoard {
   title: string
   map: BattleMap
   tokens: TokenView[]
+  updatedAt: string
+}
+
+/** The sketch the GM of a joined campaign is showing, as last received. */
+export interface SketchBoard {
+  /** Campaign room id. */
+  roomId: string
+  strokes: SketchStroke[]
   updatedAt: string
 }
 
@@ -262,6 +273,7 @@ export const db = new Dexie('shadowrun-builder') as Dexie & {
   bookSections: Dexie.Table<BookSectionRow, [string, number]>
   jobBoards: EntityTable<JobBoard, 'roomId'>
   mapBoards: EntityTable<MapBoard, 'roomId'>
+  sketchBoards: EntityTable<SketchBoard, 'roomId'>
   syncState: EntityTable<SyncState, 'id'>
   deletedCharacters: EntityTable<DeletedCharacter, 'id'>
   encounters: EntityTable<Encounter, 'id'>
@@ -354,4 +366,9 @@ db.version(11).stores({
 // Version 12 keeps the battle map the GM shows players in joined campaigns.
 db.version(12).stores({
   mapBoards: 'roomId',
+})
+
+// Version 13 keeps the sketch the GM shows players in joined campaigns.
+db.version(13).stores({
+  sketchBoards: 'roomId',
 })

@@ -1,3 +1,4 @@
+import { emptySketch, type Sketch } from '../map/sketch'
 /**
  * Writes to the GM's own data (campaign notes, run log, encounters), keeping
  * the timestamps and deletion records that Drive backup relies on.
@@ -14,6 +15,15 @@ export function markDeleted(kind: 'campaign' | 'encounter' | 'runner', itemId: s
 /** Change what a campaign backs up (notes, run log, join panel…). */
 export function updateCampaign(id: string, changes: Partial<Campaign>) {
   return db.campaigns.update(id, { ...changes, updatedAt: now() })
+}
+
+/** Change a campaign's sketch as stored now, so quick strokes build on each other. */
+export async function changeSketch(id: string, change: (sketch: Sketch) => Sketch): Promise<void> {
+  await db.transaction('rw', db.campaigns, async () => {
+    const campaign = await db.campaigns.get(id)
+    if (!campaign) return
+    await db.campaigns.update(id, { sketch: change(campaign.sketch ?? emptySketch()), updatedAt: now() })
+  })
 }
 
 export function moveEncounter(id: string, campaignId: string | undefined) {

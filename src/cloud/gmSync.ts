@@ -48,6 +48,7 @@ const CAMPAIGN_FIELDS = [
   'gmSends',
   'cast',
   'jobs',
+  'sketch',
 ] as const
 
 const campaignUpdatedAt = (c: Campaign) => c.updatedAt ?? c.joinedAt

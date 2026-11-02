@@ -107,3 +107,31 @@ describe('battle map for players', () => {
     stop()
   })
 })
+
+describe('sketch for players', () => {
+  it('reaches joined players when shown, and goes away when hidden', async () => {
+    const { publishSketch, watchSketch } = await import('./sketchBoard')
+    const { SketchStrokeSchema } = await import('../map/sketch')
+    const server = memoryServer()
+    await Promise.all([db.characters.clear(), db.campaigns.clear(), db.sketchBoards.clear()])
+    setTransport(server.client('gm'))
+    const campaign = await createCampaign('Seattle Nights', '')
+    const stroke = SketchStrokeSchema.parse({ kind: 'box', points: [100, 100, 400, 300] })
+    await publishSketch(campaign, [stroke])
+
+    setTransport(server.client('player'))
+    await db.campaigns.clear()
+    const found = await lookupCampaign(campaign.code, '')
+    if (!found.ok) throw new Error('not found')
+    const runner = await addCharacter({ ...createCharacter(), name: 'Sly' })
+    const joined = await joinCampaign(found, '', [runner.id])
+    const stop = watchSketch(joined)
+    await until(async () => (await db.sketchBoards.count()) === 1)
+    expect((await db.sketchBoards.get(campaign.id))?.strokes).toHaveLength(1)
+
+    setTransport(server.client('gm'))
+    await publishSketch(campaign, null)
+    await until(async () => (await db.sketchBoards.count()) === 0)
+    stop()
+  })
+})

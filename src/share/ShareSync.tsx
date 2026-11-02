@@ -5,6 +5,7 @@ import { isSharingConfigured, syncCampaign, watchCampaign } from './campaigns'
 import { watchInbox, watchOutbox } from './messages'
 import { playerJobs, publishJobs, watchJobs } from './jobBoard'
 import { mapPayloads, publishMap, watchMap, type MapPayload } from './mapBoard'
+import { watchSketch } from './sketchBoard'
 import { EncounterSchema } from '../model/encounter'
 
 /** The job list last published per campaign on this device, so unchanged lists aren't sent again. */
@@ -146,7 +147,8 @@ export function ShareSync() {
     let cancelled = false
     void db.campaigns.bulkGet(joinedKey.split('|')).then((list) => {
       if (cancelled) return
-      for (const campaign of list) if (campaign) stops.push(watchJobs(campaign), watchMap(campaign))
+      for (const campaign of list)
+        if (campaign) stops.push(watchJobs(campaign), watchMap(campaign), watchSketch(campaign))
     })
     return () => {
       cancelled = true
