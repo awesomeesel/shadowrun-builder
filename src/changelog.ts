@@ -11,6 +11,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 25,
+    date: '2026-11-02',
+    title: 'Read book pages full screen',
+    items: [
+      'In the Rules search, click a book page (or Full screen) to show it over the whole screen. Click again to zoom in around where you click, and once more to go back to fit.',
+      'Esc, Smaller, ✕ or a click beside the page takes you back to the small view; ← and → turn pages.',
+    ],
+  },
+  {
     id: 24,
     date: '2026-11-02',
     title: 'Rules search everywhere, with ⌘K',

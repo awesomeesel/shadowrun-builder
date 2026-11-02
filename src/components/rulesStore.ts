@@ -18,6 +18,8 @@ export interface PanelState {
   /** A book page being looked at. */
   page: { bookId: string; page: number } | null
   zoom: number
+  /** The page shown full screen: 0 = not, 1 = fit to the screen, higher = zoomed in. */
+  full: number
 }
 
 export let state: PanelState = {
@@ -28,6 +30,7 @@ export let state: PanelState = {
   selected: null,
   page: null,
   zoom: 1,
+  full: 0,
 }
 const listeners = new Set<() => void>()
 export function set(change: Partial<PanelState>) {
@@ -58,7 +61,7 @@ export function openRules() {
 
 /** Close it and clear it, so the next search starts fresh. */
 export function closeRules() {
-  set({ open: false, query: '', filter: 'all', book: null, selected: null, page: null })
+  set({ open: false, query: '', filter: 'all', book: null, selected: null, page: null, full: 0 })
 }
 
 /** The shortcut, for buttons' tooltips. */

@@ -8,13 +8,20 @@ export function PdfPage({
   page,
   width,
   zoom = 1,
+  onAspect,
 }: {
   bookId: string
   page: number
   width: number
   zoom?: number
+  /** Called with the page's height ÷ width once it's known. */
+  onAspect?: (aspect: number) => void
 }) {
   const canvas = useRef<HTMLCanvasElement>(null)
+  const aspectCallback = useRef(onAspect)
+  useEffect(() => {
+    aspectCallback.current = onAspect
+  })
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
   const [error, setError] = useState('')
 
@@ -36,7 +43,9 @@ export function PdfPage({
     void doc.getPage(Math.min(Math.max(1, page), doc.numPages)).then((p) => {
       if (cancelled) return
       const ratio = window.devicePixelRatio || 1
-      const scale = (width / p.getViewport({ scale: 1 }).width) * zoom
+      const base = p.getViewport({ scale: 1 })
+      aspectCallback.current?.(base.height / base.width)
+      const scale = (width / base.width) * zoom
       const viewport = p.getViewport({ scale: scale * ratio })
       el.width = viewport.width
       el.height = viewport.height

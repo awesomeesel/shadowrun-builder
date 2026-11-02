@@ -10,6 +10,8 @@ import {
   Plus,
   Search,
   X,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react'
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -497,6 +499,13 @@ function PageView({ panel, width }: { panel: PanelState; width: number }) {
         </button>
         <span className="mx-auto" />
         <button
+          className="btn h-8 px-2 text-xs"
+          onClick={() => set({ full: 1 })}
+          title="Show the page full screen (or click the page)"
+        >
+          <ZoomIn className="size-4" /> Full screen
+        </button>
+        <button
           className="btn size-8 p-0"
           onClick={() => set({ zoom: Math.max(1, panel.zoom - 0.5) })}
           disabled={panel.zoom <= 1}
@@ -523,8 +532,144 @@ function PageView({ panel, width }: { panel: PanelState; width: number }) {
         </a>
       </div>
       <div className="flex-1 overflow-auto bg-black/40">
-        <PdfPage bookId={view.bookId} page={view.page} width={width} zoom={panel.zoom} />
+        <button
+          className="block cursor-zoom-in"
+          onClick={() => set({ full: 1 })}
+          aria-label="Show the page full screen"
+        >
+          <PdfPage bookId={view.bookId} page={view.page} width={width} zoom={panel.zoom} />
+        </button>
       </div>
+      {panel.full > 0 &&
+        createPortal(
+          <FullPage
+            view={view}
+            level={panel.full}
+            go={go}
+            label={book ? `${book.code || book.title} ${pdfPageToPrinted(book, view.page)}` : ''}
+          />,
+          document.body,
+        )}
     </>
+  )
+}
+
+/** How much each click zooms in, relative to fitting the screen; the click after the last goes back to fit. */
+const FULL_LEVELS = [1, 2]
+
+/**
+ * A book page over the whole screen: it starts fitted, each click zooms in a
+ * step around the spot clicked, and Esc, ✕, the shrink button or a click
+ * beside the page goes back to the small view.
+ */
+function FullPage({
+  view,
+  level,
+  go,
+  label,
+}: {
+  view: { bookId: string; page: number }
+  level: number
+  go: (page: number) => void
+  label: string
+}) {
+  const scroller = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight })
+  const [aspect, setAspect] = useState(1.3)
+  // Where to scroll after the next zoom, so the clicked spot stays under the pointer.
+  const anchor = useRef<{ fx: number; fy: number; x: number; y: number } | null>(null)
+  const close = () => set({ full: 0 })
+
+  useEffect(() => {
+    const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight })
+    // Capture, so Esc shrinks the page before the rules panel sees it (which would close the panel).
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopImmediatePropagation()
+        close()
+      } else if (e.key === 'ArrowRight') go(view.page + 1)
+      else if (e.key === 'ArrowLeft') go(view.page - 1)
+    }
+    window.addEventListener('resize', onResize)
+    window.addEventListener('keydown', onKey, true)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('keydown', onKey, true)
+    }
+  }, [go, view.page])
+
+  // Fit the whole page on screen, below the toolbar.
+  const bar = 52
+  const fitWidth = Math.max(100, Math.min(size.w - 24, (size.h - bar - 24) / aspect))
+  const zoom = FULL_LEVELS[Math.min(level, FULL_LEVELS.length) - 1]
+  const width = Math.round(fitWidth * zoom)
+
+  useEffect(() => {
+    const el = scroller.current
+    const a = anchor.current
+    if (!el || !a) return
+    anchor.current = null
+    el.scrollLeft = a.fx * el.scrollWidth - a.x
+    el.scrollTop = a.fy * el.scrollHeight - a.y
+  }, [width])
+
+  const onPageClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation()
+    const el = scroller.current
+    if (!el) return
+    const box = e.currentTarget.getBoundingClientRect()
+    const area = el.getBoundingClientRect()
+    anchor.current = {
+      fx: (e.clientX - box.left + (box.left - area.left + el.scrollLeft)) / el.scrollWidth,
+      fy: (e.clientY - box.top + (box.top - area.top + el.scrollTop)) / el.scrollHeight,
+      x: e.clientX - area.left,
+      y: e.clientY - area.top,
+    }
+    set({ full: level >= FULL_LEVELS.length ? 1 : level + 1 })
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex flex-col bg-neutral-950"
+      role="dialog"
+      aria-label="Book page, full screen"
+    >
+      <div className="flex h-[52px] shrink-0 items-center gap-2 px-3 text-white">
+        <button className="btn size-9 p-0" onClick={() => go(view.page - 1)} aria-label="Previous page">
+          <ChevronLeft className="size-5" />
+        </button>
+        <button className="btn size-9 p-0" onClick={() => go(view.page + 1)} aria-label="Next page">
+          <ChevronRight className="size-5" />
+        </button>
+        <span className="min-w-0 flex-1 truncate text-center text-sm">
+          {label}
+          <span className="ml-2 hidden text-xs text-white/50 sm:inline">
+            {level > 1 ? 'Click to fit the page' : 'Click to zoom in'} · Esc to go back
+          </span>
+        </span>
+        <button className="btn h-9 px-3 text-xs" onClick={close} title="Back to the small page (Esc)">
+          <ZoomOut className="size-4" /> Smaller
+        </button>
+        <button
+          className="rounded-full p-1.5 text-white/80 hover:text-white"
+          onClick={close}
+          aria-label="Close full screen"
+        >
+          <X className="size-5" />
+        </button>
+      </div>
+      {/* A click beside the page goes back too; on the page it zooms. */}
+      <div ref={scroller} className="flex-1 overflow-auto" onClick={close}>
+        <div className="flex min-h-full min-w-full items-center justify-center p-3" style={{ width: width + 24 }}>
+          <button
+            className={level >= FULL_LEVELS.length ? 'cursor-zoom-out' : 'cursor-zoom-in'}
+            onClick={onPageClick}
+            aria-label={level >= FULL_LEVELS.length ? 'Fit the page to the screen' : 'Zoom in'}
+          >
+            <PdfPage bookId={view.bookId} page={view.page} width={width} onAspect={setAspect} />
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
