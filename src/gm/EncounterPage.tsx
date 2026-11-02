@@ -1,3 +1,4 @@
+import { RulesLauncher } from '../components/RulesPanel'
 import { latestSheets } from '../share/campaigns'
 import { TableFeed } from './TableFeed'
 import { playerInitiative } from './feedRules'
@@ -386,6 +387,7 @@ export function EncounterPage() {
           onClose={() => setAdding(false)}
         />
       )}
+      <RulesLauncher />
     </div>
   )
 }

@@ -1,3 +1,4 @@
+import { RulesLauncher } from '../../components/RulesPanel'
 import { SyncNotice } from '../../components/SyncNotice'
 import { ConflictCopy } from './ConflictCopy'
 import { ArrowLeft, Dices, Download, ListChecks, Pencil, ScrollText, TrendingUp, Wand2 } from 'lucide-react'
@@ -130,6 +131,7 @@ export function CharacterPage() {
         <GmInbox character={character} update={update} />
         <Outlet context={{ character, update } satisfies CharacterContext} />
       </main>
+      <RulesLauncher />
     </div>
   )
 }

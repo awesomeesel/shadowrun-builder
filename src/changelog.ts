@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 22,
+    date: '2026-11-02',
+    title: 'Rules at your fingertips',
+    items: [
+      'A Rules button sits in the corner of every character page and the GM’s encounters (or press /). It opens a search panel over the page, so you never leave the fight.',
+      'It searches the app’s rule summaries, statuses and Edge actions first, then spells, qualities, gear and critters by name, and finally every page of the books in your Library.',
+      'Tap a book result to read the page right there, with next and previous page and zoom. Close the panel and you’re exactly where you were; open it again and your search and page are still there.',
+    ],
+  },
+  {
     id: 21,
     date: '2026-11-02',
     title: 'Safer syncing between devices',
