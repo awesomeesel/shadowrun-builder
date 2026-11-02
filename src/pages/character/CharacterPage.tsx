@@ -1,4 +1,4 @@
-import { RulesLauncher } from '../../components/RulesPanel'
+import { RulesButton } from '../../components/RulesPanel'
 import { SyncNotice } from '../../components/SyncNotice'
 import { ConflictCopy } from './ConflictCopy'
 import { ArrowLeft, Dices, Download, ListChecks, Pencil, ScrollText, TrendingUp, Wand2 } from 'lucide-react'
@@ -61,7 +61,7 @@ export function CharacterPage() {
   return (
     <div>
       <header ref={header} className="sticky top-0 z-10 border-b border-line bg-bg/90 backdrop-blur-md print:hidden">
-        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 pt-3 sm:px-8">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 pt-3 sm:px-8">
           <Link to="/" className="text-muted hover:text-fg" aria-label="Back to characters">
             <ArrowLeft className="size-5" />
           </Link>
@@ -87,7 +87,7 @@ export function CharacterPage() {
             <span className="hidden sm:inline">Export</span>
           </button>
         </div>
-        <nav className="no-scrollbar mx-auto mt-1 flex max-w-5xl overflow-x-auto px-4 sm:px-8">
+        <nav className="no-scrollbar mx-auto mt-1 flex max-w-6xl overflow-x-auto px-4 sm:px-8">
           {character.mode === 'build' && (
             <>
               <NavLink to="wizard" className={tab}>
@@ -125,13 +125,13 @@ export function CharacterPage() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-8 print:max-w-none print:p-0">
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-8 print:max-w-none print:p-0">
         <SyncNotice characterId={character.id} name={character.name} />
         <ConflictCopy character={character} flush={flush} />
         <GmInbox character={character} update={update} />
         <Outlet context={{ character, update } satisfies CharacterContext} />
       </main>
-      <RulesLauncher />
+      <RulesButton />
     </div>
   )
 }

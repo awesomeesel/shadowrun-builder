@@ -416,7 +416,8 @@ function ActiveSession({ character, update }: CharacterContext) {
                 onClick={() => doRoll(p)}
                 className="flex min-w-0 flex-1 items-center justify-between gap-2 py-2 pl-2.5 text-left text-sm"
               >
-                <span className="truncate">{p.label}</span>
+                {/* Whole names, wrapping onto a second line if they must ("Damage resistance"). */}
+                <span className="min-w-0 leading-tight break-words">{p.label}</span>
                 <span className="shrink-0 font-display text-base font-semibold text-accent tabular-nums">
                   {p.ignoreWounds ? p.pool : formatPool(p.pool, wounds + sustainPenalty(character))}
                 </span>

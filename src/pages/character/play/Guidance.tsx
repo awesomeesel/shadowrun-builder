@@ -1,6 +1,6 @@
+import { openRules } from '../../../components/rulesStore'
 import { Lightbulb, ScrollText, X } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router'
 import { HelpButton } from '../../../components/Help'
 import { SourceLink } from '../../../components/SourceLink'
 import { Section } from '../../../components/ui'
@@ -78,10 +78,10 @@ export function NewPlayerTips() {
         </li>
         <li>
           <b>Stuck?</b> Every ⓘ explains what you’re looking at, and{' '}
-          <Link to="/rules" className="text-accent hover:underline">
+          <button className="text-accent hover:underline" onClick={openRules}>
             Rules
-          </Link>{' '}
-          has the basics with page numbers.
+          </button>{' '}
+          (bottom right) finds any rule in the app and your books.
         </li>
       </ul>
     </section>

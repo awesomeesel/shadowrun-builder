@@ -1,3 +1,4 @@
+import { openRules, RULES_SHORTCUT } from '../components/rulesStore'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ArrowLeft, BookOpen, Plus, Radio, Shuffle, Swords } from 'lucide-react'
 import { useState } from 'react'
@@ -39,9 +40,9 @@ export function GmHome() {
           <ArrowLeft className="size-5" />
         </Link>
         <h1 className="mr-auto font-display text-3xl font-semibold">GM screen</h1>
-        <Link to="/rules" className="btn">
+        <button className="btn" onClick={openRules} title={`Search the rules (${RULES_SHORTCUT})`}>
           <BookOpen className="size-4" /> Rules
-        </Link>
+        </button>
         {sharing && (
           <button className="btn btn-primary" onClick={() => setCreating(true)}>
             <Plus className="size-4" /> New campaign

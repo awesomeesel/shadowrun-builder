@@ -11,15 +11,26 @@ import {
   Search,
   X,
 } from 'lucide-react'
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link } from 'react-router'
 import { pdfPageToPrinted } from '../books/pages'
 import { PdfPage } from '../books/PdfPage'
-import { highlight, SearchIndex, snippet, type SearchDoc, type SearchKind } from '../books/search'
+import { highlight, SearchIndex, snippet, type SearchDoc } from '../books/search'
 import { db, type Book } from '../db/db'
 import { QUICK_RULES } from '../rules/sr6/quickRules'
 import { noAutofill } from './noAutofill'
+import {
+  closeRules,
+  HAS_KEYBOARD,
+  IS_MAC,
+  openRules,
+  SHORTCUT,
+  set,
+  state,
+  usePanel,
+  type Filter,
+  type PanelState,
+} from './rulesStore'
 
 /**
  * Rules lookup that slides in over whatever you're doing (the Play tab, an
@@ -28,37 +39,6 @@ import { noAutofill } from './noAutofill'
  * the books' sections; tap one to read it in place. The search, the filter
  * and what you were reading survive closing it and switching pages.
  */
-type Filter = 'all' | SearchKind
-
-interface PanelState {
-  open: boolean
-  query: string
-  filter: Filter
-  /** Only this book's items and sections. */
-  book: string | null
-  /** A result being read. */
-  selected: SearchDoc | null
-  /** A book page being looked at. */
-  page: { bookId: string; page: number } | null
-  zoom: number
-}
-
-let state: PanelState = { open: false, query: '', filter: 'all', book: null, selected: null, page: null, zoom: 1 }
-const listeners = new Set<() => void>()
-function set(change: Partial<PanelState>) {
-  state = { ...state, ...change }
-  listeners.forEach((l) => l())
-}
-function usePanel(): PanelState {
-  return useSyncExternalStore(
-    (l) => {
-      listeners.add(l)
-      return () => listeners.delete(l)
-    },
-    () => state,
-  )
-}
-
 const KIND_LABEL: Record<string, string> = {
   quality: 'Quality',
   spell: 'Spell',
@@ -184,43 +164,72 @@ function useSearchIndex(): { index: SearchIndex | null; books: Book[] } {
 
 // ---- The launcher ----
 
-/** The floating Rules button, the "/" shortcut, and the panel itself. */
-export function RulesLauncher() {
+/** The rules page shows the search itself; there the shortcut just goes to the search box. */
+const onRulesPage = () => location.hash.startsWith('#/rules')
+
+/**
+ * Mounted once for the whole app: the ⌘K / Ctrl+K shortcut and the panel.
+ * Pages open it with openRules() or a RulesButton.
+ */
+export function RulesHost() {
   const panel = usePanel()
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const typing =
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        e.target instanceof HTMLSelectElement ||
-        (e.target instanceof HTMLElement && e.target.isContentEditable)
-      if (e.key === '/' && !typing && !e.metaKey && !e.ctrlKey) {
+      // ⌘K on a Mac, Ctrl+K elsewhere, as in most apps' search. Works while typing too; again to close.
+      const modifier = IS_MAC ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey
+      if (modifier && !e.altKey && !e.shiftKey && (e.code === 'KeyK' || e.key.toLowerCase() === 'k')) {
         e.preventDefault()
-        set({ open: true })
+        if (onRulesPage()) document.querySelector<HTMLInputElement>('input[aria-label="Search the rules"]')?.focus()
+        else if (state.open) closeRules()
+        else openRules()
       } else if (e.key === 'Escape' && state.open) {
-        set({ open: false })
+        closeRules()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+  return panel.open ? createPortal(<Panel />, document.body) : null
+}
+
+/** The floating Rules button for pages used at the table (a character, an encounter). */
+export function RulesButton() {
+  const panel = usePanel()
+  if (panel.open) return null
   return (
-    <>
-      {!panel.open && (
-        <button
-          className="btn fixed right-4 bottom-4 z-30 rounded-full border-accent/60 bg-surface px-4 py-2.5 shadow-lg print:hidden"
-          onClick={() => set({ open: true })}
-          title="Look up a rule without leaving the page (shortcut: /)"
-        >
-          <Search className="size-4 text-accent" /> Rules
-        </button>
+    <button
+      className="btn fixed right-4 bottom-4 z-30 rounded-full border-accent/60 bg-surface px-4 py-2.5 shadow-lg print:hidden"
+      onClick={openRules}
+      title={`Look up a rule without leaving the page (${IS_MAC ? '⌘K' : 'Ctrl+K'})`}
+    >
+      <Search className="size-4 text-accent" /> Rules
+      {HAS_KEYBOARD && (
+        <kbd className="ml-1 rounded border border-line px-1.5 py-px font-sans text-[11px] text-muted">{SHORTCUT}</kbd>
       )}
-      {panel.open && createPortal(<Panel panel={panel} />, document.body)}
-    </>
+    </button>
   )
 }
 
-function Panel({ panel }: { panel: PanelState }) {
+function Panel() {
+  return (
+    // No backdrop: on a wide screen the page stays usable beside it.
+    <aside
+      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-line bg-bg shadow-2xl sm:w-[30rem]"
+      aria-label="Rules lookup"
+    >
+      <SearchView onClose={closeRules} />
+    </aside>
+  )
+}
+
+const CloseContext = createContext<(() => void) | undefined>(undefined)
+
+/**
+ * The search itself: results, a result being read, or a book page. Used in the
+ * panel and on the rules page; `empty` is shown before anything is typed.
+ */
+export function SearchView({ onClose, empty }: { onClose?: () => void; empty?: React.ReactNode }) {
+  const panel = usePanel()
   const box = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const { index, books } = useSearchIndex()
@@ -231,32 +240,30 @@ function Panel({ panel }: { panel: PanelState }) {
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
-
   return (
-    // No backdrop: on a wide screen the page stays usable beside it.
-    <aside
-      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-line bg-bg shadow-2xl sm:w-[30rem]"
-      aria-label="Rules lookup"
-    >
+    <CloseContext.Provider value={onClose}>
       {panel.page ? (
         <PageView panel={panel} width={width} />
       ) : panel.selected ? (
         <Reader doc={panel.selected} index={index} query={panel.query} />
       ) : (
-        <Results panel={panel} index={index} books={books} />
+        <Results panel={panel} index={index} books={books} empty={empty} />
       )}
       <div ref={box} className="h-0 w-full" />
-    </aside>
+    </CloseContext.Provider>
   )
 }
 
 function Header({ children }: { children: React.ReactNode }) {
+  const onClose = useContext(CloseContext)
   return (
     <div className="flex items-center gap-2 border-b border-line p-3">
       {children}
-      <button className="text-muted hover:text-fg" onClick={() => set({ open: false })} aria-label="Close rules">
-        <X className="size-5" />
-      </button>
+      {onClose && (
+        <button className="text-muted hover:text-fg" onClick={onClose} aria-label="Close rules">
+          <X className="size-5" />
+        </button>
+      )}
     </div>
   )
 }
@@ -301,7 +308,17 @@ function whereText(doc: SearchDoc): string {
   return [page, shown.filter(Boolean).join(' › ')].filter(Boolean).join(' · ')
 }
 
-function Results({ panel, index, books }: { panel: PanelState; index: SearchIndex | null; books: Book[] }) {
+function Results({
+  panel,
+  index,
+  books,
+  empty,
+}: {
+  panel: PanelState
+  index: SearchIndex | null
+  books: Book[]
+  empty?: React.ReactNode
+}) {
   const needle = panel.query.trim()
   const codes = books.filter((b) => b.extractedVersion).map((b) => b.code || b.title)
   const results =
@@ -360,11 +377,13 @@ function Results({ panel, index, books }: { panel: PanelState; index: SearchInde
         {!index ? (
           <p className="text-muted">Getting the books ready to search…</p>
         ) : !needle ? (
-          <p className="text-muted">
-            Type what you’re wondering about. Best matches come first: the app’s short summaries, items from your books,
-            and the sections of your books under their headings. Tap one to read it here; close this and you’re right
-            where you were.
-          </p>
+          (empty ?? (
+            <p className="text-muted">
+              Type what you’re wondering about. Best matches come first: the app’s short summaries, items from your
+              books, and the sections of your books under their headings. Tap one to read it here; close this and you’re
+              right where you were.
+            </p>
+          ))
         ) : results.length === 0 ? (
           <p className="text-muted">Nothing found for “{needle}”. Try another word, or fewer words.</p>
         ) : (
@@ -493,14 +512,15 @@ function PageView({ panel, width }: { panel: PanelState; width: number }) {
         >
           <Plus className="size-4" />
         </button>
-        <Link
-          to={`/book/${view.bookId}?pdf=${view.page}`}
+        {/* A plain link: the panel lives outside the router. */}
+        <a
+          href={`#/book/${view.bookId}?pdf=${view.page}`}
           className="btn ml-1 px-2 py-1 text-xs"
-          onClick={() => set({ open: false })}
+          onClick={closeRules}
           title="Open the full book (leaves this page)"
         >
           <BookOpen className="size-4" /> <ExternalLink className="size-3" />
-        </Link>
+        </a>
       </div>
       <div className="flex-1 overflow-auto bg-black/40">
         <PdfPage bookId={view.bookId} page={view.page} width={width} zoom={panel.zoom} />

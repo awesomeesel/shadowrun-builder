@@ -1,3 +1,4 @@
+import { openRules, RULES_SHORTCUT } from '../components/rulesStore'
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
   ArrowLeft,
@@ -184,9 +185,9 @@ export function CampaignPage() {
             <QrCode className="size-4" /> Join info
           </button>
         )}
-        <Link to="/rules" className="btn">
+        <button className="btn" onClick={openRules} title={`Search the rules (${RULES_SHORTCUT})`}>
           <BookOpen className="size-4" /> <span className="hidden sm:inline">Rules</span>
-        </Link>
+        </button>
       </div>
       <BackupStatus />
       <div className="grid grid-cols-1 gap-8">

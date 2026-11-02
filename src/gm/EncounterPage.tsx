@@ -1,4 +1,5 @@
-import { RulesLauncher } from '../components/RulesPanel'
+import { RulesButton } from '../components/RulesPanel'
+import { openRules, RULES_SHORTCUT } from '../components/rulesStore'
 import { latestSheets } from '../share/campaigns'
 import { TableFeed } from './TableFeed'
 import { playerInitiative } from './feedRules'
@@ -182,9 +183,9 @@ export function EncounterPage() {
             }}
             aria-label="Encounter name"
           />
-          <Link to="/rules" className="btn" target="_blank" title="Rules reference (opens in a new tab)">
+          <button className="btn" onClick={openRules} title={`Search the rules (${RULES_SHORTCUT})`}>
             <BookOpen className="size-4" /> <span className="hidden sm:inline">Rules</span>
-          </Link>
+          </button>
           <button className="btn" onClick={() => setAdding(true)}>
             <UserPlus className="size-4" /> Add
           </button>
@@ -387,7 +388,7 @@ export function EncounterPage() {
           onClose={() => setAdding(false)}
         />
       )}
-      <RulesLauncher />
+      <RulesButton />
     </div>
   )
 }

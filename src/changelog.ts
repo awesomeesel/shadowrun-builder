@@ -11,6 +11,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 24,
+    date: '2026-11-02',
+    title: 'Rules search everywhere, with ⌘K',
+    items: [
+      'Open (and close) the Rules search with ⌘K on a Mac or Ctrl+K on Windows, on any page, even while typing in a field.',
+      'Every Rules button (home page, GM screen, campaigns, encounters) now opens the new search over the page.',
+      'Closing the search clears it, so the next one starts fresh.',
+      'Play tab: dice pool names show in full (long ones wrap), and character pages are a little wider.',
+    ],
+  },
+  {
     id: 23,
     date: '2026-11-02',
     title: 'Smarter rules search',
