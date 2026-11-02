@@ -11,6 +11,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 23,
+    date: '2026-11-02',
+    title: 'Smarter rules search',
+    items: [
+      'The Rules panel now ranks results by how well they match, the way search engines do: “cover” finds the Cover status, Take Cover and Cover Fire first, not the credits page.',
+      'Books are searched section by section under their headings, so each result says where it is, e.g. “CRB 52 · Statuses › Status List”.',
+      'Each result has a badge (Rule, Status, Edge action, Spell, Weapon, Book…) and one line from where your words appear, highlighted.',
+      'Filter by Rules, Items or Books, or by one book. Tap a result to read it in the panel with your words highlighted; “See page” shows the real page.',
+      'Covered, covering and covers count as cover, and the last word matches as you type.',
+    ],
+  },
+  {
     id: 22,
     date: '2026-11-02',
     title: 'Rules at your fingertips',

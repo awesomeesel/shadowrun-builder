@@ -58,6 +58,16 @@ export interface DeletedCharacter {
   deletedAt: string
 }
 
+/** A part of a book under one heading, for search (see books/sections.ts). */
+export interface BookSectionRow {
+  bookId: string
+  /** Order in the book. */
+  index: number
+  page: number
+  path: string[]
+  text: string[]
+}
+
 /** A rules item recognised in one of the user's books. */
 export type CatalogEntry = ExtractedEntry & { id: string; bookId: string }
 
@@ -213,6 +223,7 @@ export const db = new Dexie('shadowrun-builder') as Dexie & {
   bookText: Dexie.Table<BookPageText, [string, number]>
   bookPages: Dexie.Table<BookPageLayout, [string, number]>
   catalog: EntityTable<CatalogEntry, 'id'>
+  bookSections: Dexie.Table<BookSectionRow, [string, number]>
   syncState: EntityTable<SyncState, 'id'>
   deletedCharacters: EntityTable<DeletedCharacter, 'id'>
   encounters: EntityTable<Encounter, 'id'>
@@ -290,4 +301,9 @@ db.version(8).stores({
 // Version 9 keeps handouts from the GM on the player's device.
 db.version(9).stores({
   handouts: 'id, characterId',
+})
+
+// Version 10 splits books into sections at their headings, for ranked rules search.
+db.version(10).stores({
+  bookSections: '[bookId+index], bookId',
 })

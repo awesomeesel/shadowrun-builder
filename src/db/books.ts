@@ -2,7 +2,8 @@ import { guessBook } from '../books/catalog'
 import { EXTRACTOR_VERSION, extractBook } from '../books/extract'
 import { pageText } from '../books/layout'
 import { closeBook, destroyPdf, openBook, openPdf, pageLayout } from '../books/pdf'
-import { db, type Book, type BookPageLayout, type BookPageText, type CatalogEntry } from './db'
+import { extractSections } from '../books/sections'
+import { db, type Book, type BookPageLayout, type BookPageText, type BookSectionRow, type CatalogEntry } from './db'
 
 /** Store a PDF in the library and start indexing its text in the background. */
 export async function addBook(file: File): Promise<Book> {
@@ -50,13 +51,18 @@ export async function updateBook(id: string, changes: Partial<Pick<Book, 'code' 
 export async function deleteBook(id: string) {
   indexing.delete(id)
   closeBook(id)
-  await db.transaction('rw', [db.books, db.bookFiles, db.bookText, db.bookPages, db.catalog], async () => {
-    await db.books.delete(id)
-    await db.bookFiles.delete(id)
-    await db.bookText.where('bookId').equals(id).delete()
-    await db.bookPages.where('bookId').equals(id).delete()
-    await db.catalog.where('bookId').equals(id).delete()
-  })
+  await db.transaction(
+    'rw',
+    [db.books, db.bookFiles, db.bookText, db.bookPages, db.catalog, db.bookSections],
+    async () => {
+      await db.books.delete(id)
+      await db.bookFiles.delete(id)
+      await db.bookText.where('bookId').equals(id).delete()
+      await db.bookPages.where('bookId').equals(id).delete()
+      await db.catalog.where('bookId').equals(id).delete()
+      await db.bookSections.where('bookId').equals(id).delete()
+    },
+  )
 }
 
 const indexing = new Set<string>()
@@ -105,9 +111,12 @@ export async function buildCatalog(id: string) {
   const entries: CatalogEntry[] = extractBook(pages).map((entry, i) => ({ ...entry, id: `${id}:${i}`, bookId: id }))
   // Search text too, as reading improves (e.g. doubled text dropped), without reading the PDF again.
   const texts: BookPageText[] = pages.map((p) => ({ bookId: id, page: p.page, text: pageText(p) }))
-  await db.transaction('rw', [db.books, db.catalog, db.bookText], async () => {
+  const sections: BookSectionRow[] = extractSections(pages).map((s, index) => ({ bookId: id, index, ...s }))
+  await db.transaction('rw', [db.books, db.catalog, db.bookText, db.bookSections], async () => {
     if (!(await db.books.get(id))) return
     await db.bookText.bulkPut(texts)
+    await db.bookSections.where('bookId').equals(id).delete()
+    await db.bookSections.bulkPut(sections)
     await db.catalog.where('bookId').equals(id).delete()
     await db.catalog.bulkPut(entries)
     await db.books.update(id, { extractedVersion: EXTRACTOR_VERSION })
