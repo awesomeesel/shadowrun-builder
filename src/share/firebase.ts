@@ -112,6 +112,24 @@ export function firebaseTransport(config: Record<string, string>): Transport {
         stop?.()
       }
     },
+    createGmKey: async (roomId, secret) => {
+      await user()
+      await setDoc(doc(db, 'rooms', roomId, 'private', 'gm'), { secret })
+    },
+    claimGm: async (roomId, secret) => {
+      const uid = (await user()).uid
+      await setDoc(doc(db, 'rooms', roomId, 'gms', uid), { secret })
+    },
+    isGm: async (roomId) => {
+      const uid = (await user()).uid
+      const room = await getDoc(doc(db, 'rooms', roomId))
+      if (room.exists() && (room.data() as RoomDoc).gm === uid) return true
+      try {
+        return (await getDoc(doc(db, 'rooms', roomId, 'gms', uid))).exists()
+      } catch {
+        return false
+      }
+    },
     putBoard: async (roomId, name, board) => {
       await user()
       await setDoc(doc(db, 'rooms', roomId, 'board', name), board)

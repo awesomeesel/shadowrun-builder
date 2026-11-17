@@ -158,7 +158,7 @@ export function SketchPad({ campaign, onClose }: { campaign: Campaign; onClose: 
       const text = e instanceof Error ? e.message : String(e)
       setError(
         /permission/i.test(text)
-          ? 'The server refused: only the device that made the campaign can show things to the players.'
+          ? 'The server refused: this device isn’t unlocked as the campaign’s GM yet. The campaign page says what to do.'
           : text,
       )
     } finally {

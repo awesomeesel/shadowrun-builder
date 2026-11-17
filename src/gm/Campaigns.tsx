@@ -53,6 +53,7 @@ import { updateCampaign } from './store'
 import { CastSection } from './Cast'
 import { SampleEncounterDialog } from './SampleEncounter'
 import { PartyOverview } from './PartyOverview'
+import { GmAccessNotice } from './GmAccessNotice'
 import { HandoutDialog } from './HandoutDialog'
 import { SketchPad } from '../map/SketchPad'
 import { JobsSection } from './Jobs'
@@ -203,6 +204,7 @@ export function CampaignPage() {
       </div>
       <BackupStatus />
       <div className="grid grid-cols-1 gap-8">
+        <GmAccessNotice campaign={campaign} />
         {!campaign.joinHidden && (
           <JoinCard campaign={campaign} onHide={() => void updateCampaign(campaign.id, { joinHidden: true })} />
         )}

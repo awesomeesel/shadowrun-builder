@@ -1,12 +1,15 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef } from 'react'
 import { db, type PlayerJob } from '../db/db'
-import { isSharingConfigured, syncCampaign, watchCampaign } from './campaigns'
+import { ensureGmAccess, isSharingConfigured, syncCampaign, watchCampaign } from './campaigns'
 import { watchInbox, watchOutbox } from './messages'
 import { playerJobs, publishJobs, watchJobs } from './jobBoard'
 import { mapPayloads, publishMap, watchMap, type MapPayload } from './mapBoard'
 import { watchSketch } from './sketchBoard'
 import { EncounterSchema } from '../model/encounter'
+
+/** GM access already checked this visit, per campaign and whether it had a GM key. */
+const checkedAccess = new Set<string>()
 
 /** The job list last published per campaign on this device, so unchanged lists aren't sent again. */
 const published = new Map<string, string>()
@@ -77,6 +80,21 @@ export function ShareSync() {
     }
   }, [gmKey])
 
+  // GM side: make sure this device may send to the players (unlocking it with the GM key from the
+  // Drive backup if need be). Checked on opening, and again when a key arrives from the backup.
+  const accessKey = (campaigns ?? [])
+    .filter((c) => c.role === 'gm' && !c.closed)
+    .map((c) => `${c.id}:${c.gmSecret ? 1 : 0}`)
+    .join('|')
+  useEffect(() => {
+    if (!isSharingConfigured() || !accessKey) return
+    for (const entry of accessKey.split('|')) {
+      if (checkedAccess.has(entry)) continue
+      checkedAccess.add(entry)
+      ensureGmAccess(entry.split(':')[0]).catch(() => checkedAccess.delete(entry))
+    }
+  }, [accessKey])
+
   // GM side: publish each campaign's job list for the players when it changes.
   const jobsKey = JSON.stringify(
     (campaigns ?? []).filter((c) => c.role === 'gm' && !c.closed).map((c) => [c.id, playerJobs(c)]),
@@ -90,7 +108,7 @@ export function ShareSync() {
         const campaign = campaigns?.find((c) => c.id === id)
         if (!campaign) continue
         published.set(id, text)
-        // Only the device that made the campaign may publish; others just don't.
+        // Only GM devices may publish (see ensureGmAccess); others just don't.
         publishJobs(campaign, jobs).catch(() => published.delete(id))
       }
     }, 1500)

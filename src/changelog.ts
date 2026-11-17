@@ -11,6 +11,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 30,
+    date: '2026-11-17',
+    title: 'GM on more than one device',
+    items: [
+      'A campaign now has a GM key, kept in the GM’s Drive backup. The GM’s other devices unlock themselves with it, so messages, handouts, loot, jobs, maps and sketches work from a tablet and a PC alike. Players never get the key.',
+      'Older campaigns: open the campaign once on the device you made it on; it makes the key, and your other devices pick it up through Drive.',
+      'Lost the device you made a campaign on? “Move the campaign to this device” gives it a new code and keeps everything else; the players join again once.',
+      'The campaign page says when a device can’t send to the players yet, and what to do about it.',
+    ],
+  },
+  {
     id: 29,
     date: '2026-11-02',
     title: 'Sketch pad',

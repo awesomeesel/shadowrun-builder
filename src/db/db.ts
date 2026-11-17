@@ -105,6 +105,13 @@ export interface Campaign {
   jobs?: CampaignJob[]
   /** The GM's sketch pad, for showing the players a rough layout. */
   sketch?: Sketch
+  /**
+   * The campaign's GM key: lets the GM's other devices act as GM on the server.
+   * Kept in the GM's Drive backup, never shown to players.
+   */
+  gmSecret?: string
+  /** Whether this device may send to the players (this device's bookkeeping, not backed up). */
+  gmAccess?: 'ok' | 'no-key' | 'refused'
   /** What the GM may send to players' sheets; both on unless switched off. */
   gmSends?: { damage: boolean; rewards: boolean }
 }

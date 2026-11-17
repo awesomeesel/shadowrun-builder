@@ -127,7 +127,7 @@ export async function sendToRunner(campaign: Campaign, sheet: SharedSheet, messa
   } catch (error) {
     if (/permission|insufficient/i.test(String(error))) {
       throw new Error(
-        'The server refused. Only the device that made the campaign can send, and the Firestore rules must be the latest from firestore.rules.',
+        'The server refused: this device isn’t unlocked as the campaign’s GM yet. The campaign page says what to do.',
       )
     }
     throw error

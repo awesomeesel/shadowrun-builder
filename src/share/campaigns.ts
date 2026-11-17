@@ -64,8 +64,16 @@ export function joinLink(campaign: Pick<Campaign, 'code' | 'password'>, includeP
   return `${base}#/join?${params}`
 }
 
-/** GM: make a new campaign on the server and remember it here. */
-export async function createCampaign(name: string, password: string): Promise<Campaign> {
+/** A long random key, as hex. */
+function randomSecret(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+/** Make a room on the server with a fresh code, and give it a GM key. */
+async function makeRoom(
+  name: string,
+  password: string,
+): Promise<{ roomId: string; code: string; gmSecret: string | undefined }> {
   const t = await getTransport()
   const gm = await t.userId()
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -77,21 +85,123 @@ export async function createCampaign(name: string, password: string): Promise<Ca
       meta: await seal(key, { name } satisfies CampaignMeta),
       createdAt: new Date().toISOString(),
     })
-    const campaign: Campaign = {
-      id: roomId,
-      role: 'gm',
-      code,
-      password,
-      name,
-      characterIds: [],
-      pushed: {},
-      joinedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    await db.campaigns.put(campaign)
-    return campaign
+    // Servers with older rules refuse the key; the campaign works anyway, and ensureGmAccess tries again later.
+    let gmSecret: string | undefined = randomSecret()
+    await t.createGmKey(roomId, gmSecret).catch(() => (gmSecret = undefined))
+    return { roomId, code, gmSecret }
   }
   throw new Error('Could not make a new campaign code; try again.')
+}
+
+/** GM: make a new campaign on the server and remember it here. */
+export async function createCampaign(name: string, password: string): Promise<Campaign> {
+  const { roomId, code, gmSecret } = await makeRoom(name, password)
+  const campaign: Campaign = {
+    id: roomId,
+    role: 'gm',
+    code,
+    password,
+    name,
+    characterIds: [],
+    pushed: {},
+    joinedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    gmSecret,
+    gmAccess: 'ok',
+  }
+  await db.campaigns.put(campaign)
+  return campaign
+}
+
+/**
+ * GM: make sure this device may send to the players. The device that made the
+ * campaign gives it a GM key if it has none yet (older campaigns), which then
+ * reaches the GM's other devices through the Drive backup; another device
+ * unlocks itself with that key. Returns what this device may do, and keeps it
+ * on the campaign for the campaign page to explain.
+ */
+export async function ensureGmAccess(campaignId: string): Promise<Campaign['gmAccess']> {
+  const campaign = await db.campaigns.get(campaignId)
+  if (!campaign || campaign.role !== 'gm' || campaign.closed) return undefined
+  const t = await getTransport()
+  const uid = await t.userId()
+  const room = await t.getRoom(campaign.id)
+  if (!room) return campaign.gmAccess
+  let access: Campaign['gmAccess']
+  if (room.gm === uid) {
+    access = 'ok'
+    if (!campaign.gmSecret) {
+      const gmSecret = randomSecret()
+      try {
+        await t.createGmKey(campaign.id, gmSecret)
+        // Saved as a backed-up change, so it reaches the GM's other devices through Drive.
+        await db.campaigns.update(campaign.id, { gmSecret, updatedAt: new Date().toISOString() })
+      } catch {
+        // A key was made before but lost here; other devices need the campaign moved instead.
+      }
+    }
+  } else if (await t.isGm(campaign.id)) {
+    access = 'ok'
+  } else if (campaign.gmSecret) {
+    try {
+      await t.claimGm(campaign.id, campaign.gmSecret)
+      access = 'ok'
+    } catch {
+      access = 'refused'
+    }
+  } else {
+    access = 'no-key'
+  }
+  if (access !== campaign.gmAccess) await db.campaigns.update(campaign.id, { gmAccess: access })
+  return access
+}
+
+/**
+ * GM: when the device that made the campaign is gone, start the campaign over
+ * on this device: a new code (players join again once), with everything else
+ * kept: notes, cast, jobs, run log, sketch, encounters and imported runners.
+ * The old campaign is left on the server for its players to leave.
+ */
+export async function moveCampaignHere(campaignId: string): Promise<Campaign> {
+  const old = await db.campaigns.get(campaignId)
+  if (!old) throw new Error('Campaign not found')
+  const { roomId, code, gmSecret } = await makeRoom(old.name, old.password)
+  const now = new Date().toISOString()
+  const moved: Campaign = {
+    ...old,
+    id: roomId,
+    code,
+    gmSecret,
+    gmAccess: 'ok',
+    characterIds: [],
+    pushed: {},
+    joinedAt: now,
+    updatedAt: now,
+    joinHidden: false,
+    error: undefined,
+    lastSyncAt: undefined,
+    closed: undefined,
+  }
+  await db.transaction('rw', [db.campaigns, db.encounters, db.sharedSheets, db.deletedGmItems], async () => {
+    await db.campaigns.put(moved)
+    await db.campaigns.delete(old.id)
+    await markDeleted('campaign', old.id)
+    await db.encounters.toCollection().modify((e) => {
+      if (e.campaignId === old.id) {
+        e.campaignId = roomId
+        e.updatedAt = now
+      }
+    })
+    for (const sheet of await db.sharedSheets.where('roomId').equals(old.id).toArray()) {
+      await db.sharedSheets.delete(sheet.id)
+      // Imported runners come along; live ones are shared again when the players rejoin.
+      if (isFileSheet(sheet)) {
+        await markDeleted('runner', sheet.id)
+        await db.sharedSheets.put({ ...sheet, id: `${roomId}/${sheet.sheetId}`, roomId })
+      }
+    }
+  })
+  return moved
 }
 
 export type LookupResult =
@@ -190,7 +300,7 @@ export async function closeCampaign(campaignId: string): Promise<void> {
  */
 export class NotCampaignOwnerError extends Error {
   constructor() {
-    super('Only the device that made this campaign can close it for the players.')
+    super('This device isn’t unlocked as the campaign’s GM, so it can’t close it for the players.')
   }
 }
 

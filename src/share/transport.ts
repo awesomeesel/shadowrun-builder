@@ -53,6 +53,16 @@ export interface Transport {
   sendMessage(roomId: string, message: MessageDoc): Promise<string>
   /** The player it's for (after handling it) or the GM (taking it back). */
   deleteMessage(roomId: string, messageId: string): Promise<void>
+  /**
+   * The device that made the campaign: store the campaign's GM key, where
+   * nobody can read it back. Other devices that know the key can then become
+   * GM devices too.
+   */
+  createGmKey(roomId: string, secret: string): Promise<void>
+  /** Become a GM device of the campaign by showing its GM key. */
+  claimGm(roomId: string, secret: string): Promise<void>
+  /** Whether this device may act as the campaign's GM: it made it, or claimed it with the key. */
+  isGm(roomId: string): Promise<boolean>
   /** GM only: publish something on the campaign's board for the players ('jobs', 'map'). */
   putBoard(roomId: string, name: string, board: BoardDoc): Promise<void>
   /** Live updates of one item on the board; null while there is none. */
@@ -77,6 +87,9 @@ export function memoryServer() {
   const sheets = new Map<string, Map<string, SheetDoc>>()
   const messages = new Map<string, Map<string, MessageDoc>>()
   const boards = new Map<string, BoardDoc>()
+  const gmKeys = new Map<string, string>()
+  const gmDevices = new Map<string, Set<string>>()
+  const isGm = (roomId: string, uid: string) => rooms.get(roomId)?.gm === uid || !!gmDevices.get(roomId)?.has(uid)
   const boardWatchers = new Set<{ key: string; fn: (b: BoardDoc | null) => void }>()
   const watchers = new Set<{ roomId: string; fn: (s: Map<string, SheetDoc>) => void }>()
   const notify = (roomId: string) => {
@@ -99,7 +112,7 @@ export function memoryServer() {
       rooms.set(roomId, room)
     },
     deleteRoom: async (roomId) => {
-      if (rooms.get(roomId)?.gm !== uid) throw new Error('permission-denied')
+      if (!isGm(roomId, uid)) throw new Error('permission-denied')
       rooms.delete(roomId)
       sheets.delete(roomId)
       notify(roomId)
@@ -115,7 +128,7 @@ export function memoryServer() {
     deleteSheet: async (roomId, sheetId) => {
       const existing = sheets.get(roomId)?.get(sheetId)
       if (!existing) return
-      if (existing.owner !== uid && rooms.get(roomId)?.gm !== uid) throw new Error('permission-denied')
+      if (existing.owner !== uid && !isGm(roomId, uid)) throw new Error('permission-denied')
       sheets.get(roomId)!.delete(sheetId)
       notify(roomId)
     },
@@ -126,7 +139,7 @@ export function memoryServer() {
       return () => watchers.delete(watcher)
     },
     sendMessage: async (roomId, message) => {
-      if (rooms.get(roomId)?.gm !== uid) throw new Error('permission-denied')
+      if (!isGm(roomId, uid)) throw new Error('permission-denied')
       const id = crypto.randomUUID()
       if (!messages.has(roomId)) messages.set(roomId, new Map())
       messages.get(roomId)!.set(id, message)
@@ -136,12 +149,22 @@ export function memoryServer() {
     deleteMessage: async (roomId, messageId) => {
       const message = messages.get(roomId)?.get(messageId)
       if (!message) return
-      if (!message.to.startsWith(`${uid}_`) && rooms.get(roomId)?.gm !== uid) throw new Error('permission-denied')
+      if (!message.to.startsWith(`${uid}_`) && !isGm(roomId, uid)) throw new Error('permission-denied')
       messages.get(roomId)!.delete(messageId)
       notifyMessages(roomId)
     },
+    createGmKey: async (roomId, secret) => {
+      if (rooms.get(roomId)?.gm !== uid || gmKeys.has(roomId)) throw new Error('permission-denied')
+      gmKeys.set(roomId, secret)
+    },
+    claimGm: async (roomId, secret) => {
+      if (!gmKeys.has(roomId) || gmKeys.get(roomId) !== secret) throw new Error('permission-denied')
+      if (!gmDevices.has(roomId)) gmDevices.set(roomId, new Set())
+      gmDevices.get(roomId)!.add(uid)
+    },
+    isGm: async (roomId) => isGm(roomId, uid),
     putBoard: async (roomId, name, board) => {
-      if (rooms.get(roomId)?.gm !== uid) throw new Error('permission-denied')
+      if (!isGm(roomId, uid)) throw new Error('permission-denied')
       const key = `${roomId}/${name}`
       boards.set(key, board)
       for (const w of boardWatchers) if (w.key === key) w.fn(board)
@@ -153,7 +176,7 @@ export function memoryServer() {
       return () => boardWatchers.delete(watcher)
     },
     watchMessages: (roomId, to, onChange) => {
-      if (to === null ? rooms.get(roomId)?.gm !== uid : !to.startsWith(`${uid}_`)) throw new Error('permission-denied')
+      if (to === null ? !isGm(roomId, uid) : !to.startsWith(`${uid}_`)) throw new Error('permission-denied')
       const watcher = { roomId, to, fn: onChange }
       messageWatchers.add(watcher)
       notifyMessages(roomId)

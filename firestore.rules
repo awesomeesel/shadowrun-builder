@@ -6,6 +6,20 @@ rules_version = '2';
 // their own sheet.
 service cloud.firestore {
   match /databases/{database}/documents {
+    function roomPath(room) {
+      return /databases/$(database)/documents/rooms/$(room);
+    }
+    function roomExists(room) {
+      return exists(roomPath(room));
+    }
+    // The GM: the device that made the campaign, or another of the GM's devices
+    // that unlocked itself with the campaign's GM key (see gms below).
+    function isGm(room) {
+      return request.auth != null
+        && (get(roomPath(room)).data.gm == request.auth.uid
+          || exists(/databases/$(database)/documents/rooms/$(room)/gms/$(request.auth.uid)));
+    }
+
     match /rooms/{room} {
       // Rooms can be fetched by id (which only the code and password give you), never listed.
       allow get: if request.auth != null;
@@ -15,15 +29,31 @@ service cloud.firestore {
         && request.resource.data.meta is string
         && request.resource.data.meta.size() < 10000;
       allow update: if false;
-      allow delete: if request.auth != null && resource.data.gm == request.auth.uid;
+      allow delete: if isGm(room);
+
+      // The campaign's GM key, set once by the device that made the campaign. Nobody can
+      // read it back; the GM's other devices know it from the GM's own Drive backup.
+      match /private/{item} {
+        allow create: if request.auth != null
+          && item == 'gm'
+          && get(roomPath(room)).data.gm == request.auth.uid
+          && request.resource.data.keys().hasOnly(['secret'])
+          && request.resource.data.secret is string
+          && request.resource.data.secret.size() >= 32
+          && request.resource.data.secret.size() < 200;
+        allow read, update, delete: if false;
+      }
+
+      // The GM's other devices: one becomes a GM device by showing the GM key.
+      match /gms/{uid} {
+        allow create, update: if request.auth != null
+          && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['secret'])
+          && request.resource.data.secret == get(/databases/$(database)/documents/rooms/$(room)/private/gm).data.secret;
+        allow read, delete: if request.auth != null && uid == request.auth.uid;
+      }
 
       match /sheets/{sheet} {
-        function roomExists() {
-          return exists(/databases/$(database)/documents/rooms/$(room));
-        }
-        function isGm() {
-          return get(/databases/$(database)/documents/rooms/$(room)).data.gm == request.auth.uid;
-        }
         function validSheet() {
           return request.resource.data.keys().hasOnly(['owner', 'data', 'updatedAt'])
             && request.resource.data.owner == request.auth.uid
@@ -31,46 +61,40 @@ service cloud.firestore {
             && request.resource.data.data.size() < 900000
             && request.resource.data.updatedAt is string;
         }
-        allow read: if request.auth != null && roomExists();
-        allow create: if request.auth != null && roomExists() && validSheet()
+        allow read: if request.auth != null && roomExists(room);
+        allow create: if request.auth != null && roomExists(room) && validSheet()
           && sheet.matches(request.auth.uid + '_.+');
-        allow update: if request.auth != null && roomExists() && validSheet()
+        allow update: if request.auth != null && roomExists(room) && validSheet()
           && resource.data.owner == request.auth.uid;
         allow delete: if request.auth != null
-          && (resource.data.owner == request.auth.uid || isGm());
+          && (resource.data.owner == request.auth.uid || isGm(room));
       }
 
-      // What the GM shows every player in the campaign, such as the jobs on offer. Only the GM writes.
+      // What the GM shows every player in the campaign: the jobs, the map, a sketch. Only the GM writes.
       match /board/{item} {
-        function isGm() {
-          return get(/databases/$(database)/documents/rooms/$(room)).data.gm == request.auth.uid;
-        }
-        allow read: if request.auth != null && exists(/databases/$(database)/documents/rooms/$(room));
-        allow create, update: if request.auth != null && isGm()
+        allow read: if request.auth != null && roomExists(room);
+        allow create, update: if isGm(room)
           && request.resource.data.keys().hasOnly(['data', 'updatedAt'])
           && request.resource.data.data is string
           && request.resource.data.data.size() < 300000
           && request.resource.data.updatedAt is string;
-        allow delete: if request.auth != null && isGm();
+        allow delete: if isGm(room);
       }
 
-      // Damage, statuses, Edge, rewards and handouts the GM sends to one runner. Only the GM writes;
-      // the player it's for reads it and removes it once accepted or declined.
+      // Damage, statuses, Edge, rewards, loot and handouts the GM sends to one runner. Only the GM
+      // writes; the player it's for reads it and removes it once accepted or declined.
       match /inbox/{message} {
-        function isGm() {
-          return get(/databases/$(database)/documents/rooms/$(room)).data.gm == request.auth.uid;
-        }
         function forMe() {
           return resource.data.to.matches(request.auth.uid + '_.+');
         }
-        allow create: if request.auth != null && isGm()
+        allow create: if isGm(room)
           && request.resource.data.keys().hasOnly(['to', 'data', 'createdAt'])
           && request.resource.data.to is string
           && request.resource.data.data is string
           && request.resource.data.data.size() < 900000
           && request.resource.data.createdAt is string;
         allow update: if false;
-        allow read, delete: if request.auth != null && (forMe() || isGm());
+        allow read, delete: if request.auth != null && (forMe() || isGm(room));
       }
     }
   }
