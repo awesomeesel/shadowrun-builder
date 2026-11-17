@@ -27,6 +27,7 @@ import { armorHint, formatInitiative, formatPool, round2 } from '../../rules/sr6
 import type { Character } from '../../model/character'
 import { ATTRIBUTE_IDS, ATTRIBUTE_LABELS } from '../../rules/sr6/attributes'
 import {
+  essenceFreed,
   computeDerived,
   explainDerived,
   formatParts,
@@ -115,7 +116,13 @@ export function SheetTab() {
               label="Essence"
               value={derived.essence}
               tone={derived.essence <= 0 ? 'danger' : undefined}
-              hint={derived.essence <= 0 ? 'At 0 Essence a character dies (p. 224)' : undefined}
+              hint={
+                derived.essence <= 0
+                  ? 'At 0 Essence a character dies (p. 224)'
+                  : essenceFreed(character)
+                    ? `Includes ${essenceFreed(character) / 100} freed by Augmentation Acclimation / Cyborg (SWC 132–133)`
+                    : undefined
+              }
             />
           </div>
         </section>

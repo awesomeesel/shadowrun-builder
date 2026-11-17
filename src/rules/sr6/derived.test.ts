@@ -375,3 +375,25 @@ describe('bonuses for heavily augmented runners', () => {
     expect(formatParts(e.unarmedAttackRating)).toBe('Reaction 5 + Strength 5 + Adjustments 2')
   })
 })
+
+describe('Essence freed by Augmentation Acclimation and Cyborg (SWC 132–133)', () => {
+  it('gives back 0.1 Essence per level, up to what the augmentations cost', async () => {
+    const { AugmentationSchema, QualitySchema, createCharacter } = await import('../../model/character')
+    const { essenceFreed } = await import('./derived')
+    const base = createCharacter()
+    const borg = {
+      ...base,
+      augmentations: [AugmentationSchema.parse({ name: 'Lots of chrome', essence: 5.8 })],
+      qualities: [
+        QualitySchema.parse({ name: 'Augmentation Acclimation', kind: 'positive', rating: 10, karma: 20 }),
+        QualitySchema.parse({ name: 'Cyborg', kind: 'positive', rating: 4, karma: 20 }),
+      ],
+    }
+    expect(computeDerived(borg).essence).toBeCloseTo(1.6)
+    expect(essenceFreed(borg)).toBe(140)
+    // Never more than the augmentations cost.
+    expect(
+      essenceFreed({ ...borg, augmentations: [AugmentationSchema.parse({ name: 'Datajack', essence: 0.1 })] }),
+    ).toBe(10)
+  })
+})

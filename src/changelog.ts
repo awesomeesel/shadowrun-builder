@@ -11,6 +11,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 31,
+    date: '2026-11-17',
+    title: 'Augmentation Acclimation and Cyborg',
+    items: [
+      'These qualities now count: each level frees 0.1 Essence for augmentations (SWC 132–133), up to what your augmentations cost. Essence, its warnings and Magic loss all follow, and the Sheet says how much was freed.',
+    ],
+  },
+  {
     id: 30,
     date: '2026-11-17',
     title: 'GM on more than one device',

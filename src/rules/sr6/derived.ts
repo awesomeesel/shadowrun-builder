@@ -122,13 +122,29 @@ export interface DerivedStats {
   matrix: MatrixStats | null
 }
 
-/** Essence in hundredths, from augmentations (with grade multipliers) and other losses. */
-function essenceHundredths(character: Character): number {
-  const augmentationLoss = character.augmentations.reduce(
+/**
+ * Essence freed for augmentations by Augmentation Acclimation and Cyborg
+ * (Sixth World Companion p. 132–133): 0.1 per level, up to 10 levels each.
+ * Augmentations take their Essence from it first, so it works as Essence
+ * back, but never more than the augmentations cost. In hundredths.
+ */
+export function essenceFreed(character: Character): number {
+  const levels = character.qualities
+    .filter((q) => q.kind === 'positive' && /^(augmentation acclimation|cyborg)\b/i.test(q.name.trim()))
+    .reduce((sum, q) => sum + Math.min(10, Math.max(0, q.rating)), 0)
+  return Math.min(levels * 10, augmentationLoss(character))
+}
+
+function augmentationLoss(character: Character): number {
+  return character.augmentations.reduce(
     (sum, aug) => sum + Math.round(aug.essence * 100 * AUGMENTATION_GRADES[aug.grade].essence),
     0,
   )
-  return 600 - character.essenceLoss - augmentationLoss
+}
+
+/** Essence in hundredths, from augmentations (with grade multipliers) and other losses. */
+function essenceHundredths(character: Character): number {
+  return 600 - character.essenceLoss - augmentationLoss(character) + essenceFreed(character)
 }
 
 /** Qualities the character has: bought ones plus the metatype's free racial qualities. */
