@@ -101,19 +101,19 @@ export function rest(
   character: Character,
   kind: 'stun' | 'physical',
   periods: number,
-  medicalCare: boolean,
+  /** Extra dice (or penalty): medical care, lifestyle. */
+  bonus: number,
   random?: () => number,
 ): RestResult {
   const d = computeDerived(character)
   const a = d.attributes
-  const bonus = medicalCare ? MEDICAL_CARE_BONUS : 0
   const left = { ...character.damage }
   const healed: Damage = { physical: 0, stun: 0, overflow: 0 }
   const rolls: Roll[] = []
   for (let i = 0; i < periods; i++) {
     if (kind === 'stun' ? left.stun === 0 : left.physical + left.overflow === 0) break
     if (kind === 'stun') {
-      const roll = rollPool(a.body + a.willpower + bonus, random)
+      const roll = rollPool(Math.max(0, a.body + a.willpower + bonus), random)
       rolls.push(roll)
       const boxes = Math.min(left.stun, roll.hits)
       left.stun -= boxes

@@ -15,6 +15,7 @@ import {
   type RestResult,
   type Treatment,
 } from '../../../rules/sr6/healing'
+import { lifestyleHealingDice } from '../../../rules/sr6/downtime'
 import { recordRoll, rollPool, type Roll } from '../../../rules/sr6/play'
 import type { Update } from '../CharacterPage'
 import { Counter, PlayDialog, RollStep } from './RollStep'
@@ -48,6 +49,8 @@ export function HealDialog({
   const [restKind, setRestKind] = useState<'stun' | 'physical'>(character.damage.stun ? 'stun' : 'physical')
   const [periods, setPeriods] = useState(restKind === 'stun' ? 4 : 2)
   const [care, setCare] = useState(false)
+  const lifestyleDice = lifestyleHealingDice(character)
+  const [useLifestyle, setUseLifestyle] = useState(false)
   const [rested, setRested] = useState<RestResult | null>(null)
 
   const damage = character.damage
@@ -222,10 +225,30 @@ export function HealDialog({
                 />
                 Someone with Biotech watches over me (+{MEDICAL_CARE_BONUS} dice)
               </label>
+              {lifestyleDice !== 0 && (
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-accent"
+                    checked={useLifestyle}
+                    onChange={(e) => setUseLifestyle(e.target.checked)}
+                  />
+                  <span>
+                    Where I live counts ({lifestyleDice > 0 ? '+' : ''}
+                    {lifestyleDice} dice){' '}
+                    <span className="text-xs text-muted">· optional rule, SWC p. 145, if your GM uses it</span>
+                  </span>
+                </label>
+              )}
               <button
                 className="btn btn-primary w-full"
                 onClick={() => {
-                  const result = rest(character, restKind, periods, care)
+                  const result = rest(
+                    character,
+                    restKind,
+                    periods,
+                    (care ? MEDICAL_CARE_BONUS : 0) + (useLifestyle ? lifestyleDice : 0),
+                  )
                   setRested(result)
                   update((c) =>
                     result.rolls.reduce(

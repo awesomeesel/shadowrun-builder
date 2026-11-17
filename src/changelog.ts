@@ -11,6 +11,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 32,
+    date: '2026-11-17',
+    title: 'Lifestyle and downtime',
+    items: [
+      'A Downtime button on the Play tab (and “End, then downtime” when you end a session): pick how long passes, pay rent, and choose what your runner does with the time.',
+      'Rent now runs out: time passing uses up the months you paid, and the ready check says how long your rent lasts or that it’s due.',
+      'Lower Heat by lying low, bribes or a cop contact (CRB 236–237), work on Reputation (SWC 193), Work for the Man or the People, and buy favors from contacts (SWC 153, 172).',
+      'Healing and karma training are a click away, with the book’s training times. Natural healing can use the optional lifestyle dice (SWC 145).',
+      'Each downtime goes into the session log with what it cost and gave.',
+    ],
+  },
+  {
     id: 31,
     date: '2026-11-17',
     title: 'Augmentation Acclimation and Cyborg',

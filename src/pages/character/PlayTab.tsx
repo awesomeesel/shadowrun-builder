@@ -3,7 +3,18 @@ import { ATTRIBUTE_IDS, ATTRIBUTE_LABELS, type AttributeId } from '../../rules/s
 import { combinePool, pairFormula, skillFormula, type FirstPart } from '../../rules/sr6/combine'
 import { SKILLS, SKILLS_BY_ID } from '../../rules/sr6/skills'
 import { HandoutsSection } from '../../share/Handouts'
-import { Dices, Flag, HeartPulse, Minus, NotebookPen, Play, Plus, ShieldAlert, Sparkles } from 'lucide-react'
+import {
+  CalendarClock,
+  Dices,
+  Flag,
+  HeartPulse,
+  Minus,
+  NotebookPen,
+  Play,
+  Plus,
+  ShieldAlert,
+  Sparkles,
+} from 'lucide-react'
 import { useState } from 'react'
 import { useOutletContext } from 'react-router'
 import { keepDriveSignedIn } from '../../cloud/cloud'
@@ -36,6 +47,7 @@ import { ContactsSection } from './play/ContactsSection'
 import { PlayerJobs } from './play/PlayerJobs'
 import { CompanionsSection } from './play/CompanionsSection'
 import { DamageDialog } from './play/DamageDialog'
+import { DowntimeDialog } from './play/DowntimeDialog'
 import { EndSessionDialog } from './play/EndSessionDialog'
 import { HealDialog } from './play/HealDialog'
 import { MatrixPlay } from './play/MatrixPlay'
@@ -59,14 +71,20 @@ const MAX_EDGE = 7
 /** The at-the-table view: damage, Edge, combat, attacks, dice and money, wrapped in a session. */
 export function PlayTab() {
   const { character, update } = useOutletContext<CharacterContext>()
-  return character.play.session ? (
-    <ActiveSession character={character} update={update} />
-  ) : (
-    <NoSession character={character} update={update} />
+  const [downtime, setDowntime] = useState(false)
+  return (
+    <>
+      {character.play.session ? (
+        <ActiveSession character={character} update={update} onDowntime={() => setDowntime(true)} />
+      ) : (
+        <NoSession character={character} update={update} onDowntime={() => setDowntime(true)} />
+      )}
+      {downtime && <DowntimeDialog character={character} update={update} onClose={() => setDowntime(false)} />}
+    </>
   )
 }
 
-function NoSession({ character, update }: CharacterContext) {
+function NoSession({ character, update, onDowntime }: CharacterContext & { onDowntime: () => void }) {
   const [title, setTitle] = useState(`Session ${character.sessions.length + 1}`)
   const [healing, setHealing] = useState(false)
   return (
@@ -78,7 +96,7 @@ function NoSession({ character, update }: CharacterContext) {
           Start a session when you sit down to play. You get a play screen for damage, Edge, combat, attacks, dice and
           money. When you end the session, a summary goes into the log below.
         </p>
-        <ReadyCheck character={character} update={update} onHeal={() => setHealing(true)} />
+        <ReadyCheck character={character} update={update} onHeal={() => setHealing(true)} onDowntime={onDowntime} />
         {character.play.statuses.length > 0 && <StatusList character={character} update={update} />}
         <div className="mt-5 flex flex-wrap gap-2">
           <input
@@ -97,6 +115,9 @@ function NoSession({ character, update }: CharacterContext) {
           >
             <Play className="size-4" /> Start session
           </button>
+          <button className="btn px-4 py-2" onClick={onDowntime} title="Time between runs: rent, Heat, side work">
+            <CalendarClock className="size-4" /> Downtime…
+          </button>
         </div>
       </section>
       <SessionLog character={character} update={update} />
@@ -106,7 +127,7 @@ function NoSession({ character, update }: CharacterContext) {
   )
 }
 
-function ActiveSession({ character, update }: CharacterContext) {
+function ActiveSession({ character, update, onDowntime }: CharacterContext & { onDowntime: () => void }) {
   const derived = computeDerived(character)
   const wounds = derived.woundModifier
   const session = character.play.session!
@@ -548,7 +569,14 @@ function ActiveSession({ character, update }: CharacterContext) {
       )}
       {hurt && <DamageDialog character={character} update={update} onClose={() => setHurt(false)} />}
       {healing && <HealDialog character={character} update={update} onClose={() => setHealing(false)} />}
-      {ending && <EndSessionDialog character={character} update={update} onClose={() => setEnding(false)} />}
+      {ending && (
+        <EndSessionDialog
+          character={character}
+          update={update}
+          onClose={() => setEnding(false)}
+          onDowntime={onDowntime}
+        />
+      )}
     </div>
   )
 }

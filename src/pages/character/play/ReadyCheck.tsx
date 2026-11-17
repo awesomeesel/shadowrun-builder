@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import type { Character } from '../../../model/character'
 import { computeDerived } from '../../../rules/sr6/derived'
+import { currentLifestyle, daysLeft, formatDays, paysRent } from '../../../rules/sr6/downtime'
 import { ammoCapacity } from '../../../rules/sr6/play'
 import type { Update } from '../CharacterPage'
 
@@ -13,6 +14,8 @@ interface Check {
   fix?: { label: string; apply: (c: Character) => Character }
   /** Offer the healing dialog for this line. */
   heal?: boolean
+  /** Offer the downtime dialog (rent) for this line. */
+  downtime?: boolean
 }
 
 /** What to sort out before a run: injuries, ammo, armor, programs, lifestyle and karma to spend. */
@@ -132,10 +135,26 @@ function readyChecks(character: Character): Check[] {
     }
   }
 
+  const home = currentLifestyle(character)
   if (character.lifestyles.length === 0) {
-    checks.push({ status: 'info', text: 'No lifestyle recorded. Where does your runner sleep?' })
-  } else if (character.lifestyles.every((l) => l.monthsPaid <= 0)) {
-    checks.push({ status: 'warn', text: 'Rent is due: no lifestyle has months paid.' })
+    checks.push({ status: 'info', text: 'No lifestyle recorded. Where does your runner sleep?', downtime: true })
+  } else if (!home) {
+    checks.push({
+      status: 'warn',
+      text: 'Rent is due: no lifestyle is paid for, so your runner lives on the street.',
+      downtime: true,
+    })
+  } else if (paysRent(home)) {
+    const left = daysLeft(home)
+    const name = home.name || home.level || 'your lifestyle'
+    checks.push({
+      status: left <= 7 ? 'warn' : 'ok',
+      text:
+        left <= 7
+          ? `Rent for ${name} runs out in ${formatDays(left)}.`
+          : `Living at ${name}: rent paid for ${formatDays(left)}.`,
+      downtime: left <= 7,
+    })
   }
 
   if (character.karma.available >= 5) {
@@ -148,11 +167,14 @@ export function ReadyCheck({
   character,
   update,
   onHeal,
+  onDowntime,
 }: {
   character: Character
   update: Update
   /** Opens the step-by-step healing dialog. */
   onHeal?: () => void
+  /** Opens the downtime dialog. */
+  onDowntime?: () => void
 }) {
   const checks = readyChecks(character)
   const icon = {
@@ -169,6 +191,11 @@ export function ReadyCheck({
           {check.heal && onHeal && (
             <button className="btn shrink-0 px-2 py-0.5 text-xs" onClick={onHeal}>
               Heal…
+            </button>
+          )}
+          {check.downtime && onDowntime && (
+            <button className="btn shrink-0 px-2 py-0.5 text-xs" onClick={onDowntime}>
+              Downtime…
             </button>
           )}
           {check.fix && (

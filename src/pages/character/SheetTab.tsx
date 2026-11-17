@@ -23,7 +23,8 @@ import { SourceLink } from '../../components/SourceLink'
 import { Portrait } from '../../components/art'
 import { MonitorTrack, PoolRow, Row, Stat } from '../../components/sheetParts'
 import { Section } from '../../components/ui'
-import { armorHint, formatInitiative, formatPool, round2 } from '../../rules/sr6/format'
+import { armorHint, formatDays, formatInitiative, formatPool, round2 } from '../../rules/sr6/format'
+import { daysLeft } from '../../rules/sr6/downtime'
 import type { Character } from '../../model/character'
 import { ATTRIBUTE_IDS, ATTRIBUTE_LABELS } from '../../rules/sr6/attributes'
 import {
@@ -552,7 +553,8 @@ export function SheetTab() {
                     )}
                   </span>
                   <span className="shrink-0 text-xs text-muted">
-                    {lifestyle.monthsPaid > 0 && `${lifestyle.monthsPaid} mo paid`}
+                    {lifestyle.cost > 0 &&
+                      (daysLeft(lifestyle) > 0 ? `${formatDays(daysLeft(lifestyle))} paid` : 'rent due')}
                     {lifestyle.cost > 0 && ` · ${lifestyle.cost.toLocaleString()}¥/mo`}
                   </span>
                 </li>

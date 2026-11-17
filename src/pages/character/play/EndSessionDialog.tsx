@@ -1,4 +1,4 @@
-import { Flag, HeartPulse } from 'lucide-react'
+import { CalendarClock, Flag, HeartPulse } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { keepDriveSignedIn } from '../../../cloud/cloud'
 import { endSession, sessionEntries } from '../../../rules/sr6/play'
@@ -7,7 +7,12 @@ import { HealDialog } from './HealDialog'
 
 const boxes = (n: number) => `${n} ${n === 1 ? 'box' : 'boxes'}`
 
-export function EndSessionDialog({ character, update, onClose }: CharacterContext & { onClose: () => void }) {
+export function EndSessionDialog({
+  character,
+  update,
+  onClose,
+  onDowntime,
+}: CharacterContext & { onClose: () => void; onDowntime?: () => void }) {
   const [clearStun, setClearStun] = useState(true)
   const [clearPhysical, setClearPhysical] = useState(false)
   const [healing, setHealing] = useState(false)
@@ -26,6 +31,11 @@ export function EndSessionDialog({ character, update, onClose }: CharacterContex
     </div>
   )
   const entries = sessionEntries(character)
+  const end = () => {
+    keepDriveSignedIn()
+    update((c) => endSession(c, { clearStun, clearPhysical, heat, reputation }))
+    onClose()
+  }
   const nuyen = entries.reduce((s, e) => s + e.nuyen, 0)
   const karma = entries.reduce((s, e) => s + e.karma, 0)
   const line = (label: string, value: ReactNode) => (
@@ -82,18 +92,23 @@ export function EndSessionDialog({ character, update, onClose }: CharacterContex
           <p className="mt-3 text-xs text-muted">
             Everything else (Edge, ammo, money and karma) is kept as it is now. The session goes into the log.
           </p>
-          <div className="mt-4 flex justify-end gap-2">
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
             <button className="btn" onClick={onClose}>
               Keep playing
             </button>
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                keepDriveSignedIn()
-                update((c) => endSession(c, { clearStun, clearPhysical, heat, reputation }))
-                onClose()
-              }}
-            >
+            {onDowntime && (
+              <button
+                className="btn"
+                onClick={() => {
+                  end()
+                  onDowntime()
+                }}
+                title="End the session, then plan the time until the next run: rent, Heat, side work"
+              >
+                <CalendarClock className="size-4" /> End, then downtime
+              </button>
+            )}
+            <button className="btn btn-primary" onClick={end}>
               <Flag className="size-4" /> End session
             </button>
           </div>

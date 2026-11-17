@@ -297,7 +297,10 @@ export const LifestyleSchema = z.object({
   level: text(),
   /** Monthly cost in nuyen. */
   cost: int(0),
+  /** Months of rent left, counting the current one. */
   monthsPaid: int(0),
+  /** Days of the current month already lived (0–29), so downtime can use rent up. */
+  daysUsed: int(0),
   notes: text(),
 })
 
@@ -330,6 +333,10 @@ export const RollRecordSchema = z.object({
 /** A finished play session, kept as a log on the character. */
 export const SessionRecordSchema = z.object({
   id: id(),
+  /** A play session, or downtime between runs. */
+  kind: z.enum(['session', 'downtime']).default('session'),
+  /** In-game days that passed (downtime only). */
+  days: int(0),
   title: text(),
   startedAt: z.string(),
   endedAt: z.string(),

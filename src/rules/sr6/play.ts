@@ -8,6 +8,7 @@ import {
   type Weapon,
 } from '../../model/character'
 import { computeDerived } from './derived'
+import { formatDays } from './format'
 
 /** Rounds a weapon holds, from its ammo text like "15(c)". 0 when it doesn't use ammo. */
 export function ammoCapacity(weapon: Weapon): number {
@@ -176,7 +177,11 @@ export function formatDuration(startedAt: string, endedAt: string): string {
 
 /** A few plain sentences describing what happened in a logged session. */
 export function sessionSummary(record: SessionRecord): string[] {
-  const lines = [`Played for ${formatDuration(record.startedAt, record.endedAt)}.`]
+  const lines = [
+    record.kind === 'downtime'
+      ? `${capitalize(formatDays(record.days))} of downtime.`
+      : `Played for ${formatDuration(record.startedAt, record.endedAt)}.`,
+  ]
   // Group by direction so it reads "Earned 8,000¥ and 5 karma", not "earned … and earned …".
   const amounts = [
     { value: record.nuyen, text: `${Math.abs(record.nuyen).toLocaleString()}¥` },
@@ -196,7 +201,8 @@ export function sessionSummary(record: SessionRecord): string[] {
   const hurt: string[] = []
   if (record.damage.physical) hurt.push(`${record.damage.physical} Physical`)
   if (record.damage.stun) hurt.push(`${record.damage.stun} Stun`)
-  if (hurt.length) lines.push(`Ended with ${hurt.join(' and ')} damage.`)
+  if (hurt.length)
+    lines.push(`${record.kind === 'downtime' ? 'Still hurt' : 'Ended'} with ${hurt.join(' and ')} damage.`)
   if (record.edgeStart !== null && record.edgeEnd !== null && record.edgeStart !== record.edgeEnd) {
     const diff = record.edgeStart - record.edgeEnd
     lines.push(diff > 0 ? `Spent ${diff} Edge.` : `Gained ${-diff} Edge.`)

@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import type { Character } from '../../model/character'
 import { ATTRIBUTE_IDS, ATTRIBUTE_LABELS } from '../../rules/sr6/attributes'
 import { computeDerived, ownedSkillPools, weaponPool, type ConditionMonitor } from '../../rules/sr6/derived'
-import { formatInitiative } from '../../rules/sr6/format'
+import { daysLeft } from '../../rules/sr6/downtime'
+import { formatDays, formatInitiative } from '../../rules/sr6/format'
 import { METATYPES } from '../../rules/sr6/metatypes'
 import { ammoCapacity } from '../../rules/sr6/play'
 import { vehicleMonitor } from '../../rules/sr6/vehicles'
@@ -347,7 +348,7 @@ export function PlaySheet({ character }: { character: Character }) {
                   ...character.licenses.map((l) => `License: ${l.name}${l.sin ? ` on ${l.sin}` : ''}`),
                   ...character.lifestyles.map(
                     (l) =>
-                      `Lifestyle: ${l.name || l.level} (${l.level}), paid ${l.monthsPaid} ${l.monthsPaid === 1 ? 'month' : 'months'}`,
+                      `Lifestyle: ${l.name || l.level}${l.level && l.level !== l.name ? ` (${l.level})` : ''}${l.cost > 0 ? `, ${daysLeft(l) ? `paid for ${formatDays(daysLeft(l))}` : 'rent due'}` : ''}`,
                   ),
                 ]}
               />

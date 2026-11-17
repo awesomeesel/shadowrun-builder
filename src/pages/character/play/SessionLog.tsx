@@ -1,9 +1,10 @@
-import { ChevronRight, NotebookPen, Trash2 } from 'lucide-react'
+import { CalendarClock, ChevronRight, NotebookPen, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { noAutofillField } from '../../../components/noAutofill'
 import { Stat } from '../../../components/sheetParts'
 import { Section } from '../../../components/ui'
 import type { SessionRecord } from '../../../model/character'
+import { formatDays } from '../../../rules/sr6/format'
 import { deleteSessionRecord, formatDuration, sessionSummary, updateSessionRecord } from '../../../rules/sr6/play'
 import type { CharacterContext } from '../CharacterPage'
 
@@ -12,7 +13,7 @@ export function SessionLog({ character, update }: CharacterContext) {
   if (character.sessions.length === 0) return null
   return (
     <Section title="Session log" icon={<NotebookPen className="size-4" />}>
-      <p className="-mt-1 mb-3 text-xs text-muted">Click a session to see its summary and notes.</p>
+      <p className="-mt-1 mb-3 text-xs text-muted">Click a session or downtime to see its summary and notes.</p>
       <ol className="grid gap-3">
         {[...character.sessions].reverse().map((s) => (
           <SessionEntry
@@ -57,6 +58,7 @@ function SessionEntry({
       >
         <ChevronRight className={`size-4 self-center text-muted transition-transform ${open ? 'rotate-90' : ''}`} />
         <span className="font-semibold">{s.title || 'Session'}</span>
+        {s.kind === 'downtime' && <CalendarClock className="size-3.5 self-center text-muted" aria-label="Downtime" />}
         <span className="text-xs text-muted">{new Date(s.startedAt).toLocaleDateString()}</span>
         <span className="ml-auto text-xs tabular-nums">
           <span className={s.nuyen >= 0 ? 'text-accent' : 'text-danger'}>{signed(s.nuyen, '¥')}</span>
@@ -73,7 +75,11 @@ function SessionEntry({
           </div>
 
           <div className={`grid grid-cols-3 gap-2 ${detailed ? 'sm:grid-cols-6' : ''}`}>
-            <Stat label="Played" value={formatDuration(s.startedAt, s.endedAt)} />
+            {s.kind === 'downtime' ? (
+              <Stat label="Time" value={formatDays(s.days)} />
+            ) : (
+              <Stat label="Played" value={formatDuration(s.startedAt, s.endedAt)} />
+            )}
             <Stat label="Nuyen" value={signed(s.nuyen, '¥')} tone={s.nuyen > 0 ? 'accent' : undefined} />
             <Stat label="Karma" value={signed(s.karma)} tone={s.karma > 0 ? 'accent' : undefined} />
             {detailed && (
@@ -148,7 +154,9 @@ function SessionEntry({
 
           <div className="flex justify-between gap-2 text-xs text-muted">
             <span>
-              {new Date(s.startedAt).toLocaleString()} – {new Date(s.endedAt).toLocaleTimeString()}
+              {s.kind === 'downtime'
+                ? `Logged ${new Date(s.startedAt).toLocaleString()}`
+                : `${new Date(s.startedAt).toLocaleString()} – ${new Date(s.endedAt).toLocaleTimeString()}`}
             </span>
             <button
               className="flex items-center gap-1 hover:text-danger"

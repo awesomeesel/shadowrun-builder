@@ -44,7 +44,8 @@ Ideas and plans for Shadowrun Builder. Add your own anywhere; tick them off with
 - [x] **Battle map** – a grid per encounter with walls, areas, circles, labels and tokens; measuring with range
       bands; shown live to players.
 - [x] **Sketch pad** – per campaign: pen, lines, boxes, labels; shown to players when the GM presses Show.
-- [ ] **Lifestyle and downtime** – monthly cost reminder and things to do between runs.
+- [x] **Lifestyle and downtime** – rent that runs out as time passes; a Downtime dialog for rent, Heat, Reputation,
+      side work, favors, healing and training; logged with the sessions.
 - [ ] **"What changed" since last session** – karma, gear and damage at a glance.
 - [ ] **Job generator and NPC quick-maker** – one click for a Johnson, objective, location and twist; quick cast
       members.

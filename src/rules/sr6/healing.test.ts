@@ -45,14 +45,14 @@ describe('treatment (pp. 119–120)', () => {
 describe('natural recovery (p. 121)', () => {
   it('rolls Body + Willpower per hour for Stun and stops when healed', () => {
     // 7 dice an hour: first hour 2 hits, second hour 3 hits.
-    const result = rest(patient({ stun: 4 }), 'stun', 5, false, dice(5, 6, 1, 1, 1, 1, 1, 5, 5, 6, 1, 1, 1, 1))
+    const result = rest(patient({ stun: 4 }), 'stun', 5, 0, dice(5, 6, 1, 1, 1, 1, 1, 5, 5, 6, 1, 1, 1, 1))
     expect(result.periods).toBe(2)
     expect(result.healed.stun).toBe(4)
     expect(result.rolls[0].pool).toBe(7)
   })
 
   it('rolls Body + Body per day for Physical, Overflow first, +2 with medical care', () => {
-    const result = rest(patient({ physical: 3, overflow: 1 }), 'physical', 1, true, dice(5, 5, 5, 1, 1, 1, 1, 1, 1, 1))
+    const result = rest(patient({ physical: 3, overflow: 1 }), 'physical', 1, 2, dice(5, 5, 5, 1, 1, 1, 1, 1, 1, 1))
     expect(result.healed).toEqual({ overflow: 1, physical: 2, stun: 0 })
   })
 })
